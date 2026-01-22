@@ -1,0 +1,763 @@
+openapi: 3.1.1
+info:
+  title: Node-RED uRDF Plugin API
+  version: 0.0.1
+  summary: REST API exposed by node-red-urdf-plugin (runtime/index.js)
+  description: |
+    This OpenAPI spec describes the HTTP Admin endpoints implemented by the Node-RED uRDF runtime plugin.
+
+    Notes:
+    - All endpoints are registered under Node-RED's **Admin HTTP server** (RED.httpAdmin).
+    - Responses generally include `{ ok, ts, ... }`, where `ts` is a Unix epoch timestamp in milliseconds.
+    - The plugin also publishes push events to the Node-RED editor via `RED.comms.publish("urdf/events", ...)` (not an HTTP API).
+    - The backing RDF store is uRDF's in-memory singleton (within the `urdf` module).
+servers:
+  - url: http://127.0.0.1:1880
+    description: Default local Node-RED runtime (example)
+tags:
+  - name: urdf
+    description: uRDF store management and query endpoints
+
+paths:
+  /urdf/health:
+    get:
+      tags: [urdf]
+      operationId: urdfHealth
+      summary: Healthcheck for uRDF module
+      description: |
+        Returns whether the `urdf` module is loaded.
+        If loaded, may also return the total store size (depends on `urdf.size()` availability).
+      responses:
+        "200":
+          description: uRDF module loaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthOk"
+              examples:
+                ok:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                    module: urdf
+                    size: 221
+        "500":
+          description: uRDF module not loaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthError"
+              examples:
+                error:
+                  value:
+                    ok: false
+                    ts: 1737535802000
+                    module: urdf
+                    size: null
+
+  /urdf/size:
+    get:
+      tags: [urdf]
+      operationId: urdfSize
+      summary: Size of the store or a specific named graph
+      description: |
+        - If `gid` is omitted: returns the **total** store size as `totalSize`.
+        - If `gid` is provided: returns the size of that graph as `size`.
+      parameters:
+        - $ref: "#/components/parameters/GidQueryOptional"
+      responses:
+        "200":
+          description: Size returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SizeOk"
+              examples:
+                total:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                    totalSize: 221
+                byGid:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                    gid: urn:nrua:app
+                    size: 125
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/graph:
+    get:
+      tags: [urdf]
+      operationId: urdfGraph
+      summary: Get a named graph (or default graph)
+      description: |
+        Returns the graph content as provided by `urdf.findGraph()`.
+
+        Behavior:
+        - If `gid` omitted: returns `urdf.findGraph()` (the default graph, depending on uRDF semantics).
+        - If `gid` provided and graph is missing: returns 404.
+      parameters:
+        - $ref: "#/components/parameters/GidQueryOptional"
+      responses:
+        "200":
+          description: Graph returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphOk"
+              examples:
+                ok:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                    gid: urn:nrua:app
+                    graph: []
+        "404":
+          description: Graph not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphNotFound"
+              examples:
+                notFound:
+                  value:
+                    ok: false
+                    ts: 1737535802000
+                    gid: urn:nrua:missing
+                    error: Graph not found
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/export:
+    get:
+      tags: [urdf]
+      operationId: urdfExport
+      summary: Export a graph as JSON-LD (download)
+      description: |
+        Exports the store content as JSON-LD.
+
+        Implementation notes from current code:
+        - If `gid` is provided, exports `urdf.findGraph(gid)`, otherwise exports `urdf.findGraph()`.
+        - Response is sent with `Content-Disposition: attachment; filename="..."`.
+        - Content-Type is `application/ld+json; charset=utf-8`.
+
+        ⚠️ Important for round-trip import via `/urdf/loadFile`:
+        - Your importer requires the uploaded document to contain a top-level `@id` (gid).
+        - Ensure exporter always emits a non-empty `@id` when exporting a specific gid.
+      parameters:
+        - $ref: "#/components/parameters/GidQueryOptional"
+      responses:
+        "200":
+          description: JSON-LD file download
+          headers:
+            Content-Disposition:
+              description: Attachment filename
+              schema:
+                type: string
+                examples:
+                  - attachment; filename="urdf-export-2026-01-22T09-00-00-000Z.jsonld"
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/JsonLdDocument"
+              examples:
+                export:
+                  value:
+                    "@context":
+                      nrua: https://w3id.org/nodered-static-program-analysis/user-application-ontology#
+                      schema: https://schema.org/
+                    "@id": urn:nrua:app
+                    "@graph": []
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/node:
+    get:
+      tags: [urdf]
+      operationId: urdfNode
+      summary: Find a node by id (optionally within a named graph)
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: Node identifier (IRI in your store, passed directly to uRDF find)
+          schema:
+            type: string
+            minLength: 1
+        - $ref: "#/components/parameters/GidQueryOptional"
+      responses:
+        "200":
+          description: Node returned (may be null depending on uRDF behavior)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NodeOk"
+        "400":
+          description: Missing id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingId:
+                  value:
+                    ok: false
+                    ts: 1737535802000
+                    error: Missing required query param: id
+        "404":
+          description: Node not found (heuristic: error message contains "not found")
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/clear:
+    post:
+      tags: [urdf]
+      operationId: urdfClear
+      summary: Clear the whole store or one named graph
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearRequest"
+            examples:
+              clearAll:
+                value: {}
+              clearOne:
+                value:
+                  gid: urn:nrua:app
+      responses:
+        "200":
+          description: Clear succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearOk"
+              examples:
+                okAll:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                okOne:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                    gid: urn:nrua:app
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/load:
+    post:
+      tags: [urdf]
+      operationId: urdfLoad
+      summary: Load JSON-LD into the store
+      description: |
+        Loads a JSON-LD object or array into uRDF via `urdf.load(body)`.
+
+        The plugin validates that the request body is a JSON object or array.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JsonLdInput"
+            examples:
+              object:
+                value:
+                  "@context":
+                    name: http://schema.org/name
+                  "@id": http://example.org/a
+                  name: Alice
+              array:
+                value:
+                  - "@id": http://example.org/a
+                    "@type": http://schema.org/Thing
+      responses:
+        "200":
+          description: Load succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoadOk"
+              examples:
+                ok:
+                  value:
+                    ok: true
+                    ts: 1737535802000
+                    size: 221
+        "400":
+          description: Invalid body shape (not object/array)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/loadFrom:
+    post:
+      tags: [urdf]
+      operationId: urdfLoadFrom
+      summary: Fetch JSON-LD from URI and load it into the store
+      description: |
+        Fetches a remote URI, attempts to parse the body as JSON/JSON-LD, then loads it.
+
+        Behavior:
+        - Accept header favors JSON-LD.
+        - If fetch fails: returns 502.
+        - If body isn't valid JSON: returns 415.
+        - Wraps arrays as `{ "@id": uri, "@graph": [...] }`.
+        - Ensures an object has a named graph; if no `@graph`, wraps into a `@graph` array while preserving `@context`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoadFromRequest"
+            examples:
+              ex:
+                value:
+                  uri: https://example.org/data.jsonld
+      responses:
+        "200":
+          description: Load succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoadFromOk"
+        "400":
+          description: Missing uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Not valid JSON or wrong JSON top-level type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Fetch failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/loadFile:
+    post:
+      tags: [urdf]
+      operationId: urdfLoadFile
+      summary: Replace a named graph by uploading JSON-LD
+      description: |
+        Accepts `{ "doc": <JSON-LD> }`.
+
+        Rules:
+        - `doc` must be a JSON object or array.
+        - The plugin requires `doc["@id"]` to exist and be a non-empty string; this is treated as the named graph id (gid).
+        - It then clears that gid and loads the document.
+
+        This endpoint is intended to support the editor-side "Load from file".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoadFileRequest"
+            examples:
+              ok:
+                value:
+                  doc:
+                    "@context":
+                      nrua: https://w3id.org/nodered-static-program-analysis/user-application-ontology#
+                      schema: https://schema.org/
+                    "@id": urn:nrua:app
+                    "@graph": []
+      responses:
+        "200":
+          description: Replace succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoadFileOk"
+        "400":
+          description: Invalid body or missing @id in uploaded document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingId:
+                  value:
+                    ok: false
+                    ts: 1737535802000
+                    error: Uploaded JSON-LD must contain an "@id" to identify the named graph (gid).
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/query:
+    post:
+      tags: [urdf]
+      operationId: urdfQuery
+      summary: Execute a SPARQL query
+      description: |
+        Executes `urdf.query(sparql)`.
+
+        Response shape:
+        - If uRDF returns boolean: `{ ok: true, type: "ASK", result: boolean }`
+        - Otherwise: `{ ok: true, type: "SELECT", results: <any> }`
+
+        Error handling:
+        - Missing sparql -> 400
+        - If error message contains "not implemented" -> 501
+        - Else -> 500
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+            examples:
+              select:
+                value:
+                  sparql: "SELECT ?s ?p ?o WHERE { ?s ?p ?o }"
+              ask:
+                value:
+                  sparql: "ASK WHERE { <urn:nrua:app> ?p ?o }"
+      responses:
+        "200":
+          description: Query succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryOk"
+        "400":
+          description: Missing sparql
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "501":
+          description: Query not implemented by backend
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  parameters:
+    GidQueryOptional:
+      name: gid
+      in: query
+      required: false
+      description: Named graph identifier (graph id)
+      schema:
+        type: string
+        minLength: 1
+
+  schemas:
+    TimestampMs:
+      type: integer
+      description: Unix epoch timestamp in milliseconds
+      minimum: 0
+
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      required: [ok, ts, error]
+      properties:
+        ok:
+          const: false
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        gid:
+          type: [string, "null"]
+        error:
+          type: string
+
+    HealthOk:
+      type: object
+      additionalProperties: false
+      required: [ok, ts, module]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        module:
+          const: urdf
+        size:
+          type: [integer, "null"]
+          minimum: 0
+
+    HealthError:
+      type: object
+      additionalProperties: true
+      required: [ok, ts, module]
+      properties:
+        ok:
+          const: false
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        module:
+          const: urdf
+        size:
+          type: ["null", integer]
+
+    SizeOk:
+      type: object
+      additionalProperties: false
+      required: [ok, ts]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        gid:
+          type: string
+        size:
+          type: integer
+          minimum: 0
+        totalSize:
+          type: integer
+          minimum: 0
+      oneOf:
+        - required: [ok, ts, totalSize]
+        - required: [ok, ts, gid, size]
+
+    GraphOk:
+      type: object
+      additionalProperties: true
+      required: [ok, ts, graph]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        gid:
+          type: [string, "null"]
+        graph:
+          description: Graph content as returned by uRDF
+          type: ["array", "object", "null"]
+          additionalProperties: true
+
+    GraphNotFound:
+      type: object
+      additionalProperties: false
+      required: [ok, ts, gid, error]
+      properties:
+        ok:
+          const: false
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        gid:
+          type: string
+        error:
+          const: Graph not found
+
+    NodeOk:
+      type: object
+      additionalProperties: true
+      required: [ok, ts, id]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        id:
+          type: string
+        gid:
+          type: [string, "null"]
+        node:
+          description: Node content as returned by uRDF
+          type: ["object", "array", "string", "number", "boolean", "null"]
+          additionalProperties: true
+
+    ClearRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        gid:
+          type: string
+          minLength: 1
+
+    ClearOk:
+      type: object
+      additionalProperties: false
+      required: [ok, ts]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        gid:
+          type: string
+
+    LoadOk:
+      type: object
+      additionalProperties: false
+      required: [ok, ts, size]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        size:
+          type: integer
+          minimum: 0
+
+    LoadFromRequest:
+      type: object
+      additionalProperties: false
+      required: [uri]
+      properties:
+        uri:
+          type: string
+          minLength: 1
+          format: uri
+
+    LoadFromOk:
+      type: object
+      additionalProperties: true
+      required: [ok, ts, uri, totalSize]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        uri:
+          type: string
+        totalSize:
+          type: integer
+          minimum: 0
+
+    JsonLdInput:
+      description: A JSON-LD document or node; plugin accepts JSON objects or arrays.
+      oneOf:
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+
+    JsonLdDocument:
+      description: A JSON-LD document with optional @context, @id, @graph.
+      type: object
+      additionalProperties: true
+      properties:
+        "@context": {}
+        "@id":
+          type: string
+        "@graph":
+          type: array
+          items: {}
+
+    LoadFileRequest:
+      type: object
+      additionalProperties: false
+      required: [doc]
+      properties:
+        doc:
+          $ref: "#/components/schemas/JsonLdInput"
+
+    LoadFileOk:
+      type: object
+      additionalProperties: false
+      required: [ok, ts, gid, size, totalSize]
+      properties:
+        ok:
+          const: true
+        ts:
+          $ref: "#/components/schemas/TimestampMs"
+        gid:
+          type: string
+        size:
+          type: integer
+          minimum: 0
+        totalSize:
+          type: integer
+          minimum: 0
+
+    QueryRequest:
+      type: object
+      additionalProperties: false
+      required: [sparql]
+      properties:
+        sparql:
+          type: string
+          minLength: 1
+
+    QueryOk:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [ok, ts, type, result]
+          properties:
+            ok:
+              const: true
+            ts:
+              $ref: "#/components/schemas/TimestampMs"
+            type:
+              const: ASK
+            result:
+              type: boolean
+        - type: object
+          additionalProperties: true
+          required: [ok, ts, type, results]
+          properties:
+            ok:
+              const: true
+            ts:
+              $ref: "#/components/schemas/TimestampMs"
+            type:
+              const: SELECT
+            results:
+              description: Query results as returned by uRDF
+              type: ["array", "object", "string", "number", "boolean", "null"]
+              additionalProperties: true
+

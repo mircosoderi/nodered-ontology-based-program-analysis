@@ -1,0 +1,9 @@
+# ignore everything
+*
+
+# but keep these so the repo can track them
+!.gitignore
+!.gitattributes
+!nodered-urdf/
+!nodered-urdf/**
+
