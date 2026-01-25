@@ -1,0 +1,276 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
+     xml:base="https://w3id.org/nodered-static-program-analysis/user-application-ontology"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:nrua="https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:schema="https://schema.org/">
+    <owl:Ontology rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology">
+        <owl:versionIRI rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology/1.0.0"/>
+        <rdfs:comment>This ontology models a selection of aspects related to the hardware/software architecture (including operating system, Node.js runtime, Node-RED platform) and most importantly the Node-RED user application that lives on top of it (including flows, subflows, nodes and connections between them), with the purpose of connecting the user application to external official and community knowledge and ultimately enabling efficient and context-rich static program analysis of Node-RED applications, including reachability, dependency tracing, policy compliance, misconfiguration detection, context-aware correctness checks or code smells detection.</rdfs:comment>
+        <rdfs:label>Node-RED Program Analysis Ontology</rdfs:label>
+        <rdfs:seeAlso>https://w3id.org/nodered-static-program-analysis/</rdfs:seeAlso>
+        <owl:versionInfo>1.0.0</owl:versionInfo>
+    </owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput -->
+
+    <owl:ObjectProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput">
+        <rdfs:domain rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"/>
+        <rdfs:range rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"/>
+        <rdfs:label>has output</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#runsSubflow -->
+
+    <owl:ObjectProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#runsSubflow">
+        <rdfs:domain rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"/>
+        <rdfs:range rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow"/>
+        <rdfs:label>runs subflow</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode -->
+
+    <owl:ObjectProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode">
+        <rdfs:domain rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"/>
+        <rdfs:range rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"/>
+        <rdfs:label>to node</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate -->
+
+    <owl:DatatypeProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate">
+        <rdfs:domain rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        <rdfs:label>from gate</rdfs:label>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised -->
+
+    <owl:DatatypeProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised">
+        <rdfs:domain rdf:resource="https://schema.org/OperatingSystem"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+        <rdfs:label>containerised</rdfs:label>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#isWsl -->
+
+    <owl:DatatypeProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#isWsl">
+        <rdfs:domain rdf:resource="https://schema.org/OperatingSystem"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+        <rdfs:label>WSL</rdfs:label>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#type -->
+
+    <owl:DatatypeProperty rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#type">
+        <rdfs:domain rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:label>type</rdfs:label>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://schema.org/Action -->
+
+    <owl:Class rdf:about="http://schema.org/Action"/>
+    
+
+
+    <!-- https://schema.org/Application -->
+
+    <owl:Class rdf:about="https://schema.org/Application"/>
+    
+
+
+    <!-- https://schema.org/OperatingSystem -->
+
+    <owl:Class rdf:about="https://schema.org/OperatingSystem"/>
+    
+
+
+    <!-- https://schema.org/RuntimePlatform -->
+
+    <owl:Class rdf:about="https://schema.org/RuntimePlatform"/>
+    
+
+
+    <!-- https://schema.org/SoftwareSourceCode -->
+
+    <owl:Class rdf:about="https://schema.org/SoftwareSourceCode"/>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#AppFlow -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#AppFlow">
+        <rdfs:subClassOf rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"/>
+        <rdfs:comment>This class models flows that are implemented in the user application.</rdfs:comment>
+        <rdfs:label>Custom Flow</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow">
+        <rdfs:subClassOf rdf:resource="https://schema.org/SoftwareSourceCode"/>
+        <rdfs:label>Flow</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow">
+        <rdfs:subClassOf rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"/>
+        <rdfs:comment>This class models flows that are available in the community-led Node-RED online library.</rdfs:comment>
+        <rdfs:label>Library Flow</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node">
+        <rdfs:subClassOf rdf:resource="https://schema.org/SoftwareSourceCode"/>
+        <rdfs:label>Node</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs">
+        <rdfs:subClassOf rdf:resource="https://schema.org/RuntimePlatform"/>
+        <rdfs:label>Node.js Runtime</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput">
+        <rdfs:label>Node Output</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed">
+        <rdfs:subClassOf rdf:resource="https://schema.org/RuntimePlatform"/>
+        <rdfs:label>Node-RED Platform</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow">
+        <rdfs:subClassOf rdf:resource="https://schema.org/SoftwareSourceCode"/>
+        <rdfs:label>Subflow</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#app -->
+
+    <owl:NamedIndividual rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#app">
+        <rdf:type rdf:resource="https://schema.org/Application"/>
+        <rdfs:label>User application</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodejs -->
+
+    <owl:NamedIndividual rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodejs">
+        <rdf:type rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs"/>
+        <rdfs:label>Node.js runtime</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodered -->
+
+    <owl:NamedIndividual rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodered">
+        <rdf:type rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"/>
+        <rdfs:label>Node-RED platform</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#os -->
+
+    <owl:NamedIndividual rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#os">
+        <rdf:type rdf:resource="https://schema.org/OperatingSystem"/>
+        <rdfs:label>Operating system</rdfs:label>
+    </owl:NamedIndividual>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 4.5.29.2024-05-13T12:11:03Z) https://github.com/owlcs/owlapi -->
+

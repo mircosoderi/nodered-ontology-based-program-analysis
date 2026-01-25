@@ -121,7 +121,7 @@ module.exports = function (RED) {
     graph.push({
       "@id": osId,
       "@type": "schema:OperatingSystem",
-      ...(notUnset(osInfo.type) ? { "schema:name": osInfo.type } : {}),
+      ...(notUnset(osInfo.type) ? { "schema:name": osInfo.platform } : {}),
       ...(notUnset(osInfo.release) ? { "schema:softwareVersion": osInfo.release } : {}),
       ...(notUnset(osInfo.version) ? { "schema:description": osInfo.version } : {}),
       ...(typeof osInfo.containerised === "boolean" ? { "nrua:isContainerised": osInfo.containerised } : {}),
@@ -142,33 +142,6 @@ module.exports = function (RED) {
       // Node-RED runs on Node.js (schema slot)
       "schema:runtimePlatform": { "@id": nodeJsId }
     };
-
-    // contextStorage from /settings.context (ontology models this as string)
-    if (s.context && typeof s.context === "object") {
-      const ctx = {
-        default: s.context.default,
-        stores: Array.isArray(s.context.stores) ? s.context.stores : undefined
-      };
-      nodeRed["nrua:contextStorage"] = stableJson(ctx);
-    }
-
-    // modeled Node-RED numeric-ish settings from diagnostics.runtime.settings (only if not UNSET)
-    const numericKeys = [
-      ["mqttReconnectTime", "nrua:mqttReconnectTime"],
-      ["serialReconnectTime", "nrua:serialReconnectTime"],
-      ["socketReconnectTime", "nrua:socketReconnectTime"],
-      ["socketTimeout", "nrua:socketTimeout"],
-      ["tcpMsgQueueSize", "nrua:tcpMsgQueueSize"],
-      ["inboundWebSocketTimeout", "nrua:inboundWebSocketTimeout"]
-    ];
-
-    for (const [srcKey, pred] of numericKeys) {
-      const v = rtSettings[srcKey];
-      if (notUnset(v)) {
-        const n = typeof v === "number" ? v : Number(v);
-        nodeRed[pred] = Number.isNaN(n) ? String(v) : n;
-      }
-    }
 
     graph.push(nodeRed);
 
@@ -389,7 +362,7 @@ module.exports = function (RED) {
     for (const t of tabs) {
       graph.push({
         "@id": flowId(t.id),
-        "@type": "nrua:Flow",
+        "@type": "nrua:AppFlow",
         "schema:identifier": String(t.id),
         ...(t.label ? { "schema:name": String(t.label) } : {}),
         "schema:isPartOf": { "@id": appId() }

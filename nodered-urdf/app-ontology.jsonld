@@ -1,14 +1,4 @@
 [ {
-  "@id" : "_:genid1",
-  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
-  "http://www.w3.org/2002/07/owl#unionOf" : [ {
-    "@list" : [ {
-      "@id" : "https://schema.org/Application"
-    }, {
-      "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"
-    } ]
-  } ]
-}, {
   "@id" : "http://schema.org/Action",
   "@type" : [ "http://www.w3.org/2002/07/owl#Class" ]
 }, {
@@ -42,6 +32,18 @@
     "@value" : "1.0.0"
   } ]
 }, {
+  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#AppFlow",
+  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
+  "http://www.w3.org/2000/01/rdf-schema#comment" : [ {
+    "@value" : "This class models flows that are implemented in the user application."
+  } ],
+  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
+    "@value" : "Custom Flow"
+  } ],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
+    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"
+  } ]
+}, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow",
   "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
   "http://www.w3.org/2000/01/rdf-schema#label" : [ {
@@ -49,6 +51,18 @@
   } ],
   "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
     "@id" : "https://schema.org/SoftwareSourceCode"
+  } ]
+}, {
+  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
+  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
+  "http://www.w3.org/2000/01/rdf-schema#comment" : [ {
+    "@value" : "This class models flows that are available in the community-led Node-RED online library."
+  } ],
+  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
+    "@value" : "Library Flow"
+  } ],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
+    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"
   } ]
 }, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node",
@@ -102,18 +116,6 @@
     "@value" : "User application"
   } ]
 }, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#contextStorage",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "context storage"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#string"
-  } ]
-}, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate",
   "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
   "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
@@ -138,18 +140,6 @@
     "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"
   } ]
 }, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#inboundWebSocketTimeout",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "inbound Web socket timeout"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#integer"
-  } ]
-}, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised",
   "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
   "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
@@ -157,18 +147,6 @@
   } ],
   "http://www.w3.org/2000/01/rdf-schema#label" : [ {
     "@value" : "containerised"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#boolean"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isStateful",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "_:genid1"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "stateful"
   } ],
   "http://www.w3.org/2000/01/rdf-schema#range" : [ {
     "@id" : "http://www.w3.org/2001/XMLSchema#boolean"
@@ -184,18 +162,6 @@
   } ],
   "http://www.w3.org/2000/01/rdf-schema#range" : [ {
     "@id" : "http://www.w3.org/2001/XMLSchema#boolean"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#mqttReconnectTime",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "MQTT reconnect time"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#integer"
   } ]
 }, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodejs",
@@ -235,54 +201,6 @@
   } ],
   "http://www.w3.org/2000/01/rdf-schema#range" : [ {
     "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#serialReconnectTime",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "serial reconnect time"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#integer"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#socketReconnectTime",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "socket reconnect time"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#integer"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#socketTimeout",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "socket timeout"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#integer"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#tcpMsgQueueSize",
-  "@type" : [ "http://www.w3.org/2002/07/owl#DatatypeProperty" ],
-  "http://www.w3.org/2000/01/rdf-schema#domain" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "TCP message queue size"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#range" : [ {
-    "@id" : "http://www.w3.org/2001/XMLSchema#integer"
   } ]
 }, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode",

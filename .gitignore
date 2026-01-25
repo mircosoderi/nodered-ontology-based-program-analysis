@@ -4,6 +4,10 @@
 # but keep these so the repo can track them
 !.gitignore
 !.gitattributes
+!app-ontology.rdf
 !nodered-urdf/
 !nodered-urdf/**
-
+!github-issues-to-jsonld/
+!github-issues-to-jsonld/**
+!discourse-forum-to-jsonld/
+!discourse-forum-to-jsonld/**
