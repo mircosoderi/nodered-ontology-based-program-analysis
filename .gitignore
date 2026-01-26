@@ -11,3 +11,5 @@
 !github-issues-to-jsonld/**
 !discourse-forum-to-jsonld/
 !discourse-forum-to-jsonld/**
+!flows-json-to-jsonld/
+!flows-json-to-jsonld/**
