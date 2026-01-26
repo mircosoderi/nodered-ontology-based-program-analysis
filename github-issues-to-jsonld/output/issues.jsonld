@@ -1,7 +1,7 @@
 {
   "@context": {
     "schema": "https://schema.org/",
-    "nrua": "https://example.org/nrua#",
+    "nrua": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "title": "schema:title",
     "date": {

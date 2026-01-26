@@ -49,6 +49,63 @@
       $el.css("display", on ? "" : "none");
     }
 
+    function firstLiteral(node, iri) {
+  const arr = node && node[iri];
+  if (!Array.isArray(arr) || arr.length === 0) return "";
+  const v = arr[0];
+  return (v && typeof v === "object" && v["@value"] !== undefined) ? String(v["@value"]) : "";
+}
+
+function setLiteral(node, iri, value) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    delete node[iri];
+    return;
+  }
+  node[iri] = [{ "@value": value }];
+}
+
+function isRule(node) {
+  const t = node && node["@type"];
+  const types = Array.isArray(t) ? t : (t ? [t] : []);
+  return types.includes(IRI_NRUA_RULE);
+}
+
+function isNodeUrn(subjectIri) {
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:node:");
+}
+function nodeIdFromUrn(subjectIri) {
+  return subjectIri.slice("urn:nrua:node:".length);
+}
+
+function revealNodeInEditor(nodeId) {
+  try {
+    if (RED && RED.view && typeof RED.view.reveal === "function") {
+      RED.view.reveal(nodeId);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function termValue(t) {
+  return t && typeof t === "object" ? t.value : undefined;
+}
+
+function ratingToNumber(r) {
+  if (!r) return -1;
+  // your rating looks like urn:rating:issues:4070 -> extract trailing number
+  const m = /(\d+)\s*$/.exec(String(r));
+  return m ? parseInt(m[1], 10) : -1;
+}
+
+function dateToMs(d) {
+  if (!d) return 0;
+  const ms = Date.parse(String(d));
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+
+
     // --- Mode selector (dropdown) ---
     const $modeRow = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center" });
     const $modeLabel = $("<div>").css({ fontWeight: 600, minWidth: "58px" }).text("Action");
@@ -62,7 +119,9 @@
       { id: "search", label: "Search" },
       { id: "query", label: "Query" },
       { id: "export", label: "Export" },
-      { id: "clear", label: "Clear" }
+      { id: "clear", label: "Clear" },
+      { id: "configure", label: "Configure" },
+      { id: "reason", label: "Reason" }
     ];
 
     MODES.forEach(m => $mode.append($("<option>").attr("value", m.id).text(m.label)));
@@ -78,6 +137,10 @@
     const $sectionQuery  = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
     const $sectionExport = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
     const $sectionClear  = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionConfigure = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionReason = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+
+
 
     // ========== Health ==========
     const $btnHealth = $("<button>").addClass("red-ui-button").text("Ping");
@@ -143,6 +206,409 @@ const $exportRow = mkRow($exportGidInput, $btnExport);
     const $btnClearStore = $("<button>").addClass("red-ui-button").text("Clear");
     const $clearRow = mkRow($clearGidInput, $btnClearStore);
     $sectionClear.append($clearRow);
+
+// ========== Configure ==========
+const RULES_GID = "urn:nrua:rules";
+const IRI_NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
+const IRI_SCHEMA_NAME = "https://schema.org/name";
+const IRI_SCHEMA_TEXT = "https://schema.org/text";
+const IRI_SCHEMA_DESC = "https://schema.org/description";
+const IRI_SCHEMA_PROG_LANG = "https://schema.org/programmingLanguage";
+const IRI_SCHEMA_ENCODING = "https://schema.org/encodingFormat";
+
+const $btnRulesRefresh = $("<button>").addClass("red-ui-button").text("Refresh rules");
+const $rulesList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
+
+const $newTitle = mkTitle("Create new rule");
+const $newId = mkInput("Rule @id (optional, leave blank to auto-generate)");
+const $newName = mkInput("Rule name");
+const $newDesc = mkInput("Description (optional)");
+const $newQuery = mkTextArea("SPARQL SELECT returning ?s ?p ?o", "140px");
+const $btnCreate = $("<button>").addClass("red-ui-button").text("Create");
+
+$sectionConfigure.append(
+  $btnRulesRefresh,
+  mkTitle("Existing rules"),
+  $rulesList,
+  $newTitle,
+  $newId,
+  $newName,
+  $newDesc,
+  $newQuery,
+  $btnCreate
+);
+
+async function loadRulesDoc() {
+  const r = await fetch(`urdf/export?gid=${encodeURIComponent(RULES_GID)}`, { method: "GET" });
+
+  if (r.status === 404) {
+    return { "@id": RULES_GID, "@graph": [] };
+  }
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw new Error(`Failed to export rules: HTTP ${r.status} ${text.slice(0, 200)}`);
+  }
+  return await r.json();
+}
+
+async function renderRules() {
+  $rulesList.empty();
+
+  const doc = await loadRulesDoc();
+  const graph = Array.isArray(doc["@graph"]) ? doc["@graph"] : [];
+  const rules = graph.filter(isRule);
+
+  if (rules.length === 0) {
+    $rulesList.append($("<div>").text("No rules found."));
+    return;
+  }
+
+  rules.forEach((rule) => {
+    const rid = rule["@id"] || "(no @id)";
+    const name = firstLiteral(rule, IRI_SCHEMA_NAME) || rid;
+    const desc = firstLiteral(rule, IRI_SCHEMA_DESC);
+    const query = firstLiteral(rule, IRI_SCHEMA_TEXT);
+
+    const $card = $("<div>").css({
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      padding: "8px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px"
+    });
+
+    const $hdr = $("<div>").css({ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" });
+    const $left = $("<div>");
+    $left.append(
+      $("<div>").css({ fontWeight: 600 }).text(name),
+      $("<div>").css({ fontFamily: "monospace", fontSize: "11px", opacity: 0.8 }).text(rid)
+    );
+
+    const $btnSave = $("<button>").addClass("red-ui-button red-ui-button-small").text("Save");
+    const $btnDelete = $("<button>").addClass("red-ui-button red-ui-button-small").text("Delete");
+    const $right = $("<div>").css({ display: "flex", gap: "8px" }).append($btnSave, $btnDelete);
+
+    $hdr.append($left, $right);
+
+    const $nameInput = mkInput("Rule name").val(name);
+    const $descInput = mkInput("Description (optional)").val(desc);
+    const $queryArea = mkTextArea("SPARQL", "140px").val(query);
+
+    $card.append($hdr, $nameInput, $descInput, $queryArea);
+    $rulesList.append($card);
+
+    // ---- Update ----
+    $btnSave.on("click", async () => {
+      try {
+        const updated = JSON.parse(JSON.stringify(rule)); // shallow clone safe enough for this structure
+        setLiteral(updated, IRI_SCHEMA_NAME, ($nameInput.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_DESC, ($descInput.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_TEXT, ($queryArea.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_PROG_LANG, "SPARQL");
+        setLiteral(updated, IRI_SCHEMA_ENCODING, "application/sparql-query");
+
+        const { status, json } = await doFetchJson("urdf/rules/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rule: updated })
+        });
+
+        setResponse(json);
+        appendLog(`HTTP ${status} POST /urdf/rules/update ${rid}`);
+
+        if (status >= 200 && status < 300 && json && json.ok) {
+          await renderRules();
+        }
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR updating rule: " + String(e));
+      }
+    });
+
+    // ---- Delete ----
+    $btnDelete.on("click", async () => {
+      try {
+        const { status, json } = await doFetchJson("urdf/rules/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: rid })
+        });
+
+        setResponse(json);
+        appendLog(`HTTP ${status} POST /urdf/rules/delete ${rid}`);
+
+        if (status >= 200 && status < 300 && json && json.ok) {
+          await renderRules();
+        }
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR deleting rule: " + String(e));
+      }
+    });
+  });
+}
+
+$btnRulesRefresh.on("click", async () => {
+  try {
+    await renderRules();
+    appendLog("Rules refreshed");
+  } catch (e) {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR refreshing rules: " + String(e));
+  }
+});
+
+$btnCreate.on("click", async () => {
+  try {
+    const idRaw = ($newId.val() || "").trim();
+    const name = ($newName.val() || "").trim();
+    const desc = ($newDesc.val() || "").trim();
+    const query = ($newQuery.val() || "").trim();
+
+    if (!name) throw new Error("Rule name is required.");
+    if (!query) throw new Error("SPARQL query is required.");
+
+    const rid = idRaw || ("urn:rule:" + Date.now());
+
+    const rule = {
+      "@id": rid,
+      "@type": [IRI_NRUA_RULE]
+    };
+
+    setLiteral(rule, IRI_SCHEMA_NAME, name);
+    setLiteral(rule, IRI_SCHEMA_DESC, desc);
+    setLiteral(rule, IRI_SCHEMA_TEXT, query);
+    setLiteral(rule, IRI_SCHEMA_PROG_LANG, "SPARQL");
+    setLiteral(rule, IRI_SCHEMA_ENCODING, "application/sparql-query");
+
+    const { status, json } = await doFetchJson("urdf/rules/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rule })
+    });
+
+    setResponse(json);
+    appendLog(`HTTP ${status} POST /urdf/rules/create ${rid}`);
+
+    if (status >= 200 && status < 300 && json && json.ok) {
+      $newId.val("");
+      $newName.val("");
+      $newDesc.val("");
+      // leave query in place or clear it—your choice:
+      // $newQuery.val("");
+      await renderRules();
+    }
+  } catch (e) {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR creating rule: " + String(e));
+  }
+});
+
+
+// ========== End of Configure ============
+
+// ========== Reason ==========
+
+const $btnReasonRefresh = $("<button>").addClass("red-ui-button").text("Refresh results");
+const $reasonList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
+$sectionReason.append($btnReasonRefresh, $reasonList);
+
+async function loadReasoningResults() {
+  const sparql = `SELECT ?s ?doc ?title ?url ?date ?rating ?cat WHERE {
+  GRAPH <urn:graph:inferred> {
+    ?s <https://schema.org/seeAlso> ?doc .
+  }
+
+  # Look for doc metadata in either graph
+  {
+    GRAPH <urn:graph:issues> {
+      OPTIONAL { ?doc <https://schema.org/title> ?title . }
+      OPTIONAL { ?doc <https://schema.org/url> ?url . }
+      OPTIONAL { ?doc <https://schema.org/date> ?date . }
+      OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+      OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+    }
+  }
+  UNION
+  {
+    GRAPH <urn:graph:forum> {
+      OPTIONAL { ?doc <https://schema.org/title> ?title . }
+      OPTIONAL { ?doc <https://schema.org/url> ?url . }
+      OPTIONAL { ?doc <https://schema.org/date> ?date . }
+      OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+      OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+    }
+  }
+}
+
+`; 
+  const { status, json } = await doFetchJson("urdf/query", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sparql })
+  });
+  if (status !== 200 || !json || !json.ok) throw new Error("Reason query failed: " + JSON.stringify(json));
+  return Array.isArray(json.results) ? json.results : [];
+}
+
+function termValue(t) {
+  return t && typeof t === "object" ? t.value : undefined;
+}
+
+async function renderReasoning() {
+  $reasonList.empty();
+
+  const rows = await loadReasoningResults();
+  if (rows.length === 0) {
+    $reasonList.append($("<div>").text("No inferred links found."));
+    return;
+  }
+
+  // group by subject IRI
+  const byS = new Map(); // subject -> Map(docIri -> docObj)
+
+for (const r of rows) {
+  const s = termValue(r.s);
+  const doc = termValue(r.doc);
+  if (!s || !doc) continue;
+
+  const title = termValue(r.title) || "";
+  const url = termValue(r.url) || "";
+  const date = termValue(r.date) || "";
+  const rating = termValue(r.rating) || "";
+  const cat = termValue(r.cat) || "";
+
+  if (!byS.has(s)) byS.set(s, new Map());
+  const docsMap = byS.get(s);
+
+  let d = docsMap.get(doc);
+  if (!d) {
+    d = {
+      doc,
+      title,
+      url,
+      date,
+      rating,
+      categories: new Set()
+    };
+    docsMap.set(doc, d);
+  }
+
+  // keep first non-empty values (because you may receive multiple rows per doc)
+  if (!d.title && title) d.title = title;
+  if (!d.url && url) d.url = url;
+  if (!d.date && date) d.date = date;
+  if (!d.rating && rating) d.rating = rating;
+
+  if (cat) d.categories.add(cat);
+}
+
+for (const [s, docsMap] of byS.entries()) {
+    
+// Card per subject
+    const $card = $("<div>").css({
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      padding: "8px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px"
+    });
+
+    const $hdr = $("<div>").css({ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" });
+
+	const items = Array.from(docsMap.values()).sort((a, b) => {
+  const da = dateToMs(a.date);
+  const db = dateToMs(b.date);
+  if (db !== da) return db - da;
+
+  const ra = ratingToNumber(a.rating);
+  const rb = ratingToNumber(b.rating);
+  return rb - ra;
+});
+
+
+    let $subjectLink;
+    if (isNodeUrn(s)) {
+      const nodeId = nodeIdFromUrn(s);
+      $subjectLink = $("<a href='#'>")
+        .text(`Node ${nodeId}`)
+        .css({ fontWeight: 600 })
+        .on("click", function (e) {
+          e.preventDefault();
+          const ok = revealNodeInEditor(nodeId);
+          if (!ok) appendLog("WARN: cannot reveal node in editor (RED.view.reveal not available)");
+        });
+    } else {
+      $subjectLink = $("<div>").css({ fontWeight: 600, fontFamily: "monospace" }).text(s);
+    }
+
+    const $count = $("<div>").css({ opacity: 0.8 }).text(`${items.length} link(s)`);
+    $hdr.append($subjectLink, $count);
+
+    const $ul = $("<div>").css({ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" });
+
+items.forEach((it) => {
+  const label = it.title ? it.title : it.doc;
+  const href = it.url || it.doc;
+
+const $line = $("<div>").css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "6px",
+  alignItems: "center",
+  padding: "6px 8px",
+  background: "#f5f5f5",
+  border: "1px solid #ddd",
+  borderRadius: "4px"
+});
+
+  const $a = $("<a>")
+    .attr("href", href)
+    .attr("target", "_blank")
+    .attr("rel", "noopener noreferrer")
+    .text(label)
+    .css({ wordBreak: "break-word" });
+
+  $line.append($a);
+
+  // category chips (small boxes)
+  const cats = Array.from(it.categories || []).sort();
+  for (const c of cats) {
+    const $chip = $("<span>").text(c).css({
+      display: "inline-block",
+      padding: "1px 6px",
+      border: "1px solid #111",
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#111",
+      fontSize: "11px",
+      lineHeight: "16px"
+    });
+    $line.append($chip);
+  }
+
+  $ul.append($line);
+});
+
+    $card.append($hdr, $ul);
+    $reasonList.append($card);
+  }
+}
+
+$btnReasonRefresh.on("click", async () => {
+  try {
+    await renderReasoning();
+    appendLog("Reason refreshed");
+  } catch (e) {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR reason: " + String(e));
+  }
+});
+
+
+// ===========================
 
     // --- Response viewer (always visible, bigger) ---
     const $responseHeader = $("<div>").css({ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" });
@@ -212,6 +678,8 @@ const $exportRow = mkRow($exportGidInput, $btnExport);
       $sectionQuery,
       $sectionExport,
       $sectionClear,
+      $sectionConfigure,
+      $sectionReason,
 
       $responseHeader,
       $response,
@@ -269,7 +737,9 @@ const $exportRow = mkRow($exportGidInput, $btnExport);
       search: $sectionSearch,
       query: $sectionQuery,
       export: $sectionExport,
-      clear: $sectionClear
+      clear: $sectionClear,
+      configure: $sectionConfigure,
+      reason: $sectionReason
     };
 
     const modeToTitle = {
@@ -278,11 +748,23 @@ const $exportRow = mkRow($exportGidInput, $btnExport);
       search: "Search",
       query: "Query",
       export: "Export",
-      clear: "Clear"
+      clear: "Clear",
+      configure: "Configure",
+      reason: "Reason"
     };
 
     function applyMode(modeId) {
       Object.keys(modeToSection).forEach(k => setVisible(modeToSection[k], k === modeId));
+      if (modeId === "configure") {
+  renderRules().catch(e => {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR loading rules: " + String(e));
+  });
+}
+if (modeId === "reason") {
+  renderReasoning().catch(e => { setResponse({ ok:false, error:String(e) }); });
+}
+
       $sectionTitle.text(modeToTitle[modeId] || "uRDF");
     }
 
@@ -296,11 +778,30 @@ const $exportRow = mkRow($exportGidInput, $btnExport);
     setEventsExpanded(false);
 
     // --- Networking ---
-    async function doFetchJson(path, options) {
-      const r = await fetch(path, options);
-      const json = await r.json();
-      return { status: r.status, json };
-    }
+async function doFetchJson(path, options) {
+  const adminRoot = (RED.settings.httpAdminRoot || "").replace(/\/$/, "");
+
+  // If already absolute (starts with http(s):// or /), keep it.
+  // Otherwise treat it as relative to httpAdminRoot.
+  let url = path;
+  if (!/^https?:\/\//i.test(path) && !path.startsWith("/")) {
+    url = adminRoot + "/" + path;
+  }
+
+  const r = await fetch(url, options);
+
+  let json;
+  try {
+    json = await r.json();
+  } catch (e) {
+    // fallback if server returned non-JSON (e.g., HTML error page)
+    const text = await r.text().catch(() => "");
+    throw new Error(`Expected JSON from ${url} but got: ${text.slice(0, 200)}`);
+  }
+
+  return { status: r.status, json };
+}
+
 
     // --- Buttons wiring ---
     $btnHealth.on("click", async function () {

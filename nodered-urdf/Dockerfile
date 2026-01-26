@@ -9,6 +9,7 @@ COPY node-red-urdf-plugin /opt/node-red-urdf-plugin
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY nodered-default-settings.js /opt/nodered-default-settings.js
 COPY app-ontology.jsonld /opt/urdf/app-ontology.jsonld
+COPY rules.jsonld /opt/urdf/rules.jsonld
 
 # Fix permissions so the node-red user can install dependencies in /opt/...
 RUN chown -R node-red:node-red /opt/node-red-urdf-plugin \

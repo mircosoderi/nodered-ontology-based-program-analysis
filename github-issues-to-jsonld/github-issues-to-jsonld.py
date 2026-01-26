@@ -26,9 +26,13 @@ import json
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import os
+import urllib.request
+import urllib.error
 
 INPUT_DIR = Path("input")
 OUTPUT_DIR = Path("output")
+NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
 
 SCHEMA = "https://schema.org/"
 XSD = "http://www.w3.org/2001/XMLSchema#"
@@ -347,6 +351,36 @@ def transform_file(path: Path) -> Dict[str, Any]:
         "@graph": nodes,
     }
 
+def post_jsonld(doc: dict, out_path) -> None:
+    if not NODERED_URDF:
+        print("No 'NODERED_URDF' env var set; skipping upload.")
+        return
+
+    url = f"{NODERED_URDF}/urdf/loadFile"
+    payload = {"doc": doc}
+    data = json.dumps(payload).encode("utf-8")
+
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            print(f"Uploaded {out_path} -> {url} (HTTP {resp.status})")
+            # optional: show server response
+            if body:
+                print(body)
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        print(f"Upload failed for {out_path} (HTTP {e.code}): {err_body}")
+        raise
+    except Exception as e:
+        print(f"Upload failed for {out_path}: {e}")
+        raise
 
 def main() -> int:
     if not INPUT_DIR.exists():
@@ -364,6 +398,7 @@ def main() -> int:
         jsonld = transform_file(in_path)
         out_path.write_text(json.dumps(jsonld, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Wrote {out_path}")
+        post_jsonld(jsonld, out_path)
 
     return 0
 

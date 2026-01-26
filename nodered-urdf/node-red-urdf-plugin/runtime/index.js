@@ -82,6 +82,43 @@ module.exports = function (RED) {
   loadOntologyJsonLdOnStartup();
 
   // -------------------------
+  // Rules load (startup)
+  // -------------------------
+  async function loadRulesJsonLdOnStartup() {
+    if (!urdf) return;
+  
+    const filePath = process.env.URDF_RULES_PATH || "/opt/urdf/rules.jsonld";
+    const gid = process.env.URDF_RULES_GID || "urn:nrua:rules";
+
+    if (!fs.existsSync(filePath)) {
+      RED.log.warn("[uRDF] Rules file not found: " + filePath);
+      return;
+    }
+    
+    try {
+      const raw = fs.readFileSync(filePath, "utf8");
+      const doc = JSON.parse(raw);
+
+      // load as named graph
+      const toLoad = Array.isArray(doc) ? { "@id": gid, "@graph": doc } : { ...doc, "@id": gid };
+      await urdf.load(toLoad);
+
+      RED.log.info("[uRDF] Rules JSON-LD loaded into gid=" + gid + " from " + filePath);
+
+      publish({
+        ts: Date.now(),
+        type: "startupLoad",
+        request: { method: "INIT", path: "rules", summary: filePath },
+        response: { ok: true, gid, filePath, totalSize: urdf.size() }
+      });
+    } catch (e) {
+      RED.log.error("[uRDF] Failed to load rules JSON-LD: " + (e?.message || String(e)));
+    }
+  }
+
+  loadRulesJsonLdOnStartup();
+
+  // -------------------------
   // Environment load (startup from /diagnostics + /settings)
   // -------------------------
   const NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#";
@@ -212,6 +249,291 @@ module.exports = function (RED) {
   }
 
   loadEnvironmentWhenAdminApiReady();
+
+  // -------------------------
+  // Inference and rules mgmt
+  // -------------------------
+	
+  const GID_RULES = process.env.URDF_RULES_GID || "urn:nrua:rules";
+  const GID_INFERRED = process.env.URDF_INFERRED_GID || "urn:graph:inferred";
+  const SCHEMA_TEXT = "https://schema.org/text";
+  const NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
+ 
+function getPropFirstValue(node, iri) {
+  const arr = node && node[iri];
+  if (!Array.isArray(arr) || arr.length === 0) return undefined;
+  const v = arr[0];
+  if (v && typeof v === "object") {
+    if (typeof v["@value"] !== "undefined") return v["@value"];
+    if (typeof v["@id"] !== "undefined") return v["@id"];
+  }
+  return v;
+}
+
+// Normalize various SPARQL binding shapes into JSON-LD object forms.
+function bindingToJsonLdObject(term) {
+  // Common cases:
+  // - string IRI or literal
+  // - { value, type: "uri"|"literal", datatype, "xml:lang" }
+  // - { termType: "NamedNode"|"Literal", value, datatype, language }
+  if (term == null) return null;
+
+  if (typeof term === "string") {
+    // Ambiguous: assume IRI if it looks like one, else literal
+    // (fallback only; prefer structured bindings)
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(term)) return { "@id": term };
+    return { "@value": term };
+  }
+
+  if (typeof term === "object") {
+    // RDFJS-like
+    if (term.termType === "NamedNode") return { "@id": term.value };
+    if (term.termType === "BlankNode") return { "@id": "_:" + term.value };
+    if (term.termType === "Literal") {
+      const lit = { "@value": term.value };
+      if (term.language) lit["@language"] = term.language;
+      const dt = term.datatype && (term.datatype.value || term.datatype);
+      if (dt && typeof dt === "string" && dt !== "http://www.w3.org/2001/XMLSchema#string") {
+        lit["@type"] = dt;
+      }
+      return lit;
+    }
+
+    // SPARQL JSON results-like
+    const value = term.value ?? term["@value"] ?? term["@id"];
+    const type = term.type; // "uri" | "literal" | "bnode"
+    if (type === "uri") return { "@id": value };
+    if (type === "bnode") return { "@id": "_:" + value };
+    if (type === "literal") {
+      const lit = { "@value": value };
+      if (term["xml:lang"]) lit["@language"] = term["xml:lang"];
+      if (term.datatype && term.datatype !== "http://www.w3.org/2001/XMLSchema#string") lit["@type"] = term.datatype;
+      return lit;
+    }
+
+    // JSON-LD-like direct
+    if (typeof term["@id"] === "string") return { "@id": term["@id"] };
+    if (typeof term["@value"] !== "undefined") {
+      const lit = { "@value": term["@value"] };
+      if (term["@language"]) lit["@language"] = term["@language"];
+      if (term["@type"]) lit["@type"] = term["@type"];
+      return lit;
+    }
+
+    // Last resort: try to use .value
+    if (typeof value === "string") {
+      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return { "@id": value };
+      return { "@value": value };
+    }
+  }
+
+  // Fallback literal
+  return { "@value": String(term) };
+}
+
+function bindingToIri(term) {
+  if (term == null) return null;
+  if (typeof term === "string") return term;
+  if (typeof term === "object") {
+    if (term.termType === "NamedNode") return term.value;
+    if (term.type === "uri") return term.value;
+    if (typeof term["@id"] === "string") return term["@id"];
+    if (typeof term.value === "string") return term.value; // last resort
+  }
+  return null;
+}
+
+async function recomputeInferencesFromRules(triggerReason) {
+  if (!urdf) return;
+
+  const ts = Date.now();
+
+  try {
+    // 1) Read the rules graph
+    const rulesGraph = urdf.findGraph(GID_RULES);
+    if (!Array.isArray(rulesGraph) || rulesGraph.length === 0) {
+      // Deterministic: if no rules, clear inferred graph
+      await urdf.clear(GID_INFERRED);
+      publish({
+        ts,
+        type: "inference",
+        request: { method: "AUTO", path: "rules", summary: `no rules (${triggerReason || ""})` },
+        response: { ok: true, ts, rules: 0, triples: 0, gid: GID_INFERRED }
+      });
+      return;
+    }
+
+    // 2) Extract rule resources
+    const rules = rulesGraph.filter((n) => {
+      const types = n && n["@type"];
+      if (!types) return false;
+      const t = Array.isArray(types) ? types : [types];
+      return t.includes(NRUA_RULE);
+    });
+
+    // 3) Execute each rule, collect triples
+    // We'll build inferred triples as JSON-LD node objects grouped by subject
+    const bySubject = new Map(); // subjectIri -> nodeObject
+
+    let firedTriples = 0;
+    for (const rule of rules) {
+      const q = getPropFirstValue(rule, SCHEMA_TEXT);
+      if (!q || typeof q !== "string" || !q.trim()) continue;
+
+      const qres = await urdf.query(q);
+      const bindings = Array.isArray(qres) ? qres : (qres && Array.isArray(qres.results) ? qres.results : []);
+
+      for (const b of bindings) {
+        // Expect bindings for s,p,o
+        const sTerm = b.s ?? b["?s"] ?? b.subject ?? b.S;
+        const pTerm = b.p ?? b["?p"] ?? b.predicate ?? b.P;
+        const oTerm = b.o ?? b["?o"] ?? b.object ?? b.O;
+
+        const sIri = bindingToIri(sTerm);
+        const pIri = bindingToIri(pTerm);
+        const oJson = bindingToJsonLdObject(oTerm);
+
+        if (!sIri || !pIri || !oJson) continue;
+
+        let subjNode = bySubject.get(sIri);
+        if (!subjNode) {
+          subjNode = { "@id": sIri };
+          bySubject.set(sIri, subjNode);
+        }
+
+        subjNode[pIri] = subjNode[pIri] || [];
+        subjNode[pIri].push(oJson);
+
+        firedTriples++;
+      }
+    }
+
+    // 4) Replace inferred graph deterministically
+    await urdf.clear(GID_INFERRED);
+    await urdf.load({
+      "@id": GID_INFERRED,
+      "@graph": Array.from(bySubject.values())
+    });
+
+    const payload = {
+      ok: true,
+      ts,
+      rules: rules.length,
+      triples: firedTriples,
+      gid: GID_INFERRED,
+      reason: triggerReason || "manual",
+      size: urdf.size(GID_INFERRED),
+      totalSize: urdf.size()
+    };
+
+    publish({
+      ts,
+      type: "inference",
+      request: { method: "AUTO", path: "rules", summary: `applied ${rules.length} rule(s)` },
+      response: payload
+    });
+
+    RED.log.info(`[uRDF] Applied ${rules.length} rule(s): wrote ${firedTriples} inferred triple(s) to gid=${GID_INFERRED}`);
+  } catch (e) {
+    const payload = { ok: false, ts, gid: GID_INFERRED, error: e?.message || String(e) };
+    publish({
+      ts,
+      type: "inference",
+      request: { method: "AUTO", path: "rules", summary: "FAILED" },
+      response: payload
+    });
+    RED.log.error("[uRDF] Rule inference failed: " + payload.error);
+  }
+}
+
+function asArray(x) {
+  return Array.isArray(x) ? x : (x ? [x] : []);
+}
+
+function isRuleNode(n) {
+  const t = asArray(n && n["@type"]);
+  return t.includes(NRUA_RULE);
+}
+
+function getGraphSafe(gid) {
+  const g = urdf.findGraph(gid);
+  return Array.isArray(g) ? g : [];
+}
+
+async function replaceNamedGraph(gid, graphArray) {
+  // context optional; uRDF stores expanded IRIs anyway
+  await urdf.clear(gid);
+  await urdf.load({ "@id": gid, "@graph": graphArray });
+}
+
+RED.httpAdmin.post("/urdf/rules/create", jsonParser, async (req, res) => {
+  const ts = Date.now();
+  if (!requireUrdf(ts, "rulesCreate", { method: "POST", path: "/urdf/rules/create" }, res)) return;
+
+  const rule = req.body && req.body.rule;
+  if (!rule || typeof rule !== "object") return res.status(400).json({ ok: false, ts, error: 'Body must be { "rule": { ... } }' });
+  if (!rule["@id"] || typeof rule["@id"] !== "string") return res.status(400).json({ ok: false, ts, error: 'rule["@id"] is required' });
+  if (!isRuleNode(rule)) return res.status(400).json({ ok: false, ts, error: `rule["@type"] must include ${NRUA_RULE}` });
+
+  try {
+    const graph = getGraphSafe(GID_RULES);
+
+    if (graph.some(n => n && n["@id"] === rule["@id"])) {
+      return res.status(409).json({ ok: false, ts, error: "Rule already exists", id: rule["@id"] });
+    }
+
+    graph.push(rule);
+    await replaceNamedGraph(GID_RULES, graph);
+
+    return res.status(200).json({ ok: true, ts, gid: GID_RULES, created: rule["@id"], count: graph.length });
+  } catch (e) {
+    return res.status(500).json({ ok: false, ts, error: e?.message || String(e) });
+  }
+});
+
+RED.httpAdmin.post("/urdf/rules/update", jsonParser, async (req, res) => {
+  const ts = Date.now();
+  if (!requireUrdf(ts, "rulesUpdate", { method: "POST", path: "/urdf/rules/update" }, res)) return;
+
+  const rule = req.body && req.body.rule;
+  if (!rule || typeof rule !== "object") return res.status(400).json({ ok: false, ts, error: 'Body must be { "rule": { ... } }' });
+  if (!rule["@id"] || typeof rule["@id"] !== "string") return res.status(400).json({ ok: false, ts, error: 'rule["@id"] is required' });
+  if (!isRuleNode(rule)) return res.status(400).json({ ok: false, ts, error: `rule["@type"] must include ${NRUA_RULE}` });
+
+  try {
+    const graph = getGraphSafe(GID_RULES);
+    const idx = graph.findIndex(n => n && n["@id"] === rule["@id"]);
+    if (idx < 0) return res.status(404).json({ ok: false, ts, error: "Rule not found", id: rule["@id"] });
+
+    graph[idx] = rule;
+    await replaceNamedGraph(GID_RULES, graph);
+
+    return res.status(200).json({ ok: true, ts, gid: GID_RULES, updated: rule["@id"], count: graph.length });
+  } catch (e) {
+    return res.status(500).json({ ok: false, ts, error: e?.message || String(e) });
+  }
+});
+
+RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
+  const ts = Date.now();
+  if (!requireUrdf(ts, "rulesDelete", { method: "POST", path: "/urdf/rules/delete" }, res)) return;
+
+  const id = req.body && req.body.id ? String(req.body.id) : "";
+  if (!id.trim()) return res.status(400).json({ ok: false, ts, error: 'Body must be { "id": "..." }' });
+
+  try {
+    const graph = getGraphSafe(GID_RULES);
+    const next = graph.filter(n => !(n && n["@id"] === id));
+    if (next.length === graph.length) return res.status(404).json({ ok: false, ts, error: "Rule not found", id });
+
+    await replaceNamedGraph(GID_RULES, next);
+
+    return res.status(200).json({ ok: true, ts, gid: GID_RULES, deleted: id, count: next.length });
+  } catch (e) {
+    return res.status(500).json({ ok: false, ts, error: e?.message || String(e) });
+  }
+});
+
 
   // -------------------------
   // Application load from /flows (on deploy/start)
@@ -454,6 +776,7 @@ module.exports = function (RED) {
     // Replace graph each time (deploy/update) to keep deterministic state
     await urdf.clear(GID_APP);
     await urdf.load(appDoc);
+    await recomputeInferencesFromRules(reason);
 
     const payload = {
       ok: true,

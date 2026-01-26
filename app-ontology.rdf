@@ -5,9 +5,7 @@
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:xml="http://www.w3.org/XML/1998/namespace"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
-     xmlns:nrua="https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
-     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-     xmlns:schema="https://schema.org/">
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
     <owl:Ontology rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology">
         <owl:versionIRI rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology/1.0.0"/>
         <rdfs:comment>This ontology models a selection of aspects related to the hardware/software architecture (including operating system, Node.js runtime, Node-RED platform) and most importantly the Node-RED user application that lives on top of it (including flows, subflows, nodes and connections between them), with the purpose of connecting the user application to external official and community knowledge and ultimately enabling efficient and context-rich static program analysis of Node-RED applications, including reachability, dependency tracing, policy compliance, misconfiguration detection, context-aware correctness checks or code smells detection.</rdfs:comment>
@@ -211,6 +209,14 @@
     <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed">
         <rdfs:subClassOf rdf:resource="https://schema.org/RuntimePlatform"/>
         <rdfs:label>Node-RED Platform</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule -->
+
+    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule">
+        <rdfs:subClassOf rdf:resource="https://schema.org/SoftwareSourceCode"/>
     </owl:Class>
     
 

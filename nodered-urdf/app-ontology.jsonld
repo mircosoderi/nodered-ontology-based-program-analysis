@@ -98,6 +98,12 @@
     "@id" : "https://schema.org/RuntimePlatform"
   } ]
 }, {
+  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule",
+  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
+    "@id" : "https://schema.org/SoftwareSourceCode"
+  } ]
+}, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow",
   "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
   "http://www.w3.org/2000/01/rdf-schema#label" : [ {
