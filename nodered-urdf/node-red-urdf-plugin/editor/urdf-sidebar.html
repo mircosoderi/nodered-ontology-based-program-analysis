@@ -104,6 +104,38 @@ function dateToMs(d) {
   return Number.isFinite(ms) ? ms : 0;
 }
 
+function isFlowUrn(subjectIri) {
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:flow:");
+}
+function flowIdFromUrn(subjectIri) {
+  return subjectIri.slice("urn:nrua:flow:".length);
+}
+
+function revealFlowInEditor(flowId) {
+  try {
+    // Node-RED typically uses RED.workspaces.show(tabId) to switch tabs
+    if (RED && RED.workspaces && typeof RED.workspaces.show === "function") {
+      RED.workspaces.show(flowId);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function localIdFromIri(iri) {
+  if (!iri) return "";
+  const s = String(iri);
+  // last token after / # :
+  const m = /([^/#:]+)\s*$/.exec(s);
+  return m ? m[1] : s;
+}
+
+function humanPredicateLabel(pIri, pLabel) {
+  // prefer label, else compact from IRI tail
+  const lbl = (pLabel || "").trim();
+  if (lbl) return lbl;
+  return localIdFromIri(pIri);
+}
 
 
     // --- Mode selector (dropdown) ---
@@ -410,21 +442,60 @@ $btnCreate.on("click", async () => {
 
 // ========== Reason ==========
 
-const $btnReasonRefresh = $("<button>").addClass("red-ui-button").text("Refresh results");
 const $reasonList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
-$sectionReason.append($btnReasonRefresh, $reasonList);
+$sectionReason.append($reasonList);
 
 async function loadReasoningResults() {
-  const sparql = `SELECT ?s ?doc ?title ?url ?date ?rating ?cat WHERE {
+const sparql = `
+SELECT
+  ?s ?p ?doc
+  ?sClass ?sClassLabel
+  ?pLabel
+  ?title ?url ?site ?date ?rating ?cat
+WHERE {
+  # 1) Reasoning links: ONLY from inferred graph
   GRAPH <urn:graph:inferred> {
-    ?s <https://schema.org/seeAlso> ?doc .
+    ?s ?p ?doc .
   }
 
-  # Look for doc metadata in either graph
+  # 2) Subject type is in the app graph
+  OPTIONAL {
+    GRAPH <urn:nrua:app> {
+      ?s a ?sClass .
+    }
+  }
+
+  # 3) Subject class label is in the ontology graph
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?sClass <http://www.w3.org/2000/01/rdf-schema#label> ?sClassLabel .
+    }
+  }
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?sClass <https://schema.org/name> ?sClassLabel .
+    }
+  }
+
+  # 4) Predicate label (best-effort)
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?p <http://www.w3.org/2000/01/rdf-schema#label> ?pLabel .
+    }
+  }
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?p <https://schema.org/name> ?pLabel .
+    }
+  }
+
+  # 5) Document metadata: doc is in ONE of these graphs
   {
     GRAPH <urn:graph:issues> {
+      # anchor (prevents empty duplicate rows)
+      ?doc <https://schema.org/url> ?url .
+
       OPTIONAL { ?doc <https://schema.org/title> ?title . }
-      OPTIONAL { ?doc <https://schema.org/url> ?url . }
       OPTIONAL { ?doc <https://schema.org/date> ?date . }
       OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
       OPTIONAL { ?doc <https://schema.org/category> ?cat . }
@@ -433,16 +504,45 @@ async function loadReasoningResults() {
   UNION
   {
     GRAPH <urn:graph:forum> {
+      ?doc <https://schema.org/url> ?url .
+
       OPTIONAL { ?doc <https://schema.org/title> ?title . }
-      OPTIONAL { ?doc <https://schema.org/url> ?url . }
       OPTIONAL { ?doc <https://schema.org/date> ?date . }
       OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
       OPTIONAL { ?doc <https://schema.org/category> ?cat . }
     }
   }
-}
+  UNION
+  {
+    GRAPH <urn:graph:flowslib> {
+      ?doc <https://schema.org/url> ?url .
 
-`; 
+      OPTIONAL { ?doc <https://schema.org/title> ?title . }
+      OPTIONAL { ?doc <https://schema.org/date> ?date . }
+      OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+      OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+    }
+  }
+  UNION
+  {
+    GRAPH <urn:nrua:app> {
+      ?doc <https://schema.org/name> ?name .
+    }
+  }
+
+  # 6) Site from schema:url (now always bound in the matching branch)
+  BIND(
+    REPLACE(
+      STR(?url),
+      '^https?://([^/]+).*$',
+      '$1'
+    ) AS ?site
+  )
+}
+LIMIT 1000
+
+`;
+
   const { status, json } = await doFetchJson("urdf/query", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -459,54 +559,82 @@ function termValue(t) {
 async function renderReasoning() {
   $reasonList.empty();
 
-  const rows = await loadReasoningResults();
-  if (rows.length === 0) {
+  let rows = await loadReasoningResults();
+  if (!Array.isArray(rows) || rows.length === 0) {
     $reasonList.append($("<div>").text("No inferred links found."));
     return;
   }
 
   // group by subject IRI
-  const byS = new Map(); // subject -> Map(docIri -> docObj)
+  // subject -> Map(key -> itemObj)
+  const byS = new Map();
 
-for (const r of rows) {
-  const s = termValue(r.s);
-  const doc = termValue(r.doc);
-  if (!s || !doc) continue;
+  for (const r of rows) {
+    const s = termValue(r.s);
+    const p = termValue(r.p);
+    const doc = termValue(r.doc);
+    if (!s || !p || !doc) continue;
 
-  const title = termValue(r.title) || "";
-  const url = termValue(r.url) || "";
-  const date = termValue(r.date) || "";
-  const rating = termValue(r.rating) || "";
-  const cat = termValue(r.cat) || "";
+    const sClassLabel = termValue(r.sClassLabel) || "";
+    const pLabel = termValue(r.pLabel) || "";
 
-  if (!byS.has(s)) byS.set(s, new Map());
-  const docsMap = byS.get(s);
+    const title  = termValue(r.title)  || "";
+    const url    = termValue(r.url)    || "";
+    const site   = termValue(r.site)   || ""; // NEW (host extracted from url in SPARQL)
+    const date   = termValue(r.date)   || "";
+    const rating = termValue(r.rating) || "";
+    const cat    = termValue(r.cat)    || "";
 
-  let d = docsMap.get(doc);
-  if (!d) {
-    d = {
-      doc,
-      title,
-      url,
-      date,
-      rating,
-      categories: new Set()
-    };
-    docsMap.set(doc, d);
+    if (!byS.has(s)) byS.set(s, new Map());
+    const itemsMap = byS.get(s);
+
+    // key by (doc,p) so we can show predicate per line
+const key = p + "||" + doc;
+
+    let d = itemsMap.get(key);
+    if (!d) {
+      d = {
+        s,
+        sClassLabel,
+        p,
+        pLabel,
+        doc,
+        title,
+        url,
+        site,
+        date,
+        rating,
+        categories: new Set()
+      };
+      itemsMap.set(key, d);
+    }
+
+    // keep first non-empty values (multiple rows may exist)
+    if (!d.sClassLabel && sClassLabel) d.sClassLabel = sClassLabel;
+    if (!d.pLabel && pLabel) d.pLabel = pLabel;
+
+    if (!d.title && title) d.title = title;
+    if (!d.url && url) d.url = url;
+    if (!d.site && site) d.site = site;
+
+    if (!d.date && date) d.date = date;
+    if (!d.rating && rating) d.rating = rating;
+
+    if (cat) d.categories.add(cat);
   }
 
-  // keep first non-empty values (because you may receive multiple rows per doc)
-  if (!d.title && title) d.title = title;
-  if (!d.url && url) d.url = url;
-  if (!d.date && date) d.date = date;
-  if (!d.rating && rating) d.rating = rating;
+  for (const [s, itemsMap] of byS.entries()) {
+    const items = Array.from(itemsMap.values()).sort((a, b) => {
+      const da = dateToMs(a.date);
+      const db = dateToMs(b.date);
+      if (db !== da) return db - da;
 
-  if (cat) d.categories.add(cat);
-}
+      const ra = ratingToNumber(a.rating);
+      const rb = ratingToNumber(b.rating);
+      return rb - ra;
+    });
 
-for (const [s, docsMap] of byS.entries()) {
-    
-// Card per subject
+    // Card per subject
     const $card = $("<div>").css({
       border: "1px solid var(--red-ui-primary-border-color, #ddd)",
       borderRadius: "4px",
@@ -516,105 +644,172 @@ for (const [s, docsMap] of byS.entries()) {
       gap: "6px"
     });
 
-    const $hdr = $("<div>").css({ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" });
+    const $hdr = $("<div>").css({
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "8px",
+      alignItems: "center"
+    });
 
-	const items = Array.from(docsMap.values()).sort((a, b) => {
-  const da = dateToMs(a.date);
-  const db = dateToMs(b.date);
-  if (db !== da) return db - da;
+    // compute subject "id"
+    let subjId = "";
+    if (isNodeUrn(s)) subjId = nodeIdFromUrn(s);
+    else if (isFlowUrn(s)) subjId = flowIdFromUrn(s);
+    else subjId = localIdFromIri(s);
 
-  const ra = ratingToNumber(a.rating);
-  const rb = ratingToNumber(b.rating);
-  return rb - ra;
-});
+    // pick a class label if present in any item (best-effort)
+    const firstItem = items[0] || {};
+    const cls = (firstItem.sClassLabel || "").trim() || "Thing";
 
+    const hdrText = `${cls} ${subjId}`;
 
     let $subjectLink;
+
+    // Header click behavior: Node -> reveal/highlight; Flow -> switch tab only
     if (isNodeUrn(s)) {
       const nodeId = nodeIdFromUrn(s);
       $subjectLink = $("<a href='#'>")
-        .text(`Node ${nodeId}`)
+        .text(hdrText)
         .css({ fontWeight: 600 })
         .on("click", function (e) {
           e.preventDefault();
           const ok = revealNodeInEditor(nodeId);
           if (!ok) appendLog("WARN: cannot reveal node in editor (RED.view.reveal not available)");
         });
+    } else if (isFlowUrn(s)) {
+      const flowId = flowIdFromUrn(s);
+      $subjectLink = $("<a href='#'>")
+        .text(hdrText)
+        .css({ fontWeight: 600 })
+        .on("click", function (e) {
+          e.preventDefault();
+          const ok = revealFlowInEditor(flowId);
+          if (!ok) appendLog("WARN: cannot switch to flow (RED.workspaces.show not available)");
+        });
     } else {
-      $subjectLink = $("<div>").css({ fontWeight: 600, fontFamily: "monospace" }).text(s);
+      $subjectLink = $("<div>")
+        .css({ fontWeight: 600, fontFamily: "monospace" })
+        .text(hdrText + " — " + s);
     }
 
     const $count = $("<div>").css({ opacity: 0.8 }).text(`${items.length} link(s)`);
     $hdr.append($subjectLink, $count);
 
-    const $ul = $("<div>").css({ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" });
-
-items.forEach((it) => {
-  const label = it.title ? it.title : it.doc;
-  const href = it.url || it.doc;
-
-const $line = $("<div>").css({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "6px",
-  alignItems: "center",
-  padding: "6px 8px",
-  background: "#f5f5f5",
-  border: "1px solid #ddd",
-  borderRadius: "4px"
-});
-
-  const $a = $("<a>")
-    .attr("href", href)
-    .attr("target", "_blank")
-    .attr("rel", "noopener noreferrer")
-    .text(label)
-    .css({ wordBreak: "break-word" });
-
-  $line.append($a);
-
-  // category chips (small boxes)
-  const cats = Array.from(it.categories || []).sort();
-  for (const c of cats) {
-    const $chip = $("<span>").text(c).css({
-      display: "inline-block",
-      padding: "1px 6px",
-      border: "1px solid #111",
-      borderRadius: "10px",
-      background: "#fff",
-      color: "#111",
-      fontSize: "11px",
-      lineHeight: "16px"
+    const $ul = $("<div>").css({
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      marginTop: "4px"
     });
-    $line.append($chip);
-  }
 
-  $ul.append($line);
-});
+    items.forEach((it) => {
+      const label = it.title ? it.title : it.doc;
+      const href = it.url || it.doc;
+
+      const $line = $("<div>").css({
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "6px",
+        alignItems: "center",
+        padding: "6px 8px",
+        background: "#f5f5f5",
+        border: "1px solid #ddd",
+        borderRadius: "4px"
+      });
+
+      // predicate chip
+      const predText = humanPredicateLabel(it.p, it.pLabel);
+      const $pred = $("<span>").text(predText).css({
+        display: "inline-block",
+        padding: "1px 6px",
+        border: "1px solid #999",
+        borderRadius: "10px",
+        background: "#fff",
+        fontSize: "11px",
+        lineHeight: "16px",
+        opacity: 0.9
+      });
+      $line.append($pred);
+
+      // NEW: site chip ("from <host>") based on ?site extracted from url
+      const siteTxt = (it.site || "").trim();
+      if (siteTxt) {
+        const $from = $("<span>").text("from " + siteTxt).css({
+          display: "inline-block",
+          padding: "1px 6px",
+          border: "1px solid #999",
+          borderRadius: "10px",
+          background: "#fff",
+          fontSize: "11px",
+          lineHeight: "16px",
+          opacity: 0.85
+        });
+        $line.append($from);
+      }
+
+      // clickable doc title/link
+      const $a = $("<a>")
+        .attr("href", href)
+        .attr("target", "_blank")
+        .attr("rel", "noopener noreferrer")
+        .text(label)
+        .css({ wordBreak: "break-word" });
+
+      $line.append($a);
+
+      // category chips
+      const cats = Array.from(it.categories || []).sort();
+      for (const c of cats) {
+        const $chip = $("<span>").text(c).css({
+          display: "inline-block",
+          padding: "1px 6px",
+          border: "1px solid #111",
+          borderRadius: "10px",
+          background: "#fff",
+          color: "#111",
+          fontSize: "11px",
+          lineHeight: "16px"
+        });
+        $line.append($chip);
+      }
+
+      $ul.append($line);
+    });
 
     $card.append($hdr, $ul);
     $reasonList.append($card);
   }
 }
 
-$btnReasonRefresh.on("click", async () => {
-  try {
-    await renderReasoning();
-    appendLog("Reason refreshed");
-  } catch (e) {
-    setResponse({ ok: false, error: String(e) });
-    appendLog("ERROR reason: " + String(e));
-  }
-});
-
 
 // ===========================
 
     // --- Response viewer (always visible, bigger) ---
-    const $responseHeader = $("<div>").css({ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" });
-    const $responseTitle = mkTitle("Response");
-    const $btnClearResponse = $("<button>").addClass("red-ui-button red-ui-button-small").text("Clear");
-    $responseHeader.append($responseTitle, $btnClearResponse);
+// --- Response viewer header ---
+const $responseHeader = $("<div>").css({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between"
+});
+
+const $responseTitle = mkTitle("Response");
+
+const $btnCopyResponse = $("<button>")
+  .addClass("red-ui-button red-ui-button-small")
+  .text("Copy");
+
+const $btnClearResponse = $("<button>")
+  .addClass("red-ui-button red-ui-button-small")
+  .text("Clear");
+
+// Right-side button group
+const $responseActions = $("<div>").css({
+  display: "flex",
+  gap: "6px"
+});
+
+$responseActions.append($btnCopyResponse, $btnClearResponse);
+$responseHeader.append($responseTitle, $responseActions);
 
     const $response = $("<pre>").css({
       margin: 0,
@@ -707,6 +902,35 @@ $btnReasonRefresh.on("click", async () => {
         $response.text(String(obj));
       }
     }
+
+$btnCopyResponse.on("click", function (e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const text = $response.text();
+  if (!text || text === "—") return;
+
+  // Modern API (secure contexts only)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(err => {
+      console.warn("Clipboard API failed, falling back", err);
+      legacyCopy(text);
+    });
+  } else {
+    legacyCopy(text);
+  }
+});
+
+function legacyCopy(text) {
+  const $tmp = $("<textarea>")
+    .val(text)
+    .css({ position: "fixed", left: "-9999px" })
+    .appendTo("body");
+
+  $tmp[0].select();
+  document.execCommand("copy");
+  $tmp.remove();
+}
 
     $btnClearResponse.on("click", function (e) {
       e.preventDefault();

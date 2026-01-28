@@ -670,79 +670,120 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
     }
   }
 
-  function buildAppJsonLdFromFlows(flowsArray) {
-    const graph = [];
+function buildAppJsonLdFromFlows(flowsArray) {
+  const graph = [];
 
-    // Application
+  // Application
+  graph.push({
+    "@id": appId(),
+    "@type": "schema:Application"
+  });
+
+  // --- NEW: collect keywords per flow (tab) ---
+  const flowKeywords = new Map(); // flowIri -> Set(keyword)
+
+  function addKw(flowIri, kw) {
+    if (!kw) return;
+    const k = String(kw).trim();
+    if (!k) return;
+    let set = flowKeywords.get(flowIri);
+    if (!set) {
+      set = new Set();
+      flowKeywords.set(flowIri, set);
+    }
+    set.add(k);
+  }
+
+  // Tabs -> Flow entities
+  const tabs = flowsArray.filter((n) => n && n.type === "tab");
+  for (const t of tabs) {
+    const fid = flowId(t.id);
+
     graph.push({
-      "@id": appId(),
-      "@type": "schema:Application"
+      "@id": fid,
+      "@type": "nrua:Flow",
+      "schema:identifier": String(t.id),
+      ...(t.label ? { "schema:name": String(t.label) } : {}),
+      "schema:isPartOf": { "@id": appId() }
     });
 
-    // Tabs -> Flow entities
-    const tabs = flowsArray.filter((n) => n && n.type === "tab");
-    for (const t of tabs) {
-      graph.push({
-        "@id": flowId(t.id),
-        "@type": "nrua:AppFlow",
-        "schema:identifier": String(t.id),
-        ...(t.label ? { "schema:name": String(t.label) } : {}),
-        "schema:isPartOf": { "@id": appId() }
-      });
-    }
-
-    // Nodes (including config nodes)
-    for (const n of flowsArray) {
-      if (!n || typeof n !== "object") continue;
-      if (!n.id || !n.type) continue;
-      if (n.type === "tab") continue;
-
-      const thisNodeId = nodeId(n.id);
-
-      const node = {
-        "@id": thisNodeId,
-        "@type": "nrua:Node",
-        "schema:identifier": String(n.id),
-        "nrua:type": String(n.type),
-        ...(n.name ? { "schema:name": String(n.name) } : {}),
-        "schema:isPartOf": n.z ? { "@id": flowId(String(n.z)) } : { "@id": appId() }
-      };
-
-      graph.push(node);
-
-      // type-specific configuration (lossless; excludes common keys)
-      for (const [k, v] of Object.entries(n)) {
-        if (EXCLUDE_NODE_KEYS.has(k)) continue;
-        if (k === "name") continue;
-        if (k === "label" || k === "disabled" || k === "env") continue;
-        addPropertyValue(graph, thisNodeId, k, v, thisNodeId);
-      }
-
-      // Wiring via NodeOutput
-      if (Array.isArray(n.wires)) {
-        for (let gate = 0; gate < n.wires.length; gate++) {
-          const targets = n.wires[gate];
-          if (!Array.isArray(targets) || targets.length === 0) continue;
-
-          graph.push({
-            "@id": outId(n.id, gate),
-            "@type": "nrua:NodeOutput",
-            "nrua:fromGate": gate,
-            "nrua:toNode": targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
-          });
-
-          node["nrua:hasOutput"] = node["nrua:hasOutput"] || [];
-          node["nrua:hasOutput"].push({ "@id": outId(n.id, gate) });
-        }
-      }
-    }
-
-    return {
-      "@context": { nrua: NRUA, schema: SCHEMA },
-      "@id": GID_APP,
-      "@graph": graph
-    };
+    // ensure map exists even if flow has no nodes
+    flowKeywords.set(fid, flowKeywords.get(fid) || new Set());
   }
+
+  // Nodes (including config nodes)
+  for (const n of flowsArray) {
+    if (!n || typeof n !== "object") continue;
+    if (!n.id || !n.type) continue;
+    if (n.type === "tab") continue;
+
+    const thisNodeId = nodeId(n.id);
+
+    const partOf = n.z ? flowId(String(n.z)) : appId();
+
+    // --- NEW: add node type as keyword to its flow ---
+    if (n.z) {
+      addKw(partOf, n.type); // e.g. "inject", "change", "debug", ...
+    }
+
+    const node = {
+      "@id": thisNodeId,
+      "@type": "nrua:Node",
+      "schema:identifier": String(n.id),
+      "nrua:type": String(n.type),
+      ...(n.name ? { "schema:name": String(n.name) } : {}),
+      "schema:isPartOf": { "@id": partOf }
+    };
+
+    graph.push(node);
+
+    // type-specific configuration (lossless; excludes common keys)
+    for (const [k, v] of Object.entries(n)) {
+      if (EXCLUDE_NODE_KEYS.has(k)) continue;
+      if (k === "name") continue;
+      if (k === "label" || k === "disabled" || k === "env") continue;
+      addPropertyValue(graph, thisNodeId, k, v, thisNodeId);
+    }
+
+    // Wiring via NodeOutput
+    if (Array.isArray(n.wires)) {
+      for (let gate = 0; gate < n.wires.length; gate++) {
+        const targets = n.wires[gate];
+        if (!Array.isArray(targets) || targets.length === 0) continue;
+
+        graph.push({
+          "@id": outId(n.id, gate),
+          "@type": "nrua:NodeOutput",
+          "nrua:fromGate": gate,
+          "nrua:toNode": targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
+        });
+
+        node["nrua:hasOutput"] = node["nrua:hasOutput"] || [];
+        node["nrua:hasOutput"].push({ "@id": outId(n.id, gate) });
+      }
+    }
+  }
+
+  // --- NEW: write schema:keywords onto each Flow node (sorted for determinism) ---
+for (const [flowIri, set] of flowKeywords.entries()) {
+  if (!set || set.size === 0) continue;
+  const flowNode = graph.find((x) => x && x["@id"] === flowIri);
+  if (!flowNode) continue;
+
+  flowNode["schema:keywords"] = Array.from(set)
+    .map((kw) => String(kw).trim())   // optional safety
+    .filter(Boolean)                  // optional safety
+    .sort()
+    .join(",");
+}
+
+
+  return {
+    "@context": { nrua: NRUA, schema: SCHEMA },
+    "@id": GID_APP,
+    "@graph": graph
+  };
+}
 
   let appReloadTimer = null;
 

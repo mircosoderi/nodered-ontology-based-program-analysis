@@ -2,60 +2,60 @@
   "@context": {
     "schema": "https://schema.org/"
   },
-  "@id": "urn:graph:node-red-cookbook-flows",
+  "@id": "urn:graph:flowslib",
   "@graph": [
     {
       "@id": "urn:libflow:535331d8.55c1f",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "Basics - Messages",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "Basics - Messages",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "535331d8.55c1f",
       "https://schema.org/keywords": "change,comment,debug,inject,range"
     },
     {
       "@id": "urn:libflow:ac14500e.2c57d",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "Basics - Flow control",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "Basics - Flow control",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "ac14500e.2c57d",
       "https://schema.org/keywords": "change,comment,debug,delay,inject,join,range,rbe,split,switch,trigger"
     },
     {
       "@id": "urn:libflow:fc046f99.4be08",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "Basics - Error handling",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "Basics - Error handling",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "fc046f99.4be08",
       "https://schema.org/keywords": "catch,comment,debug,delay,function,inject"
     },
     {
       "@id": "urn:libflow:64133d39.bb0394",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "Basic - Working with data formats",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "Basic - Working with data formats",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "64133d39.bb0394",
       "https://schema.org/keywords": "change,comment,csv,debug,inject,join,json,split,template,xml,yaml"
     },
     {
       "@id": "urn:libflow:3045204d.cfbae",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "HTTP endpoints",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "HTTP endpoints",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "3045204d.cfbae",
       "https://schema.org/keywords": "change,comment,file in,function,http in,http response,inject,template"
     },
     {
       "@id": "urn:libflow:55635136.aa9cb",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "HTTP requests",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "HTTP requests",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "55635136.aa9cb",
       "https://schema.org/keywords": "change,comment,debug,function,http in,http request,http response,inject"
     },
     {
       "@id": "urn:libflow:b571704d.6c591",
-      "@type": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-      "https://schema.org/name": "MQTT",
+      "@type": "https://schema.org/SoftwareSourceCode",
+      "https://schema.org/title": "MQTT",
       "https://schema.org/url": "https://raw.githubusercontent.com/node-red/cookbook-flows/refs/heads/master/flows.json",
       "https://schema.org/identifier": "b571704d.6c591",
       "https://schema.org/keywords": "comment,debug,inject,json,mqtt in,mqtt out"

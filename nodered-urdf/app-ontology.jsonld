@@ -32,18 +32,6 @@
     "@value" : "1.0.0"
   } ]
 }, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#AppFlow",
-  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
-  "http://www.w3.org/2000/01/rdf-schema#comment" : [ {
-    "@value" : "This class models flows that are implemented in the user application."
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "Custom Flow"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"
-  } ]
-}, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow",
   "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
   "http://www.w3.org/2000/01/rdf-schema#label" : [ {
@@ -51,18 +39,6 @@
   } ],
   "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
     "@id" : "https://schema.org/SoftwareSourceCode"
-  } ]
-}, {
-  "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow",
-  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ],
-  "http://www.w3.org/2000/01/rdf-schema#comment" : [ {
-    "@value" : "This class models flows that are available in the community-led Node-RED online library."
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#label" : [ {
-    "@value" : "Library Flow"
-  } ],
-  "http://www.w3.org/2000/01/rdf-schema#subClassOf" : [ {
-    "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"
   } ]
 }, {
   "@id" : "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node",

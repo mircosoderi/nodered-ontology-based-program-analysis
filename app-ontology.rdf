@@ -149,31 +149,11 @@
     
 
 
-    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#AppFlow -->
-
-    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#AppFlow">
-        <rdfs:subClassOf rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"/>
-        <rdfs:comment>This class models flows that are implemented in the user application.</rdfs:comment>
-        <rdfs:label>Custom Flow</rdfs:label>
-    </owl:Class>
-    
-
-
     <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow -->
 
     <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow">
         <rdfs:subClassOf rdf:resource="https://schema.org/SoftwareSourceCode"/>
         <rdfs:label>Flow</rdfs:label>
-    </owl:Class>
-    
-
-
-    <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow -->
-
-    <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow">
-        <rdfs:subClassOf rdf:resource="https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"/>
-        <rdfs:comment>This class models flows that are available in the community-led Node-RED online library.</rdfs:comment>
-        <rdfs:label>Library Flow</rdfs:label>
     </owl:Class>
     
 

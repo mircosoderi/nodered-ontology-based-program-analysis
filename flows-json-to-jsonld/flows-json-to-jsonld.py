@@ -8,7 +8,7 @@ import urllib.error
 INPUT_DIR = Path("input")
 OUTPUT_DIR = Path("output")
 NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
-LIBFLOW_CLASS = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#LibFlow"
+LIBFLOW_CLASS = "https://schema.org/SoftwareSourceCode"
 SCHEMA = "https://schema.org/"
 
 
@@ -64,16 +64,14 @@ def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> dict:
             if isinstance(t, str) and t and t != "tab":
                 types.add(t)
 
-        keywords = ",".join(sorted(types))
-
         libflows.append(
             {
                 "@id": f"urn:libflow:{flow_id}",
                 "@type": LIBFLOW_CLASS,
-                f"{SCHEMA}name": label,
+                f"{SCHEMA}title": label,
                 f"{SCHEMA}url": flows_url,
                 f"{SCHEMA}identifier": flow_id,
-                f"{SCHEMA}keywords": keywords,
+                f"{SCHEMA}keywords": ",".join(sorted(types))
             }
         )
 
@@ -139,7 +137,7 @@ def main():
         nodes_list = extract_nodes_list(doc)
 
         # graph name: urn:graph:<input filename without extension>
-        graph_id = f"urn:graph:{input_path.stem}"
+        graph_id = "urn:graph:flowslib"
 
         jsonld = build_jsonld(flows_url, graph_id, nodes_list)
 
