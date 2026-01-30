@@ -179,6 +179,7 @@
     <!-- https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput -->
 
     <owl:Class rdf:about="https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput">
+        <rdfs:subClassOf rdf:resource="https://schema.org/SoftwareSourceCode"/>
         <rdfs:label>Node Output</rdfs:label>
     </owl:Class>
     

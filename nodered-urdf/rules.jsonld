@@ -30,9 +30,43 @@
   "schema:description": "If any two distinct resources (of any type) have an identical schema:name literal, assert schema:sameAs between them. Emits only one direction per pair to reduce duplicates.",
   "schema:programmingLanguage": "SPARQL",
   "schema:encodingFormat": "application/sparql-query",
-"schema:text": "SELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?s <https://schema.org/name> ?name .\n    ?o <https://schema.org/name> ?name .\n    FILTER(?s != ?o)\n  }\n  BIND(<https://schema.org/sameAs> AS ?p)\n}\n"
+"schema:text": "SELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?s <https://schema.org/name> ?name .\n    ?o <https://schema.org/name> ?name .\n\n    ?s a ?sClass .\n    ?o a ?oClass .\n\n    VALUES ?sClass {\n      <https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node>\n      <https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow>\n    }\n    VALUES ?oClass {\n      <https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node>\n      <https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow>\n    }\n\n    FILTER(?s != ?o)\n  }\n  BIND(<https://schema.org/sameAs> AS ?p)\n}"
 
+},
+{
+  "@id": "urn:rule:flow-loop-warning-nodes-only",
+  "@type": ["nrua:Rule"],
+  "schema:name": "Detect loops in app flow (Node/NodeOutput wiring) => schema:comment warning (Nodes only)",
+  "schema:description": "Projects only Nodes, NodeOutputs, and wiring (hasOutput/toNode), derives Node->Node edges, computes reachability, detects cycles, and emits schema:comment \"This element is part of a loop.\" only for nrua:Node resources involved in a loop. NodeOutput resources are used only to derive edges and loop membership. Internal helper predicates (urn:nrua:pv:path, urn:nrua:pv:inLoop) should be filtered out at materialization time.",
+  "schema:programmingLanguage": "N3",
+  "schema:encodingFormat": "text/n3",
+  "schema:text": "@prefix schema: <https://schema.org/> .\n\n# Reachability base\n{ ?a <urn:nrua:pv:edge> ?b } => { ?a <urn:nrua:pv:path> ?b } .\n\n# Reachability transitive closure\n{ ?a <urn:nrua:pv:path> ?b . ?b <urn:nrua:pv:edge> ?c } => { ?a <urn:nrua:pv:path> ?c } .\n\n# Node is in a loop if it can reach itself\n{ ?n <urn:nrua:pv:path> ?n } => { ?n <urn:nrua:pv:inLoop> \"true\" } .\n\n# Warn Nodes in loops (Nodes only)\n{ ?n a <https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node> . ?n <urn:nrua:pv:inLoop> \"true\" }\n  => { ?n schema:comment \"This element is part of a loop.\" } .\n",
+  "schema:hasPart": [
+    {
+      "@type": "schema:SoftwareSourceCode",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    # Keep types for Node and NodeOutput\n    { ?s a nrua:Node       BIND(<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> AS ?p) BIND(nrua:Node AS ?o) }\n    UNION\n    { ?s a nrua:NodeOutput BIND(<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> AS ?p) BIND(nrua:NodeOutput AS ?o) }\n\n    # Keep the wiring predicates\n    UNION\n    { ?s nrua:hasOutput ?o BIND(nrua:hasOutput AS ?p) }\n    UNION\n    { ?s nrua:toNode ?o    BIND(nrua:toNode AS ?p) }\n\n    # Helper: Node -> Node edges (for reachability)\n    UNION\n    {\n      ?n nrua:hasOutput ?out .\n      ?out nrua:toNode ?m .\n      BIND(?n AS ?s)\n      BIND(<urn:nrua:pv:edge> AS ?p)\n      BIND(?m AS ?o)\n    }\n  }\n}\n"
+    }]},
+{
+  "@id": "urn:rule:function-node-missing-output-warning",
+  "@type": ["nrua:Rule"],
+  "schema:name": "Function node with no outputs => schema:comment warning",
+  "schema:description": "If a nrua:Node has nrua:type literal \"function\" and has no nrua:hasOutput links to any nrua:NodeOutput, emit a schema:comment warning on that node.",
+  "schema:programmingLanguage": "N3",
+  "schema:encodingFormat": "text/n3",
+  "schema:text": "@prefix schema: <https://schema.org/> .\n\n{ ?n <urn:nrua:pv:functionMissingOutput> \"true\" }\n=>\n{ ?n schema:comment \"There may be a link missing in output from this function node.\" } .\n",
+  "schema:hasPart": [
+    {
+      "@type": "schema:SoftwareSourceCode",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX schema: <https://schema.org/>\nPREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?n rdf:type nrua:Node .\n    ?n nrua:type \"function\" .\n\n    FILTER NOT EXISTS { ?n nrua:hasOutput ?out }\n\n    BIND(?n AS ?s)\n    BIND(<urn:nrua:pv:functionMissingOutput> AS ?p)\n    BIND(\"true\" AS ?o)\n  }\n}\n"
+    }
+  ]
 }
+
+
 
   ]
 }

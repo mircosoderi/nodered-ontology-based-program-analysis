@@ -7,6 +7,20 @@ module.exports = function (RED) {
   const jsonParser = express.json({ limit: "5mb" });
   const fs = require("fs");
 
+  let eyeling;
+try {
+  eyeling = require("eyeling/eyeling.js");
+} catch (e) {
+  eyeling = null;
+}
+
+if (eyeling && typeof eyeling.reasonStream === "function") {
+  RED.log.info("[uRDF] Eyeling reasonStream loaded");
+} else {
+  RED.log.warn("[uRDF] Eyeling not available (reasonStream missing)");
+}
+
+
   // Load uRDF module (singleton in-memory store lives inside it)
   let urdf;
   try {
@@ -258,6 +272,220 @@ module.exports = function (RED) {
   const GID_INFERRED = process.env.URDF_INFERRED_GID || "urn:graph:inferred";
   const SCHEMA_TEXT = "https://schema.org/text";
   const NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
+  const SCHEMA_PROGRAMMING_LANGUAGE = "https://schema.org/programmingLanguage";
+  const SCHEMA_ENCODING_FORMAT = "https://schema.org/encodingFormat";
+  const SCHEMA_HASPART = "https://schema.org/hasPart";
+  const SCHEMA_SOFTWARE_SOURCE_CODE = "https://schema.org/SoftwareSourceCode";
+
+function stripN3Quotes(v) {
+  // Eyeling gives literals as strings like "\"derived\"" or "\"Flow 1\""
+  // We want the lexical value without the surrounding quotes and with escapes interpreted.
+  if (typeof v !== "string") return String(v ?? "");
+
+  const s = v.trim();
+
+  // If it starts and ends with a quote, remove one layer and unescape
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    const inner = s.slice(1, -1);
+    // Eyeling uses backslash escapes in the string content
+    return inner
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\")
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\r")
+      .replace(/\\t/g, "\t");
+  }
+
+  return s;
+}
+
+function looksLikeIri(v) {
+  // Minimal heuristic: IRIs in your system are typically urn:... or http(s)...
+  return typeof v === "string" && (v.startsWith("urn:") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("_:"));
+}
+
+function eyelingDfToSpo(df) {
+  // df sample shows: { fact: { s:{value}, p:{value}, o:{value} }, ... }
+  const f = df && df.fact;
+  const s = f && f.s && f.s.value;
+  const p = f && f.p && f.p.value;
+  const o = f && f.o && f.o.value;
+
+  if (!s || !p || o == null) return null;
+  return { s, p, o };
+}
+
+function eyelingObjectToJsonLd(oVal) {
+  // oVal can be:
+  // - "\"derived\"" (quoted literal)
+  // - "<iri>" (unlikely here) or plain iri string
+  // - "_:b1" (possible)
+  if (looksLikeIri(oVal)) return { "@id": oVal };
+
+  // Default: treat as literal; strip quotes if quoted
+  return { "@value": stripN3Quotes(oVal) };
+}
+
+function rdfjsTermToJsonLd(term) {
+  if (!term || typeof term !== "object") {
+    throw new Error("Invalid RDFJS term: " + JSON.stringify(term));
+  }
+
+  if (term.termType === "NamedNode") {
+    return { "@id": term.value };
+  }
+
+  if (term.termType === "BlankNode") {
+    // RDFJS BlankNode.value is WITHOUT "_:"
+    return { "@id": "_:" + term.value };
+  }
+
+  if (term.termType === "Literal") {
+    const out = { "@value": term.value };
+
+    if (term.language) {
+      out["@language"] = term.language;
+    } else if (term.datatype && term.datatype.value && term.datatype.value !== "http://www.w3.org/2001/XMLSchema#string") {
+      out["@type"] = term.datatype.value;
+    }
+
+    return out;
+  }
+
+  throw new Error("Unsupported RDFJS termType: " + term.termType);
+}
+
+function addToBySubject(bySubject, sId, pIri, oJsonLd) {
+  let node = bySubject.get(sId);
+  if (!node) {
+    node = { "@id": sId };
+    bySubject.set(sId, node);
+  }
+  if (!node[pIri]) node[pIri] = [];
+  node[pIri].push(oJsonLd);
+}
+
+function escapeNTriplesString(s) {
+  // N-Triples string escaping: backslash, quotes, newlines, carriage returns, tabs
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+}
+
+function termToNTriples(term) {
+  if (term == null) throw new Error("Null term");
+
+  // uRDF query bindings look like: { value: "...", type: "uri"|"literal"|"bnode", ... }
+  if (typeof term === "object") {
+    const t = (term.type || "").toLowerCase();
+    const v = term.value;
+
+    if (t === "uri") {
+      if (!v) throw new Error("URI term missing value");
+      return `<${v}>`;
+    }
+
+    if (t === "bnode" || t === "blanknode") {
+      if (!v) throw new Error("Blank node term missing value");
+      // Keep as _:... (uRDF supports it; and we clear inferred graph each run)
+      return v.startsWith("_:") ? v : `_:${v}`;
+    }
+
+    if (t === "literal") {
+      const lex = escapeNTriplesString(v ?? "");
+      // Optional language or datatype if present
+      if (term["xml:lang"] || term.lang) {
+        const lang = term["xml:lang"] || term.lang;
+        return `"${lex}"@${lang}`;
+      }
+      if (term.datatype) {
+        return `"${lex}"^^<${term.datatype}>`;
+      }
+      return `"${lex}"`;
+    }
+
+    // Fallback: if it looks like an @id JSON-LD-ish object
+    if (typeof term["@id"] === "string") {
+      const id = term["@id"];
+      if (id.startsWith("_:")) return id;
+      return `<${id}>`;
+    }
+  }
+
+  // Fallback: raw string as IRI
+  if (typeof term === "string") {
+    if (term.startsWith("_:")) return term;
+    return `<${term}>`;
+  }
+
+  throw new Error("Unsupported term shape: " + JSON.stringify(term));
+}
+
+function bindingToNTripleLine(b) {
+  const s = termToNTriples(b.s);
+  const p = termToNTriples(b.p);
+  const o = termToNTriples(b.o);
+  return `${s} ${p} ${o} .`;
+}
+
+function normalizeQueryResults(qres) {
+  if (Array.isArray(qres)) return qres;
+  if (qres && Array.isArray(qres.results)) return qres.results;
+  return [];
+}
+
+function hasSpo(binding) {
+  if (!binding || typeof binding !== "object") return false;
+  return binding.s != null && binding.p != null && binding.o != null;
+}
+
+function normalizeLang(x) {
+  if (!x) return "";
+  return String(x).trim().toLowerCase();
+}
+
+function isN3Rule(rule) {
+  const lang = normalizeLang(getPropFirstValue(rule, SCHEMA_PROGRAMMING_LANGUAGE));
+  const fmt  = normalizeLang(getPropFirstValue(rule, SCHEMA_ENCODING_FORMAT));
+
+  // Accept a few common variants
+  return (
+    lang === "n3" ||
+    lang === "notation3" ||
+    lang.includes("n3") ||
+    fmt.includes("n3") ||
+    fmt.includes("notation3")
+  );
+}
+
+function extractN3ProjectionSparql(rule, nodesById) {
+  const parts = rule && rule[SCHEMA_HASPART];
+  if (!Array.isArray(parts) || parts.length === 0) return undefined;
+
+  for (const partRef of parts) {
+    if (!partRef || typeof partRef !== "object") continue;
+
+    let part = partRef;
+    const pid = partRef["@id"];
+    if (pid && nodesById && nodesById.has(pid)) {
+      part = nodesById.get(pid);
+    }
+
+    const pl = normalizeLang(getPropFirstValue(part, SCHEMA_PROGRAMMING_LANGUAGE));
+    const types = part["@type"];
+    const t = Array.isArray(types) ? types : (types ? [types] : []);
+    const hasSoftwareSourceCodeType = t.includes(SCHEMA_SOFTWARE_SOURCE_CODE);
+
+    if (hasSoftwareSourceCodeType || pl === "sparql") {
+      const q = getPropFirstValue(part, SCHEMA_TEXT);
+      if (typeof q === "string" && q.trim()) return q;
+    }
+  }
+  return undefined;
+}
  
 function getPropFirstValue(node, iri) {
   const arr = node && node[iri];
@@ -346,6 +574,7 @@ function bindingToIri(term) {
 async function recomputeInferencesFromRules(triggerReason) {
   if (!urdf) return;
 
+
   const ts = Date.now();
 
   try {
@@ -363,6 +592,14 @@ async function recomputeInferencesFromRules(triggerReason) {
       return;
     }
 
+    const nodesById = new Map();
+for (const n of rulesGraph) {
+  if (n && typeof n === "object" && typeof n["@id"] === "string") {
+    nodesById.set(n["@id"], n);
+  }
+}
+
+
     // 2) Extract rule resources
     const rules = rulesGraph.filter((n) => {
       const types = n && n["@type"];
@@ -376,15 +613,156 @@ async function recomputeInferencesFromRules(triggerReason) {
     const bySubject = new Map(); // subjectIri -> nodeObject
 
     let firedTriples = 0;
-    for (const rule of rules) {
-      const q = getPropFirstValue(rule, SCHEMA_TEXT);
-      if (!q || typeof q !== "string" || !q.trim()) continue;
+for (const rule of rules) {
+  const programText = getPropFirstValue(rule, SCHEMA_TEXT);
+  if (!programText || typeof programText !== "string" || !programText.trim()) continue;
 
-      const qres = await urdf.query(q);
-      const bindings = Array.isArray(qres) ? qres : (qres && Array.isArray(qres.results) ? qres.results : []);
+  // ---- New: detect N3 rules and extract their projection query ----
+if (isN3Rule(rule)) {
+  const projection = extractN3ProjectionSparql(rule, nodesById);
 
-      for (const b of bindings) {
-        // Expect bindings for s,p,o
+  if (!projection) {
+    RED.log.warn("[uRDF] N3 rule found but missing schema:hasPart projection SPARQL query: " + (rule["@id"] || "(no @id)"));
+    continue;
+  }
+
+  // NEW: execute projection query
+  let projRes;
+  try {
+    projRes = await urdf.query(projection);
+  } catch (e) {
+    RED.log.warn("[uRDF] N3 projection query failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
+    continue;
+  }
+
+  const bindings = normalizeQueryResults(projRes);
+  const ok = bindings.filter(hasSpo);
+  const bad = bindings.length - ok.length;
+
+  RED.log.info(
+    "[uRDF] N3 projection executed for rule " + (rule["@id"] || "(no @id)") +
+    " -> bindings=" + bindings.length +
+    ", validSpo=" + ok.length +
+    (bad ? (", invalid=" + bad) : "")
+  );
+
+  // Log a tiny sample (first 3) so we see term shapes without flooding logs
+  for (let i = 0; i < Math.min(3, ok.length); i++) {
+    const b = ok[i];
+    RED.log.info("[uRDF] N3 projection sample " + i + " for " + (rule["@id"] || "(no @id)") +
+      " s=" + JSON.stringify(b.s) +
+      " p=" + JSON.stringify(b.p) +
+      " o=" + JSON.stringify(b.o)
+    );
+  }
+
+	let factsLines = [];
+for (const b of ok) {
+  try {
+    factsLines.push(bindingToNTripleLine(b));
+  } catch (e) {
+    RED.log.warn("[uRDF] Failed to serialize binding to N-Triples for rule " + (rule["@id"] || "(no @id)") +
+      ": " + (e && e.message ? e.message : e) +
+      " binding=" + JSON.stringify(b)
+    );
+  }
+}
+
+const factsText = factsLines.join("\n");
+
+// Preview only (avoid log spam)
+const previewCount = Math.min(10, factsLines.length);
+RED.log.info("[uRDF] N3 fact base serialized for rule " + (rule["@id"] || "(no @id)") +
+  " -> triples=" + factsLines.length +
+  ", previewLines=" + previewCount
+);
+for (let i = 0; i < previewCount; i++) {
+  RED.log.info("[uRDF] N3 facts preview " + i + ": " + factsLines[i]);
+}
+
+const n3Program = programText; // rule's schema:text (already validated)
+const n3Input = factsText + "\n\n" + n3Program;
+
+if (!eyeling || typeof eyeling.reasonStream !== "function") {
+  RED.log.warn("[uRDF] Eyeling reasonStream not available at runtime, skipping N3 execution for " + (rule["@id"] || "(no @id)"));
+  continue;
+}
+
+let derivedCount = 0;
+const maxPreview = 10;
+
+const derivedDF = [];
+const derivedPreview = [];
+
+let loggedFirstDf = false;
+
+function onDerived(ev) {
+  derivedCount++;
+
+  if (ev && ev.df) {
+    derivedDF.push(ev.df);
+
+    if (!loggedFirstDf) {
+      loggedFirstDf = true;
+    }
+  }
+
+  if (derivedPreview.length < 2 && ev && typeof ev.triple === "string") {
+    derivedPreview.push(ev.triple);
+  }
+}
+
+try {
+  const out = eyeling.reasonStream(n3Input, { onDerived });  // <-- correct signature
+
+RED.log.info(
+  "[uRDF] Eyeling finished for rule " + (rule["@id"] || "(no @id)") +
+  " -> derivedCount=" + derivedCount +
+  ", collectedDF=" + derivedDF.length +
+  ", out.derived=" + (out && out.derived ? out.derived.length : "n/a")
+);
+
+for (let i = 0; i < derivedPreview.length; i++) {
+  RED.log.info("[uRDF] Eyeling derived preview " + i + " for " + (rule["@id"] || "(no @id)") + ": " + derivedPreview[i]);
+}
+
+for (const df of derivedDF) {
+  const spo = eyelingDfToSpo(df);
+  if (!spo) {
+    RED.log.warn("[uRDF] Derived df missing fact.s/p/o: " + JSON.stringify(df));
+    continue;
+  }
+
+  const sId = spo.s;   // already an IRI or _:...
+  const pIri = spo.p;  // IRI
+  const oJson = eyelingObjectToJsonLd(spo.o);
+
+	const INTERNAL_PRED_PREFIX = "urn:nrua:pv:";
+if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
+  continue; // do not persist helper predicates
+}
+
+  addToBySubject(bySubject, sId, pIri, oJson);
+}
+
+RED.log.info("[uRDF] Added " + derivedDF.length + " derived facts to bySubject for rule " + (rule["@id"] || "(no @id)"));
+firedTriples+=derivedDF.length
+
+} catch (e) {
+  RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
+}
+
+continue; // still no writing to inferred graph
+
+}
+
+  // ---- Existing SPARQL path remains exactly the same ----
+  const q = programText;
+  const qres = await urdf.query(q);
+  const bindings = Array.isArray(qres) ? qres : (qres && Array.isArray(qres.results) ? qres.results : []);
+
+  for (const b of bindings) {
+  // Expect bindings for s,p,o
         const sTerm = b.s ?? b["?s"] ?? b.subject ?? b.S;
         const pTerm = b.p ?? b["?p"] ?? b.predicate ?? b.P;
         const oTerm = b.o ?? b["?o"] ?? b.object ?? b.O;
@@ -405,15 +783,18 @@ async function recomputeInferencesFromRules(triggerReason) {
         subjNode[pIri].push(oJson);
 
         firedTriples++;
-      }
-    }
+  }
+}
+
 
     // 4) Replace inferred graph deterministically
-    await urdf.clear(GID_INFERRED);
-    await urdf.load({
-      "@id": GID_INFERRED,
-      "@graph": Array.from(bySubject.values())
-    });
+const inferredGraphToLoad = Array.from(bySubject.values());
+
+await urdf.clear(GID_INFERRED);
+await urdf.load({
+  "@id": GID_INFERRED,
+  "@graph": inferredGraphToLoad
+});
 
     const payload = {
       ok: true,

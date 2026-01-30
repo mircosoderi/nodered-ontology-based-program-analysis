@@ -5,7 +5,8 @@
   "license": "Apache-2.0",
   "main": "runtime/index.js",
   "dependencies": {
-    "urdf": "git+https://github.com/vcharpenay/uRDF.js.git#94d482b4027f17142f745ffda9fc5b938c4fe9bb"
+    "urdf": "git+https://github.com/vcharpenay/uRDF.js.git#94d482b4027f17142f745ffda9fc5b938c4fe9bb",
+    "eyeling": "git+https://github.com/eyereasoner/eyeling.git#398dbea04ee274ab322c13430e5a14b12cf6f598"
   },
   "node-red": {
     "nodes": {

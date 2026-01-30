@@ -4,6 +4,7 @@
 
   const TOPIC = "urdf/events";
 
+
   function createSidebar() {
     const $root = $("<div>").css({
       height: "100%",
@@ -15,6 +16,7 @@
     });
 
     // --- Helpers ---
+
     function mkInput(ph) {
       return $("<input>")
         .attr("type", "text")
@@ -488,56 +490,53 @@ WHERE {
       ?p <https://schema.org/name> ?pLabel .
     }
   }
-
-  # 5) Document metadata: doc is in ONE of these graphs
-  {
-    GRAPH <urn:graph:issues> {
-      # anchor (prevents empty duplicate rows)
-      ?doc <https://schema.org/url> ?url .
-
-      OPTIONAL { ?doc <https://schema.org/title> ?title . }
-      OPTIONAL { ?doc <https://schema.org/date> ?date . }
-      OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
-      OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+  # 5) Document metadata: doc MAY be in one of these graphs (or none / literal)
+  OPTIONAL {
+    {
+      GRAPH <urn:graph:issues> {
+        ?doc <https://schema.org/url> ?url .
+        OPTIONAL { ?doc <https://schema.org/title> ?title . }
+        OPTIONAL { ?doc <https://schema.org/date> ?date . }
+        OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+        OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+      }
     }
-  }
-  UNION
-  {
-    GRAPH <urn:graph:forum> {
-      ?doc <https://schema.org/url> ?url .
-
-      OPTIONAL { ?doc <https://schema.org/title> ?title . }
-      OPTIONAL { ?doc <https://schema.org/date> ?date . }
-      OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
-      OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+    UNION
+    {
+      GRAPH <urn:graph:forum> {
+        ?doc <https://schema.org/url> ?url .
+        OPTIONAL { ?doc <https://schema.org/title> ?title . }
+        OPTIONAL { ?doc <https://schema.org/date> ?date . }
+        OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+        OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+      }
     }
-  }
-  UNION
-  {
-    GRAPH <urn:graph:flowslib> {
-      ?doc <https://schema.org/url> ?url .
-
-      OPTIONAL { ?doc <https://schema.org/title> ?title . }
-      OPTIONAL { ?doc <https://schema.org/date> ?date . }
-      OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
-      OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+    UNION
+    {
+      GRAPH <urn:graph:flowslib> {
+        ?doc <https://schema.org/url> ?url .
+        OPTIONAL { ?doc <https://schema.org/title> ?title . }
+        OPTIONAL { ?doc <https://schema.org/date> ?date . }
+        OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+        OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+      }
     }
-  }
-  UNION
-  {
-    GRAPH <urn:nrua:app> {
-      ?doc <https://schema.org/name> ?name .
+    UNION
+    {
+      GRAPH <urn:nrua:app> {
+        OPTIONAL { ?doc <https://schema.org/name> ?name . }
+      }
     }
   }
 
-  # 6) Site from schema:url (now always bound in the matching branch)
+  # 6) Site from schema:url (only if ?url is bound)
   BIND(
-    REPLACE(
-      STR(?url),
-      '^https?://([^/]+).*$',
-      '$1'
+    IF(BOUND(?url),
+      REPLACE(STR(?url), '^https?://([^/]+).*$', '$1'),
+      ""
     ) AS ?site
   )
+
 }
 LIMIT 1000
 
@@ -573,6 +572,7 @@ async function renderReasoning() {
     const s = termValue(r.s);
     const p = termValue(r.p);
     const doc = termValue(r.doc);
+    const docType = r.doc && r.doc.type; 
     if (!s || !p || !doc) continue;
 
     const sClassLabel = termValue(r.sClassLabel) || "";
@@ -599,6 +599,7 @@ const key = p + "||" + doc;
         p,
         pLabel,
         doc,
+	docType,
         title,
         url,
         site,
@@ -702,79 +703,125 @@ const key = p + "||" + doc;
       marginTop: "4px"
     });
 
-    items.forEach((it) => {
-      const label = it.title ? it.title : it.doc;
-      const href = it.url || it.doc;
+items.forEach((it) => {
 
-      const $line = $("<div>").css({
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        alignItems: "center",
-        padding: "6px 8px",
-        background: "#f5f5f5",
-        border: "1px solid #ddd",
-        borderRadius: "4px"
-      });
+	let label;
+	const isLiteral = (it.docType === "literal");
 
-      // predicate chip
-      const predText = humanPredicateLabel(it.p, it.pLabel);
-      const $pred = $("<span>").text(predText).css({
-        display: "inline-block",
-        padding: "1px 6px",
-        border: "1px solid #999",
-        borderRadius: "10px",
-        background: "#fff",
-        fontSize: "11px",
-        lineHeight: "16px",
-        opacity: 0.9
-      });
-      $line.append($pred);
 
-      // NEW: site chip ("from <host>") based on ?site extracted from url
-      const siteTxt = (it.site || "").trim();
-      if (siteTxt) {
-        const $from = $("<span>").text("from " + siteTxt).css({
-          display: "inline-block",
-          padding: "1px 6px",
-          border: "1px solid #999",
-          borderRadius: "10px",
-          background: "#fff",
-          fontSize: "11px",
-          lineHeight: "16px",
-          opacity: 0.85
-        });
-        $line.append($from);
-      }
+if (isNodeUrn(it.doc)) {
+  label = "Node " + nodeIdFromUrn(it.doc);
+} else if (isFlowUrn(it.doc)) {
+  label = "Flow " + flowIdFromUrn(it.doc);
+} else {
+  label = it.title ? it.title : it.doc;
+}
 
-      // clickable doc title/link
-      const $a = $("<a>")
-        .attr("href", href)
-        .attr("target", "_blank")
-        .attr("rel", "noopener noreferrer")
-        .text(label)
-        .css({ wordBreak: "break-word" });
+  const $line = $("<div>").css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    alignItems: "center",
+    padding: "6px 8px",
+    background: "#f5f5f5",
+    border: "1px solid #ddd",
+    borderRadius: "4px"
+  });
 
-      $line.append($a);
+  // predicate chip
+  const predText = humanPredicateLabel(it.p, it.pLabel);
+  const $pred = $("<span>").text(predText).css({
+    display: "inline-block",
+    padding: "1px 6px",
+    border: "1px solid #999",
+    borderRadius: "10px",
+    background: "#fff",
+    fontSize: "11px",
+    lineHeight: "16px",
+    opacity: 0.9
+  });
+  $line.append($pred);
 
-      // category chips
-      const cats = Array.from(it.categories || []).sort();
-      for (const c of cats) {
-        const $chip = $("<span>").text(c).css({
-          display: "inline-block",
-          padding: "1px 6px",
-          border: "1px solid #111",
-          borderRadius: "10px",
-          background: "#fff",
-          color: "#111",
-          fontSize: "11px",
-          lineHeight: "16px"
-        });
-        $line.append($chip);
-      }
-
-      $ul.append($line);
+  // site chip ("from <host>")
+  const siteTxt = (it.site || "").trim();
+  if (siteTxt) {
+    const $from = $("<span>").text("from " + siteTxt).css({
+      display: "inline-block",
+      padding: "1px 6px",
+      border: "1px solid #999",
+      borderRadius: "10px",
+      background: "#fff",
+      fontSize: "11px",
+      lineHeight: "16px",
+      opacity: 0.85
     });
+    $line.append($from);
+  }
+
+  // doc link: node/flow reveal, else external only if schema:url exists
+  let $docEl;
+if (isLiteral) {
+    $docEl = $("<span>")
+      .text(label)
+      .css({ wordBreak: "break-word", opacity: 0.85, cursor: "default" });
+
+  } else if (isNodeUrn(it.doc)) {
+    const nodeId = nodeIdFromUrn(it.doc);
+    $docEl = $("<a href='#'>")
+      .text(label)
+      .css({ wordBreak: "break-word" })
+      .on("click", function (e) {
+        e.preventDefault();
+        const ok = revealNodeInEditor(nodeId);
+        if (!ok) appendLog("WARN: cannot reveal node in editor (RED.view.reveal not available)");
+      });
+  } else if (isFlowUrn(it.doc)) {
+    const flowId = flowIdFromUrn(it.doc);
+    $docEl = $("<a href='#'>")
+      .text(label)
+      .css({ wordBreak: "break-word" })
+      .on("click", function (e) {
+        e.preventDefault();
+        const ok = revealFlowInEditor(flowId);
+        if (!ok) appendLog("WARN: cannot switch to flow (RED.workspaces.show not available)");
+      });
+  } else if (it.url) {
+    $docEl = $("<a>")
+      .attr("href", it.url)
+      .attr("target", "_blank")
+      .attr("rel", "noopener noreferrer")
+      .text(label)
+      .css({ wordBreak: "break-word" });
+  } else {
+    $docEl = $("<span>")
+      .text(label)
+      .css({
+        wordBreak: "break-word",
+        opacity: 0.85,
+        cursor: "default"
+      });
+  }
+
+  $line.append($docEl);
+
+  // category chips
+  const cats = Array.from(it.categories || []).sort();
+  for (const c of cats) {
+    const $chip = $("<span>").text(c).css({
+      display: "inline-block",
+      padding: "1px 6px",
+      border: "1px solid #111",
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#111",
+      fontSize: "11px",
+      lineHeight: "16px"
+    });
+    $line.append($chip);
+  }
+
+  $ul.append($line);
+});
 
     $card.append($hdr, $ul);
     $reasonList.append($card);
@@ -978,6 +1025,7 @@ function legacyCopy(text) {
     };
 
     function applyMode(modeId) {
+      currentMode = modeId;
       Object.keys(modeToSection).forEach(k => setVisible(modeToSection[k], k === modeId));
       if (modeId === "configure") {
   renderRules().catch(e => {
@@ -991,6 +1039,22 @@ if (modeId === "reason") {
 
       $sectionTitle.text(modeToTitle[modeId] || "uRDF");
     }
+
+    let currentMode = "health";
+let reasonRefreshTimer = null;
+
+function scheduleReasonRefresh(source) {
+  if (currentMode !== "reason") return;
+
+  if (reasonRefreshTimer) clearTimeout(reasonRefreshTimer);
+  reasonRefreshTimer = setTimeout(() => {
+    renderReasoning().catch(err => {
+      setResponse({ ok: false, error: String(err) });
+      appendLog("ERROR renderReasoning (" + source + "): " + String(err));
+    });
+  }, 300);
+}
+
 
     $mode.on("change", function () {
       applyMode($mode.val());
@@ -1248,7 +1312,7 @@ $btnExport.on("click", async function () {
   }
 });
 
-    return { appendLog, setResponse };
+    return { appendLog, setResponse, scheduleReasonRefresh };
   }
 
   RED.plugins.registerPlugin("urdf-editor", {
@@ -1261,16 +1325,26 @@ $btnExport.on("click", async function () {
         return;
       }
 
-      RED.comms.subscribe(TOPIC, function (msg) {
+      RED.comms.subscribe(TOPIC, function (a, b) {
+      const msg =
+    (b !== undefined) ? b :
+    (a && typeof a === "object") ? a :
+    null;
+
         if (!msg) return;
 
         const summary = (msg.request && msg.request.summary) ? (" — " + msg.request.summary) : "";
         const req = msg.request ? (msg.request.method + " " + msg.request.path) : "event";
-        ui.appendLog((msg.type || "event") + " " + req + summary);
+        ui.appendLog(JSON.stringify(msg));
 
         if (msg.response) {
           ui.setResponse(msg.response);
         }
+
+	if (msg.type && msg.type == "appUpdate") {
+	  ui.scheduleReasonRefresh(msg);
+	}
+
       });
     }
   });
