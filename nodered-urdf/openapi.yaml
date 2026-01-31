@@ -2,29 +2,49 @@ openapi: 3.1.1
 info:
   title: Node-RED uRDF Plugin API
   version: 0.0.1
-  summary: REST API exposed by node-red-urdf-plugin (runtime/index.js)
-  description: 'This OpenAPI spec describes the HTTP Admin endpoints implemented by the Node-RED uRDF runtime plugin.
+  summary: HTTP Admin endpoints exposed by the Node-RED uRDF runtime plugin
+  description: |
+    This specification documents the **Node-RED Admin HTTP endpoints** implemented by the uRDF runtime plugin.
 
+    ## Where these endpoints live
+    - All routes are registered on Node-RED's **Admin HTTP server** (`RED.httpAdmin`).
+    - In the default Docker setup, that is typically served on the same port as Node-RED (e.g. `1880`).
 
-    Notes:
+    ## The data model: uRDF store + named graphs (`gid`)
+    The runtime exposes an in-memory RDF store (uRDF). Data is organized in **named graphs** identified by a `gid` (a string, typically a URN or IRI).
 
-    - All endpoints are registered under Node-RED''s **Admin HTTP server** (RED.httpAdmin).
+    Common graphs used by the runtime (defaults shown):
+    - **Ontology**: `urn:nrua:ontology` (from `/opt/urdf/app-ontology.jsonld`)
+    - **Rules**: `urn:nrua:rules` (from `/opt/urdf/rules.jsonld`)
+    - **Environment**: `urn:nrua:env` (derived from Node-RED Admin API diagnostics/settings)
+    - **Application model**: `urn:nrua:app` (derived from `GET /flows`)
+    - **Inferred graph**: `urn:graph:inferred` (recomputed from rules)
 
-    - Responses generally include `{ ok, ts, ... }`, where `ts` is a Unix epoch timestamp in milliseconds.
+    Some endpoints act on:
+    - the **whole store** (no `gid`)
+    - a **single named graph** (`gid=...`)
 
-    - The plugin also publishes push events to the Node-RED editor via `RED.comms.publish("urdf/events", ...)` (not an HTTP API).
+    ## Conventions
+    - Most JSON responses include `{ ok, ts, ... }`, where:
+      - `ok` is a success flag
+      - `ts` is a Unix epoch timestamp in milliseconds
+    - The runtime may also publish **push events** to the Node-RED editor using `RED.comms.publish("urdf/events", ...)`.
+      Those editor events are **not** part of this HTTP API.
 
-    - The backing RDF store is uRDF''s in-memory singleton (within the `urdf` module).
-
-    '
 servers:
-- url: http://127.0.0.1:1880
-  description: Default local Node-RED runtime (example)
+  - url: http://127.0.0.1:1880
+    description: Default local Node-RED runtime (example)
+
 tags:
-- name: urdf
-  description: uRDF store management and query endpoints
-- name: rules
-  description: Rule management endpoints (stored in a named graph)
+  - name: urdf
+    description: |
+      uRDF store management and query operations.
+      These endpoints let you inspect graphs, load JSON-LD, clear graphs, and run SPARQL queries.
+  - name: rules
+    description: |
+      CRUD operations for rule resources stored inside the rules named graph (`gid` = rules graph).
+      Rules are stored as JSON-LD nodes and later consumed by the inference engine.
+
 components:
   parameters:
     GidQueryOptional:
@@ -33,7 +53,21 @@ components:
       required: false
       schema:
         type: string
-      description: Named graph identifier (gid). If omitted, the endpoint uses the default graph or full store depending on the route.
+      description: |
+        Named graph identifier (gid).
+        If omitted, the endpoint uses the default graph or whole store depending on the route.
+      examples:
+        ontology:
+          value: urn:nrua:ontology
+        rules:
+          value: urn:nrua:rules
+        env:
+          value: urn:nrua:env
+        app:
+          value: urn:nrua:app
+        inferred:
+          value: urn:graph:inferred
+
     GidQueryRequired:
       name: gid
       in: query
@@ -41,6 +75,7 @@ components:
       schema:
         type: string
       description: Named graph identifier (gid).
+
     IdQueryRequired:
       name: id
       in: query
@@ -48,218 +83,202 @@ components:
       schema:
         type: string
       description: Resource identifier (typically an IRI/URN used as `@id`).
+      examples:
+        urn:
+          value: urn:nrua:node:1234abcd
+        iri:
+          value: https://example.org/resource/42
+
   schemas:
     UnixMillis:
       type: integer
       description: Unix epoch timestamp in milliseconds.
       examples:
-      - 1737535802000
-    OkFlag:
-      type: boolean
-      description: Whether the operation succeeded.
+        - 1737535802000
+
     ErrorResponse:
       type: object
-      required:
-      - ok
-      - ts
-      - error
+      required: [ok, ts, error]
       properties:
         ok:
           type: boolean
           const: false
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         error:
           type: string
+      description: Standard failure payload.
+
     BasicOk:
       type: object
-      required:
-      - ok
-      - ts
+      required: [ok, ts]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
+      description: Standard success payload base.
+
     HealthOk:
       type: object
-      required:
-      - ok
-      - ts
-      - module
+      required: [ok, ts, module]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         module:
           type: string
-          enum:
-          - urdf
+          enum: [urdf]
         size:
-          type:
-          - integer
-          - 'null'
-          description: Total store size if available.
+          type: [integer, "null"]
+          description: Total store size, when available.
+      description: Returned when the uRDF module is loaded.
+
     HealthError:
       type: object
-      required:
-      - ok
-      - ts
-      - module
+      required: [ok, ts, module]
       properties:
         ok:
           type: boolean
           const: false
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         module:
           type: string
-          enum:
-          - urdf
+          enum: [urdf]
         size:
-          type:
-          - integer
-          - 'null'
+          type: [integer, "null"]
+          description: Total store size, when available.
+      description: Returned when the uRDF module is not loaded.
+
     SizeOk:
       type: object
-      required:
-      - ok
-      - ts
+      required: [ok, ts]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         gid:
-          type:
-          - string
-          - 'null'
+          type: [string, "null"]
+          description: Present when `gid` was provided; otherwise null/omitted.
         size:
           type: integer
-          description: Size of the specified gid (present when gid query param is provided).
+          description: Size of the specified named graph (present when `gid` is provided).
         totalSize:
           type: integer
-          description: Total store size (present when gid query param is omitted).
+          description: Total store size (present when `gid` is omitted).
+      description: Size information for either the store or one named graph.
+
     GraphOk:
       type: object
-      required:
-      - ok
-      - ts
-      - graph
+      required: [ok, ts, graph]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         gid:
-          type:
-          - string
-          - 'null'
+          type: [string, "null"]
         graph:
           description: Graph contents as returned by uRDF.
-          type:
-          - array
-          - object
-          - 'null'
+          type: [array, object, "null"]
+      description: Returns graph content for the requested `gid` (or default graph).
+
     NodeOk:
       type: object
-      required:
-      - ok
-      - ts
-      - id
-      - node
+      required: [ok, ts, id, node]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         id:
           type: string
         gid:
-          type:
-          - string
-          - 'null'
+          type: [string, "null"]
         node:
           description: Found node/resource as returned by uRDF.
-          type:
-          - object
-          - array
-          - string
-          - number
-          - boolean
-          - 'null'
+          type: [object, array, string, number, boolean, "null"]
+      description: Returns one resource by `@id`.
+
     ClearRequest:
       type: object
       properties:
         gid:
           type: string
-          description: If provided, clears only this named graph; otherwise clears the whole store.
+          description: |
+            If provided, clears only this named graph.
+            If omitted, clears the default/whole store (as implemented by uRDF).
       additionalProperties: false
+
     ClearOk:
       allOf:
-      - $ref: '#/components/schemas/BasicOk'
-      - type: object
-        properties:
-          gid:
-            type: string
+        - $ref: "#/components/schemas/BasicOk"
+        - type: object
+          properties:
+            gid:
+              type: string
+              description: Present only when a specific `gid` was cleared.
+
     JsonLdDocument:
-      description: A JSON-LD document (object or array). This API does not validate the JSON-LD structure beyond JSON parsing.
+      description: |
+        A JSON-LD document (object or array).
+        The runtime does not validate JSON-LD semantics beyond JSON parsing; it forwards the payload to uRDF.
       oneOf:
-      - type: object
-        additionalProperties: true
-      - type: array
-        items: {}
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+
     LoadFileRequest:
       type: object
-      required:
-      - doc
+      required: [doc]
       properties:
         doc:
-          $ref: '#/components/schemas/JsonLdDocument'
+          $ref: "#/components/schemas/JsonLdDocument"
       additionalProperties: false
-      description: Replaces a named graph with the uploaded JSON-LD. The uploaded JSON-LD must include an "@id" that will be used as gid.
+      description: |
+        Replaces a named graph with the uploaded JSON-LD.
+        The uploaded JSON-LD must contain an `"@id"` which will be used as the target `gid`.
+
     LoadFromRequest:
       type: object
-      required:
-      - uri
+      required: [uri]
       properties:
         uri:
           type: string
           format: uri
           description: URL to fetch JSON/JSON-LD from.
       additionalProperties: false
+
     QueryRequest:
       type: object
-      required:
-      - sparql
+      required: [sparql]
       properties:
         sparql:
           type: string
           description: SPARQL query string.
       additionalProperties: false
+
     QueryOk:
       type: object
-      required:
-      - ok
-      - ts
-      - type
+      required: [ok, ts, type]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         type:
           type: string
-          enum:
-          - ASK
-          - SELECT
+          enum: [ASK, SELECT]
         result:
           type: boolean
           description: ASK query result (present when type=ASK).
@@ -267,110 +286,108 @@ components:
           type: array
           description: SELECT query results (shape depends on uRDF).
           items: {}
+      description: Query results wrapper.
+
     LoadOk:
       type: object
-      required:
-      - ok
-      - ts
-      - size
+      required: [ok, ts, size]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         size:
           type: integer
           description: Total store size after load.
+      description: Returned by `/urdf/load` after a successful append.
+
     LoadFromOk:
       type: object
-      required:
-      - ok
-      - ts
-      - uri
-      - totalSize
+      required: [ok, ts, uri, totalSize]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         uri:
           type: string
           format: uri
         totalSize:
           type: integer
+      description: Returned by `/urdf/loadFrom` after fetch+load.
+
     LoadFileOk:
       type: object
-      required:
-      - ok
-      - ts
-      - gid
-      - size
-      - totalSize
+      required: [ok, ts, gid, size, totalSize]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         gid:
           type: string
         size:
           type: integer
         totalSize:
           type: integer
+      description: Returned after a named graph replacement via `/urdf/loadFile`.
+
     ExportOk:
       description: A JSON-LD export document (application/ld+json).
-      $ref: '#/components/schemas/JsonLdDocument'
+      $ref: "#/components/schemas/JsonLdDocument"
+
     RuleResource:
       type: object
-      required:
-      - '@id'
-      - '@type'
+      required: ["@id", "@type"]
       properties:
-        '@id':
+        "@id":
           type: string
           description: Rule identifier (IRI/URN).
-        '@type':
-          description: Must include the uA ontology Rule class IRI.
+        "@type":
+          description: Must include the Rule class IRI from the user application ontology.
           oneOf:
-          - type: string
-          - type: array
-            items:
-              type: string
+            - type: string
+            - type: array
+              items:
+                type: string
       additionalProperties: true
-      description: A rule resource stored in the rules named graph. The runtime requires @id and that @type includes the Rule class.
+      description: |
+        A rule resource stored in the rules named graph.
+
+        Runtime validation:
+        - `"@id"` must be present
+        - `"@type"` must include the Rule class IRI
+        - the runtime expects executable source code (e.g. SPARQL or N3) in `schema:text`
+
     RuleCreateRequest:
       type: object
-      required:
-      - rule
+      required: [rule]
       properties:
         rule:
-          $ref: '#/components/schemas/RuleResource'
+          $ref: "#/components/schemas/RuleResource"
       additionalProperties: false
+
     RuleDeleteRequest:
       type: object
-      required:
-      - id
+      required: [id]
       properties:
         id:
           type: string
-          description: Rule @id to delete.
+          description: Rule `@id` to delete.
       additionalProperties: false
+
     RuleMutateOk:
       type: object
-      required:
-      - ok
-      - ts
-      - gid
-      - count
+      required: [ok, ts, gid, count]
       properties:
         ok:
           type: boolean
           const: true
         ts:
-          $ref: '#/components/schemas/UnixMillis'
+          $ref: "#/components/schemas/UnixMillis"
         gid:
           type: string
         count:
@@ -384,421 +401,504 @@ components:
           type: string
         id:
           type: string
-          description: Additional identifier field used in some error responses.
+          description: Identifier field used in some error payloads.
       additionalProperties: true
+      description: Success payload for rule mutations.
+
 paths:
   /urdf/health:
     get:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfHealth
-      summary: Healthcheck for uRDF module
-      description: Returns whether the `urdf` module is loaded. If loaded, may also return the total store size.
+      summary: Healthcheck for the uRDF runtime
+      description: |
+        Checks whether the `urdf` module is loaded.
+        When available, also reports the total store size.
       responses:
-        '200':
+        "200":
           description: uRDF module loaded
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthOk'
-        '500':
+                $ref: "#/components/schemas/HealthOk"
+        "500":
           description: uRDF module not loaded
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthError'
+                $ref: "#/components/schemas/HealthError"
+
   /urdf/size:
     get:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfSize
-      summary: Size of the store or a specific named graph
+      summary: Get store size or named graph size
+      description: |
+        Returns size information.
+        - If `gid` is omitted: returns total store size.
+        - If `gid` is provided: returns the size for that named graph.
       parameters:
-      - $ref: '#/components/parameters/GidQueryOptional'
+        - $ref: "#/components/parameters/GidQueryOptional"
       responses:
-        '200':
+        "200":
           description: Size returned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SizeOk'
-        '500':
+                $ref: "#/components/schemas/SizeOk"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/graph:
     get:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfGraph
       summary: Fetch a graph (default or named graph)
+      description: |
+        Returns the graph contents as maintained by uRDF.
+        - If `gid` is omitted: returns the default graph.
+        - If `gid` is provided: returns that named graph.
       parameters:
-      - $ref: '#/components/parameters/GidQueryOptional'
+        - $ref: "#/components/parameters/GidQueryOptional"
       responses:
-        '200':
+        "200":
           description: Graph returned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GraphOk'
-        '404':
-          description: Graph not found (only when gid is provided)
+                $ref: "#/components/schemas/GraphOk"
+        "404":
+          description: Graph not found (only when `gid` is provided)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/export:
     get:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfExport
-      summary: Export the full store or a named graph as JSON-LD (download)
-      description: Returns an `application/ld+json` document. If `gid` query param is provided, exports only that named graph.
+      summary: Export store or one named graph as JSON-LD (download)
+      description: |
+        Returns an `application/ld+json` export document.
+
+        - If `gid` is omitted: exports the default/whole graph content returned by uRDF.
+        - If `gid` is provided: exports only that named graph.
+
+        The runtime sets `Content-Disposition: attachment` to trigger a download in browsers.
       parameters:
-      - $ref: '#/components/parameters/GidQueryOptional'
+        - $ref: "#/components/parameters/GidQueryOptional"
       responses:
-        '200':
-          description: Export document
+        "200":
+          description: Export document (download)
           content:
             application/ld+json:
               schema:
-                $ref: '#/components/schemas/ExportOk'
-        '500':
+                $ref: "#/components/schemas/ExportOk"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/node:
     get:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfNode
-      summary: Fetch a single resource by id (optionally within a named graph)
+      summary: Fetch a single resource by id
+      description: |
+        Retrieves one JSON-LD node/resource by `id` (its `@id`), optionally scoped to a named graph (`gid`).
+
+        Notes:
+        - If `gid` is provided, the lookup is limited to that named graph.
+        - If `gid` is omitted, the lookup uses uRDF's default behavior (may search globally depending on uRDF).
       parameters:
-      - $ref: '#/components/parameters/IdQueryRequired'
-      - $ref: '#/components/parameters/GidQueryOptional'
+        - $ref: "#/components/parameters/IdQueryRequired"
+        - $ref: "#/components/parameters/GidQueryOptional"
       responses:
-        '200':
+        "200":
           description: Node returned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NodeOk'
-        '400':
-          description: 'Missing required query param: id'
+                $ref: "#/components/schemas/NodeOk"
+        "400":
+          description: Missing required query param `id`
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: 'Node not found (heuristic: error message contains "not found")'
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Node not found (runtime uses a heuristic based on the error message)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/clear:
     post:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfClear
-      summary: Clear the whole store or a specific named graph
+      summary: Clear the whole store or one named graph
+      description: |
+        Clears data from uRDF.
+        - If `gid` is provided in the body: clears only that named graph.
+        - If `gid` is omitted: clears the default/whole store (as implemented by uRDF).
       requestBody:
         required: false
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClearRequest'
+              $ref: "#/components/schemas/ClearRequest"
+            examples:
+              clearNamedGraph:
+                value: { gid: "urn:nrua:app" }
+              clearAll:
+                value: {}
       responses:
-        '200':
+        "200":
           description: Cleared
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClearOk'
-        '500':
+                $ref: "#/components/schemas/ClearOk"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/load:
     post:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfLoad
       summary: Load JSON-LD into the store (append)
-      description: Loads the provided JSON-LD document into the store (does not clear existing graphs).
+      description: |
+        Loads the provided JSON-LD document into uRDF **without clearing existing data**.
+
+        Use this when you want to append data to a graph or add new nodes.
+        If you want a deterministic full replacement of a named graph, use `/urdf/loadFile`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JsonLdDocument'
+              $ref: "#/components/schemas/JsonLdDocument"
+            examples:
+              appendGraph:
+                value:
+                  - "@id": "urn:example:a"
+                    "https://schema.org/name": [{ "@value": "A" }]
       responses:
-        '200':
+        "200":
           description: Loaded
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoadOk'
-        '400':
+                $ref: "#/components/schemas/LoadOk"
+        "400":
           description: Invalid body (must be a JSON object or array)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/loadFrom:
     post:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfLoadFrom
       summary: Fetch JSON/JSON-LD from a URL and load it into the store
+      description: |
+        Fetches a remote JSON or JSON-LD document from `uri` and loads it into uRDF.
+
+        Error modes:
+        - `502` if the upstream fetch returns a non-2xx status
+        - `415` if the fetched content cannot be parsed as JSON or has an unsupported JSON shape
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoadFromRequest'
+              $ref: "#/components/schemas/LoadFromRequest"
+            examples:
+              fromUrl:
+                value: { uri: "https://example.org/data.jsonld" }
       responses:
-        '200':
+        "200":
           description: Fetched and loaded
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoadFromOk'
-        '400':
-          description: Missing uri
+                $ref: "#/components/schemas/LoadFromOk"
+        "400":
+          description: Missing `uri`
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '415':
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
           description: Fetched content is not valid JSON or unsupported JSON shape
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '502':
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
           description: Upstream fetch failed (non-2xx HTTP)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/loadFile:
     post:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfLoadFile
-      summary: Replace a named graph with an uploaded JSON-LD document
+      summary: Replace a named graph with uploaded JSON-LD
+      description: |
+        Replaces a named graph deterministically:
+        1) clear the graph identified by `doc["@id"]`
+        2) load the provided JSON-LD document
+
+        This endpoint is the safest choice when you want reproducible state (no accumulation).
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoadFileRequest'
+              $ref: "#/components/schemas/LoadFileRequest"
+            examples:
+              replaceGraph:
+                value:
+                  doc:
+                    "@id": "urn:nrua:rules"
+                    "@graph":
+                      - "@id": "urn:rule:1"
+                        "@type":
+                          - "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule"
       responses:
-        '200':
+        "200":
           description: Replaced graph
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoadFileOk'
-        '400':
-          description: Invalid body or missing @id within uploaded JSON-LD
+                $ref: "#/components/schemas/LoadFileOk"
+        "400":
+          description: Invalid body or missing `@id` within uploaded JSON-LD
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/query:
     post:
-      tags:
-      - urdf
+      tags: [urdf]
       operationId: urdfQuery
       summary: Execute a SPARQL query against the store
+      description: |
+        Executes a SPARQL query through uRDF.
+
+        The runtime wraps results as:
+        - `type=ASK` with a boolean `result`
+        - `type=SELECT` with an array `results` (format depends on uRDF)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QueryRequest'
+              $ref: "#/components/schemas/QueryRequest"
+            examples:
+              ask:
+                value:
+                  sparql: "ASK { ?s ?p ?o }"
+              select:
+                value:
+                  sparql: "SELECT * WHERE { ?s ?p ?o } LIMIT 10"
       responses:
-        '200':
+        "200":
           description: Query executed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QueryOk'
-        '400':
-          description: Missing sparql string
+                $ref: "#/components/schemas/QueryOk"
+        "400":
+          description: Missing `sparql` string
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '501':
-          description: 'Query not implemented (heuristic: error contains "not implemented")'
+                $ref: "#/components/schemas/ErrorResponse"
+        "501":
+          description: Query not implemented (runtime uses a heuristic based on the error message)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/rules/create:
     post:
-      tags:
-      - rules
+      tags: [rules]
       operationId: urdfRulesCreate
       summary: Create a rule in the rules named graph
+      description: |
+        Creates a new rule resource inside the rules graph.
+
+        Validation enforced by the runtime:
+        - body must be `{ "rule": { ... } }`
+        - `rule["@id"]` is required
+        - `rule["@type"]` must include the Rule class IRI
+
+        Returns `409` if a rule with the same `@id` already exists.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RuleCreateRequest'
+              $ref: "#/components/schemas/RuleCreateRequest"
       responses:
-        '200':
+        "200":
           description: Rule stored
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleMutateOk'
-        '400':
-          description: Invalid body / missing @id / @type does not include Rule
+                $ref: "#/components/schemas/RuleMutateOk"
+        "400":
+          description: Invalid body / missing `@id` / `@type` does not include Rule
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Rule not found (update only)
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Rule already exists
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Rule already exists (create only)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
   /urdf/rules/update:
     post:
-      tags:
-      - rules
+      tags: [rules]
       operationId: urdfRulesUpdate
       summary: Update an existing rule in the rules named graph
+      description: |
+        Replaces an existing rule resource (full replacement, not patch).
+
+        Returns `404` if no rule with the given `@id` exists.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RuleCreateRequest'
+              $ref: "#/components/schemas/RuleCreateRequest"
       responses:
-        '200':
+        "200":
           description: Rule stored
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleMutateOk'
-        '400':
-          description: Invalid body / missing @id / @type does not include Rule
+                $ref: "#/components/schemas/RuleMutateOk"
+        "400":
+          description: Invalid body / missing `@id` / `@type` does not include Rule
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Rule not found (update only)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Rule already exists (create only)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal error (including uRDF not loaded)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /urdf/rules/delete:
-    post:
-      tags:
-      - rules
-      operationId: urdfRulesDelete
-      summary: Delete a rule from the rules named graph
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RuleDeleteRequest'
-      responses:
-        '200':
-          description: Rule deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RuleMutateOk'
-        '400':
-          description: Invalid body / missing id
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
           description: Rule not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error (including uRDF not loaded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/rules/delete:
+    post:
+      tags: [rules]
+      operationId: urdfRulesDelete
+      summary: Delete a rule from the rules named graph
+      description: |
+        Deletes a rule resource from the rules graph by its `@id`.
+        Returns `404` if the rule does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleDeleteRequest"
+      responses:
+        "200":
+          description: Rule deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleMutateOk"
+        "400":
+          description: Invalid body / missing `id`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+

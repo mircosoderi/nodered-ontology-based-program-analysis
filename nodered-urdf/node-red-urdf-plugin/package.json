@@ -1,7 +1,7 @@
 {
   "name": "node-red-urdf-plugin",
   "version": "0.0.1",
-  "description": "Node-RED runtime+editor plugin: uRDF REST wrapper (Phase 1: /urdf/health + push events)",
+  "description": "Node-RED plugin providing a runtime and editor extension that embeds an RDF store (uRDF) and a rule-based reasoning engine (eyeling), and exposes them through a Node-RED runtime node and an editor sidebar plugin.",
   "license": "Apache-2.0",
   "main": "runtime/index.js",
   "dependencies": {

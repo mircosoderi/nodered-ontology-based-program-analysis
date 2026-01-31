@@ -1,12 +1,34 @@
 module.exports = function (RED) {
   "use strict";
 
+  // ============================================================================
+  // Runtime plugin entrypoint
+  // ============================================================================
+  // Node-RED loads this module once at startup. Everything here runs in-process
+  // inside Node-RED, so error handling must be defensive: failures should be
+  // logged and surfaced, but must not crash the runtime.
+  // ============================================================================
+
+  // ----------------------------------------------------------------------------
+  // Editor event push channel
+  // ----------------------------------------------------------------------------
+  // The runtime emits structured events (startup loads, inference, API calls)
+  // to the Node-RED editor using RED.comms when available.
+  //
+  // This creates a "runtime → editor" visibility path without requiring the
+  // editor to poll runtime endpoints.
   const TOPIC = "urdf/events";
 
   const express = require("express");
   const jsonParser = express.json({ limit: "5mb" });
   const fs = require("fs");
 
+  // ----------------------------------------------------------------------------
+  // Optional reasoning engine (Eyeling)
+  // ----------------------------------------------------------------------------
+  // Eyeling is treated as an optional dependency: the runtime remains usable
+  // without it (e.g., SPARQL-only operation). If Eyeling is missing or does not
+  // expose the expected API, N3 execution is skipped and a warning is logged.
   let eyeling;
 try {
   eyeling = require("eyeling/eyeling.js");
@@ -20,8 +42,12 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
   RED.log.warn("[uRDF] Eyeling not available (reasonStream missing)");
 }
 
-
-  // Load uRDF module (singleton in-memory store lives inside it)
+  // ----------------------------------------------------------------------------
+  // RDF store (uRDF)
+  // ----------------------------------------------------------------------------
+  // uRDF provides the in-memory RDF store and the query/load APIs used by all
+  // runtime endpoints and by startup loaders. This module is required for the
+  // plugin to operate meaningfully.
   let urdf;
   try {
     urdf = require("urdf");
@@ -30,19 +56,31 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
     RED.log.error("[uRDF] failed to load module 'urdf': " + e.message);
   }
 
+  // ----------------------------------------------------------------------------
+  // Runtime → editor event emitter
+  // ----------------------------------------------------------------------------
+  // Never allow event-push failures to break the Node-RED runtime.
+  // If the comms channel is unavailable (headless deployments), publishing is
+  // simply skipped.
   function publish(event) {
     try {
       if (RED.comms && typeof RED.comms.publish === "function") {
         RED.comms.publish(TOPIC, event);
       }
     } catch (_) {
-      // never break runtime on push failures
+      // Intentionally ignored: observability must not impact availability.
     }
   }
 
-  // -------------------------
-  // Admin API fetch helper
-  // -------------------------
+  // ----------------------------------------------------------------------------
+  // Local Admin API fetch helper
+  // ----------------------------------------------------------------------------
+  // This runtime relies on Node-RED's Admin HTTP API to obtain:
+  // - diagnostics and settings for environment modeling
+  // - /flows for building an application knowledge graph
+  //
+  // Using localhost HTTP keeps a clean boundary: the runtime consumes the same
+  // API an external admin client would, rather than reaching into internals.
   async function fetchAdminJson(path) {
     const port = Number(process.env.PORT || 1880);
     const p = path.startsWith("/") ? path : `/${path}`;
@@ -58,9 +96,19 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
     return await r.json();
   }
 
-  // -------------------------
-  // Ontology load (startup)
-  // -------------------------
+  // ----------------------------------------------------------------------------
+  // Startup loader: ontology graph
+  // ----------------------------------------------------------------------------
+  // On container start, a default ontology (JSON-LD) can be loaded into a named
+  // graph to bootstrap the knowledge base.
+  //
+  // - URDF_ONTOLOGY_PATH selects the source file
+  // - URDF_ONTOLOGY_GID selects the target named graph id (gid)
+  //
+  // This loader is designed to be safe:
+  // - missing files are not fatal
+  // - parse/load errors are logged
+  // - success is published to the editor event channel
   async function loadOntologyJsonLdOnStartup() {
     if (!urdf) return;
 
@@ -76,7 +124,6 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
       const raw = fs.readFileSync(filePath, "utf8");
       const doc = JSON.parse(raw);
 
-      // load as named graph
       const toLoad = Array.isArray(doc) ? { "@id": gid, "@graph": doc } : { ...doc, "@id": gid };
       await urdf.load(toLoad);
 
@@ -95,9 +142,14 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
 
   loadOntologyJsonLdOnStartup();
 
-  // -------------------------
-  // Rules load (startup)
-  // -------------------------
+  // ----------------------------------------------------------------------------
+  // Startup loader: rules graph
+  // ----------------------------------------------------------------------------
+  // On container start, a default rule set (JSON-LD) can be loaded into a named
+  // graph. These rule resources are later read by the inference orchestration.
+  //
+  // - URDF_RULES_PATH selects the source file
+  // - URDF_RULES_GID selects the target named graph id (gid)
   async function loadRulesJsonLdOnStartup() {
     if (!urdf) return;
   
@@ -113,7 +165,6 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
       const raw = fs.readFileSync(filePath, "utf8");
       const doc = JSON.parse(raw);
 
-      // load as named graph
       const toLoad = Array.isArray(doc) ? { "@id": gid, "@graph": doc } : { ...doc, "@id": gid };
       await urdf.load(toLoad);
 
@@ -132,17 +183,35 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
 
   loadRulesJsonLdOnStartup();
 
-  // -------------------------
-  // Environment load (startup from /diagnostics + /settings)
-  // -------------------------
+  // ----------------------------------------------------------------------------
+  // Startup loader: runtime environment model (from Node-RED Admin API)
+  // ----------------------------------------------------------------------------
+  // This section builds a small "environment knowledge graph" that describes:
+  // - the Operating System details (platform/release/containerised/etc.)
+  // - the Node.js runtime version
+  // - the Node-RED runtime version
+  //
+  // The data source is the local Node-RED Admin API:
+  //   - GET /diagnostics
+  //   - GET /settings
+  //
+  // Because the plugin is loaded during Node-RED startup, those endpoints may
+  // not be immediately reachable. The loader therefore includes a retry loop
+  // that waits until the Admin API is ready.
   const NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#";
   const SCHEMA = "https://schema.org/";
   const GID_ENV = process.env.URDF_ENV_GID || "urn:nrua:env";
 
+  // ----------------------------------------------------------------------------
+  // Small helpers used by the environment mapping
+  // ----------------------------------------------------------------------------
   function notUnset(v) {
     return typeof v !== "undefined" && v !== null && v !== "UNSET";
   }
 
+  // Deterministic JSON serialization helper (stable key ordering).
+  // Note: kept as-is even if not used elsewhere, to preserve behavior and
+  // because it may be referenced in future extensions.
   function stableJson(obj) {
     if (!obj || typeof obj !== "object") return JSON.stringify(obj);
     const out = {};
@@ -154,6 +223,16 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
     return JSON.stringify(out);
   }
 
+  // ----------------------------------------------------------------------------
+  // Build JSON-LD environment graph
+  // ----------------------------------------------------------------------------
+  // Converts Node-RED Admin API responses into a JSON-LD document that can be
+  // loaded into uRDF as a named graph. The model uses:
+  // - schema.org types/properties for broadly understandable runtime metadata
+  // - NRUA-specific types for Node-RED / Node.js concepts
+  //
+  // The returned document is shaped as:
+  //   { "@context": ..., "@id": <GID_ENV>, "@graph": [ ...nodes... ] }
   function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
     const osId = "urn:nrua:os";
     const nodeJsId = "urn:nrua:nodejs";
@@ -190,7 +269,6 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
       "@id": nodeRedId,
       "@type": "nrua:NodeRed",
       ...(notUnset(rt.version) ? { "schema:version": rt.version } : {}),
-      // Node-RED runs on Node.js (schema slot)
       "schema:runtimePlatform": { "@id": nodeJsId }
     };
 
@@ -203,6 +281,11 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
     };
   }
 
+  // ----------------------------------------------------------------------------
+  // Load environment graph into uRDF
+  // ----------------------------------------------------------------------------
+  // Reads Admin API JSON, builds the JSON-LD environment document, loads it into
+  // uRDF, then publishes an event for observability.
   async function loadEnvironmentOnStartupFromAdminApi() {
     if (!urdf) return;
 
@@ -238,6 +321,12 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
     }
   }
 
+  // ----------------------------------------------------------------------------
+  // Admin API readiness wait loop
+  // ----------------------------------------------------------------------------
+  // The Admin API may not be available at the instant this plugin is loaded.
+  // This loop probes /diagnostics until it is reachable, then performs the
+  // environment load exactly once.
   function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -264,12 +353,30 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
 
   loadEnvironmentWhenAdminApiReady();
 
-  // -------------------------
-  // Inference and rules mgmt
-  // -------------------------
-	
+  // ----------------------------------------------------------------------------
+  // Inference and rules management
+  // ----------------------------------------------------------------------------
+  // This section provides the "bridge layer" between:
+  //   - uRDF: storage, named graphs, SPARQL querying
+  //   - eyeling: N3 rule execution (optional)
+  //
+  // The key output is an "inferred" named graph rebuilt deterministically from:
+  //   - rules stored in GID_RULES
+  //   - facts computed either via SPARQL (direct) or via N3 reasoning (eyeling)
+  //
+  // Note: the actual orchestration that executes rules and replaces the inferred
+  // graph appears later; this chunk focuses on the utilities and rule decoding.
+
   const GID_RULES = process.env.URDF_RULES_GID || "urn:nrua:rules";
   const GID_INFERRED = process.env.URDF_INFERRED_GID || "urn:graph:inferred";
+
+  // ----------------------------------------------------------------------------
+  // Rule encoding vocabulary (schema.org + NRUA)
+  // ----------------------------------------------------------------------------
+  // Rules are represented as JSON-LD resources of type NRUA_RULE.
+  // Their executable program is stored in schema:text, and metadata indicates
+  // the "language" and "format" of that program. Some rules may also contain
+  // parts (schema:hasPart) to store auxiliary code such as a projection query.
   const SCHEMA_TEXT = "https://schema.org/text";
   const NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
   const SCHEMA_PROGRAMMING_LANGUAGE = "https://schema.org/programmingLanguage";
@@ -277,17 +384,20 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
   const SCHEMA_HASPART = "https://schema.org/hasPart";
   const SCHEMA_SOFTWARE_SOURCE_CODE = "https://schema.org/SoftwareSourceCode";
 
+  // ----------------------------------------------------------------------------
+  // Eyeling output normalization
+  // ----------------------------------------------------------------------------
+  // Eyeling emits derived facts through callbacks. The values representing
+  // literals may arrive as quoted N3-like strings (e.g. "\"Flow 1\"").
+  // These helpers normalize those shapes into JSON-LD objects suitable for
+  // loading into uRDF.
 function stripN3Quotes(v) {
-  // Eyeling gives literals as strings like "\"derived\"" or "\"Flow 1\""
-  // We want the lexical value without the surrounding quotes and with escapes interpreted.
   if (typeof v !== "string") return String(v ?? "");
 
   const s = v.trim();
 
-  // If it starts and ends with a quote, remove one layer and unescape
   if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
     const inner = s.slice(1, -1);
-    // Eyeling uses backslash escapes in the string content
     return inner
       .replace(/\\"/g, '"')
       .replace(/\\\\/g, "\\")
@@ -300,12 +410,10 @@ function stripN3Quotes(v) {
 }
 
 function looksLikeIri(v) {
-  // Minimal heuristic: IRIs in your system are typically urn:... or http(s)...
   return typeof v === "string" && (v.startsWith("urn:") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("_:"));
 }
 
 function eyelingDfToSpo(df) {
-  // df sample shows: { fact: { s:{value}, p:{value}, o:{value} }, ... }
   const f = df && df.fact;
   const s = f && f.s && f.s.value;
   const p = f && f.p && f.p.value;
@@ -316,16 +424,18 @@ function eyelingDfToSpo(df) {
 }
 
 function eyelingObjectToJsonLd(oVal) {
-  // oVal can be:
-  // - "\"derived\"" (quoted literal)
-  // - "<iri>" (unlikely here) or plain iri string
-  // - "_:b1" (possible)
   if (looksLikeIri(oVal)) return { "@id": oVal };
-
-  // Default: treat as literal; strip quotes if quoted
   return { "@value": stripN3Quotes(oVal) };
 }
 
+  // ----------------------------------------------------------------------------
+  // RDFJS term -> JSON-LD conversion
+  // ----------------------------------------------------------------------------
+  // Some uRDF or binding paths can expose RDFJS-like terms. This conversion
+  // preserves:
+  // - IRIs as {"@id": "..."}
+  // - Blank nodes as {"@id": "_:..."}
+  // - Literals with language or datatype annotations when present
 function rdfjsTermToJsonLd(term) {
   if (!term || typeof term !== "object") {
     throw new Error("Invalid RDFJS term: " + JSON.stringify(term));
@@ -336,7 +446,6 @@ function rdfjsTermToJsonLd(term) {
   }
 
   if (term.termType === "BlankNode") {
-    // RDFJS BlankNode.value is WITHOUT "_:"
     return { "@id": "_:" + term.value };
   }
 
@@ -355,6 +464,13 @@ function rdfjsTermToJsonLd(term) {
   throw new Error("Unsupported RDFJS termType: " + term.termType);
 }
 
+  // ----------------------------------------------------------------------------
+  // JSON-LD graph assembly helper
+  // ----------------------------------------------------------------------------
+  // Inference results are assembled by grouping triples by subject into JSON-LD
+  // node objects. This helper ensures:
+  // - each subject node exists once
+  // - predicate values are stored as arrays (JSON-LD multi-valued properties)
 function addToBySubject(bySubject, sId, pIri, oJsonLd) {
   let node = bySubject.get(sId);
   if (!node) {
@@ -365,8 +481,16 @@ function addToBySubject(bySubject, sId, pIri, oJsonLd) {
   node[pIri].push(oJsonLd);
 }
 
+  // ----------------------------------------------------------------------------
+  // SPARQL binding -> N-Triples serialization (for Eyeling input)
+  // ----------------------------------------------------------------------------
+  // The N3 execution path uses a two-step approach:
+  //   1) run a SPARQL "projection" query over uRDF to produce a set of facts
+  //   2) serialize those facts as N-Triples lines
+  //   3) concatenate facts + the N3 program text and pass it to eyeling
+  //
+  // These functions normalize common binding shapes into N-Triples safely.
 function escapeNTriplesString(s) {
-  // N-Triples string escaping: backslash, quotes, newlines, carriage returns, tabs
   return String(s)
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')
@@ -378,7 +502,6 @@ function escapeNTriplesString(s) {
 function termToNTriples(term) {
   if (term == null) throw new Error("Null term");
 
-  // uRDF query bindings look like: { value: "...", type: "uri"|"literal"|"bnode", ... }
   if (typeof term === "object") {
     const t = (term.type || "").toLowerCase();
     const v = term.value;
@@ -390,13 +513,11 @@ function termToNTriples(term) {
 
     if (t === "bnode" || t === "blanknode") {
       if (!v) throw new Error("Blank node term missing value");
-      // Keep as _:... (uRDF supports it; and we clear inferred graph each run)
       return v.startsWith("_:") ? v : `_:${v}`;
     }
 
     if (t === "literal") {
       const lex = escapeNTriplesString(v ?? "");
-      // Optional language or datatype if present
       if (term["xml:lang"] || term.lang) {
         const lang = term["xml:lang"] || term.lang;
         return `"${lex}"@${lang}`;
@@ -407,7 +528,6 @@ function termToNTriples(term) {
       return `"${lex}"`;
     }
 
-    // Fallback: if it looks like an @id JSON-LD-ish object
     if (typeof term["@id"] === "string") {
       const id = term["@id"];
       if (id.startsWith("_:")) return id;
@@ -415,7 +535,6 @@ function termToNTriples(term) {
     }
   }
 
-  // Fallback: raw string as IRI
   if (typeof term === "string") {
     if (term.startsWith("_:")) return term;
     return `<${term}>`;
@@ -442,6 +561,16 @@ function hasSpo(binding) {
   return binding.s != null && binding.p != null && binding.o != null;
 }
 
+  // ----------------------------------------------------------------------------
+  // Rule decoding helpers
+  // ----------------------------------------------------------------------------
+  // Rules can be executed in two main modes:
+  //   - SPARQL: schema:text contains a SPARQL query, executed directly via urdf.query
+  //   - N3: schema:text contains a Notation3 program executed by eyeling
+  //
+  // For N3 rules, an additional SPARQL "projection" query is expected in a part
+  // resource referenced by schema:hasPart. That query is executed to generate
+  // the facts passed as input to the N3 program.
 function normalizeLang(x) {
   if (!x) return "";
   return String(x).trim().toLowerCase();
@@ -451,7 +580,6 @@ function isN3Rule(rule) {
   const lang = normalizeLang(getPropFirstValue(rule, SCHEMA_PROGRAMMING_LANGUAGE));
   const fmt  = normalizeLang(getPropFirstValue(rule, SCHEMA_ENCODING_FORMAT));
 
-  // Accept a few common variants
   return (
     lang === "n3" ||
     lang === "notation3" ||
@@ -486,7 +614,7 @@ function extractN3ProjectionSparql(rule, nodesById) {
   }
   return undefined;
 }
- 
+
 function getPropFirstValue(node, iri) {
   const arr = node && node[iri];
   if (!Array.isArray(arr) || arr.length === 0) return undefined;
@@ -498,23 +626,23 @@ function getPropFirstValue(node, iri) {
   return v;
 }
 
-// Normalize various SPARQL binding shapes into JSON-LD object forms.
+  // ----------------------------------------------------------------------------
+  // SPARQL binding normalization to JSON-LD
+  // ----------------------------------------------------------------------------
+  // In the SPARQL rule path, urdf.query results are interpreted as bindings for
+  // {s,p,o}. These helpers normalize the different shapes seen in practice into:
+  // - a subject IRI (string)
+  // - a predicate IRI (string)
+  // - an object as JSON-LD ({ "@id": ... } or { "@value": ... } ...)
 function bindingToJsonLdObject(term) {
-  // Common cases:
-  // - string IRI or literal
-  // - { value, type: "uri"|"literal", datatype, "xml:lang" }
-  // - { termType: "NamedNode"|"Literal", value, datatype, language }
   if (term == null) return null;
 
   if (typeof term === "string") {
-    // Ambiguous: assume IRI if it looks like one, else literal
-    // (fallback only; prefer structured bindings)
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(term)) return { "@id": term };
     return { "@value": term };
   }
 
   if (typeof term === "object") {
-    // RDFJS-like
     if (term.termType === "NamedNode") return { "@id": term.value };
     if (term.termType === "BlankNode") return { "@id": "_:" + term.value };
     if (term.termType === "Literal") {
@@ -527,9 +655,8 @@ function bindingToJsonLdObject(term) {
       return lit;
     }
 
-    // SPARQL JSON results-like
     const value = term.value ?? term["@value"] ?? term["@id"];
-    const type = term.type; // "uri" | "literal" | "bnode"
+    const type = term.type;
     if (type === "uri") return { "@id": value };
     if (type === "bnode") return { "@id": "_:" + value };
     if (type === "literal") {
@@ -539,7 +666,6 @@ function bindingToJsonLdObject(term) {
       return lit;
     }
 
-    // JSON-LD-like direct
     if (typeof term["@id"] === "string") return { "@id": term["@id"] };
     if (typeof term["@value"] !== "undefined") {
       const lit = { "@value": term["@value"] };
@@ -548,14 +674,12 @@ function bindingToJsonLdObject(term) {
       return lit;
     }
 
-    // Last resort: try to use .value
     if (typeof value === "string") {
       if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return { "@id": value };
       return { "@value": value };
     }
   }
 
-  // Fallback literal
   return { "@value": String(term) };
 }
 
@@ -566,22 +690,41 @@ function bindingToIri(term) {
     if (term.termType === "NamedNode") return term.value;
     if (term.type === "uri") return term.value;
     if (typeof term["@id"] === "string") return term["@id"];
-    if (typeof term.value === "string") return term.value; // last resort
+    if (typeof term.value === "string") return term.value;
   }
   return null;
 }
 
+  // ----------------------------------------------------------------------------
+  // Inference orchestration: rebuild inferred graph from rules
+  // ----------------------------------------------------------------------------
+  // This function recomputes the inferred knowledge graph deterministically.
+  //
+  // Inputs:
+  //   - Rules are read from the named graph GID_RULES
+  //   - Facts are read from the rest of the uRDF store via SPARQL queries
+  //
+  // Execution modes:
+  //   - SPARQL rule: schema:text is executed directly as SPARQL
+  //   - N3 rule: schema:text is an N3 program executed by eyeling, and a separate
+  //     "projection" SPARQL query (from schema:hasPart) is used to generate the
+  //     facts fed into the reasoner
+  //
+  // Output:
+  //   - The inferred named graph (GID_INFERRED) is cleared and replaced entirely
+  //     with the new inferred graph (graph replacement is deterministic and
+  //     avoids incremental drift).
 async function recomputeInferencesFromRules(triggerReason) {
   if (!urdf) return;
-
 
   const ts = Date.now();
 
   try {
-    // 1) Read the rules graph
+    // ------------------------------------------------------------------------
+    // Step 1: read the rules graph
+    // ------------------------------------------------------------------------
     const rulesGraph = urdf.findGraph(GID_RULES);
     if (!Array.isArray(rulesGraph) || rulesGraph.length === 0) {
-      // Deterministic: if no rules, clear inferred graph
       await urdf.clear(GID_INFERRED);
       publish({
         ts,
@@ -592,6 +735,7 @@ async function recomputeInferencesFromRules(triggerReason) {
       return;
     }
 
+    // Build a lookup of nodes by @id to allow dereferencing schema:hasPart refs.
     const nodesById = new Map();
 for (const n of rulesGraph) {
   if (n && typeof n === "object" && typeof n["@id"] === "string") {
@@ -599,8 +743,9 @@ for (const n of rulesGraph) {
   }
 }
 
-
-    // 2) Extract rule resources
+    // ------------------------------------------------------------------------
+    // Step 2: extract rule resources
+    // ------------------------------------------------------------------------
     const rules = rulesGraph.filter((n) => {
       const types = n && n["@type"];
       if (!types) return false;
@@ -608,16 +753,21 @@ for (const n of rulesGraph) {
       return t.includes(NRUA_RULE);
     });
 
-    // 3) Execute each rule, collect triples
-    // We'll build inferred triples as JSON-LD node objects grouped by subject
-    const bySubject = new Map(); // subjectIri -> nodeObject
+    // ------------------------------------------------------------------------
+    // Step 3: execute rules and aggregate inferred triples
+    // ------------------------------------------------------------------------
+    // Inferred results are assembled as JSON-LD node objects grouped by subject.
+    // This makes it easy to load the inferred graph as JSON-LD afterward.
+    const bySubject = new Map();
 
     let firedTriples = 0;
 for (const rule of rules) {
   const programText = getPropFirstValue(rule, SCHEMA_TEXT);
   if (!programText || typeof programText !== "string" || !programText.trim()) continue;
 
-  // ---- New: detect N3 rules and extract their projection query ----
+  // ----------------------------------------------------------------------
+  // N3 rule path (Eyeling)
+  // ----------------------------------------------------------------------
 if (isN3Rule(rule)) {
   const projection = extractN3ProjectionSparql(rule, nodesById);
 
@@ -626,7 +776,7 @@ if (isN3Rule(rule)) {
     continue;
   }
 
-  // NEW: execute projection query
+  // Execute the projection query to produce bindings of {s,p,o} facts.
   let projRes;
   try {
     projRes = await urdf.query(projection);
@@ -639,12 +789,8 @@ if (isN3Rule(rule)) {
   const ok = bindings.filter(hasSpo);
   const bad = bindings.length - ok.length;
 
-  // Log a tiny sample (first 3) so we see term shapes without flooding logs
-  for (let i = 0; i < Math.min(3, ok.length); i++) {
-    const b = ok[i];
-  }
-
-	let factsLines = [];
+  // Serialize projection bindings into N-Triples facts to feed the reasoner.
+  let factsLines = [];
 for (const b of ok) {
   try {
     factsLines.push(bindingToNTripleLine(b));
@@ -658,43 +804,48 @@ for (const b of ok) {
 
 const factsText = factsLines.join("\n");
 
-// Preview only (avoid log spam)
 const previewCount = Math.min(10, factsLines.length);
 
-const n3Program = programText; // rule's schema:text (already validated)
-const n3Input = factsText + "\n\n" + n3Program;
+  // Prepare the N3 input as:
+  //   <facts as N-Triples>
+  //   <blank line>
+  //   <N3 program text>
+  const n3Program = programText;
+  const n3Input = factsText + "\n\n" + n3Program;
 
-if (!eyeling || typeof eyeling.reasonStream !== "function") {
-  RED.log.warn("[uRDF] Eyeling reasonStream not available at runtime, skipping N3 execution for " + (rule["@id"] || "(no @id)"));
-  continue;
-}
+  // If Eyeling is unavailable at runtime, N3 execution is skipped safely.
+  if (!eyeling || typeof eyeling.reasonStream !== "function") {
+    RED.log.warn("[uRDF] Eyeling reasonStream not available at runtime, skipping N3 execution for " + (rule["@id"] || "(no @id)"));
+    continue;
+  }
 
-let derivedCount = 0;
-const maxPreview = 10;
+  let derivedCount = 0;
+  const maxPreview = 10;
 
-const derivedDF = [];
-const derivedPreview = [];
+  const derivedDF = [];
+  const derivedPreview = [];
 
-let loggedFirstDf = false;
+  let loggedFirstDf = false;
 
-function onDerived(ev) {
-  derivedCount++;
+  // Callback invoked by Eyeling when new facts are derived.
+  function onDerived(ev) {
+    derivedCount++;
 
-  if (ev && ev.df) {
-    derivedDF.push(ev.df);
+    if (ev && ev.df) {
+      derivedDF.push(ev.df);
 
-    if (!loggedFirstDf) {
-      loggedFirstDf = true;
+      if (!loggedFirstDf) {
+        loggedFirstDf = true;
+      }
+    }
+
+    if (derivedPreview.length < 2 && ev && typeof ev.triple === "string") {
+      derivedPreview.push(ev.triple);
     }
   }
 
-  if (derivedPreview.length < 2 && ev && typeof ev.triple === "string") {
-    derivedPreview.push(ev.triple);
-  }
-}
-
-try {
-  const out = eyeling.reasonStream(n3Input, { onDerived });  // <-- correct signature
+  try {
+    const out = eyeling.reasonStream(n3Input, { onDerived });
 
 for (const df of derivedDF) {
   const spo = eyelingDfToSpo(df);
@@ -703,33 +854,35 @@ for (const df of derivedDF) {
     continue;
   }
 
-  const sId = spo.s;   // already an IRI or _:...
-  const pIri = spo.p;  // IRI
+  const sId = spo.s;
+  const pIri = spo.p;
   const oJson = eyelingObjectToJsonLd(spo.o);
 
 	const INTERNAL_PRED_PREFIX = "urn:nrua:pv:";
 if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
-  continue; // do not persist helper predicates
+  continue;
 }
 
   addToBySubject(bySubject, sId, pIri, oJson);
 }
 
-} catch (e) {
-  RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
+  } catch (e) {
+    RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
+  }
+
+  // N3 path ends here; results are already merged into bySubject.
+  continue;
+
 }
 
-continue; // still no writing to inferred graph
-
-}
-
-  // ---- Existing SPARQL path remains exactly the same ----
+  // ----------------------------------------------------------------------
+  // SPARQL rule path (direct)
+  // ----------------------------------------------------------------------
   const q = programText;
   const qres = await urdf.query(q);
   const bindings = Array.isArray(qres) ? qres : (qres && Array.isArray(qres.results) ? qres.results : []);
 
   for (const b of bindings) {
-  // Expect bindings for s,p,o
         const sTerm = b.s ?? b["?s"] ?? b.subject ?? b.S;
         const pTerm = b.p ?? b["?p"] ?? b.predicate ?? b.P;
         const oTerm = b.o ?? b["?o"] ?? b.object ?? b.O;
@@ -753,8 +906,9 @@ continue; // still no writing to inferred graph
   }
 }
 
-
-    // 4) Replace inferred graph deterministically
+    // ------------------------------------------------------------------------
+    // Step 4: replace inferred graph deterministically
+    // ------------------------------------------------------------------------
 const inferredGraphToLoad = Array.from(bySubject.values());
 
 await urdf.clear(GID_INFERRED);
@@ -793,6 +947,17 @@ await urdf.load({
   }
 }
 
+  // ----------------------------------------------------------------------------
+  // Rule graph utilities and rule CRUD endpoints
+  // ----------------------------------------------------------------------------
+  // The rules graph (GID_RULES) is stored as JSON-LD in uRDF. These helpers and
+  // endpoints provide a minimal management API to:
+  //   - create a new rule resource
+  //   - update an existing rule resource
+  //   - delete a rule by @id
+  //
+  // The API operates on full rule objects (no patching): create/update replace
+  // the entire rule resource entry in the rules graph.
 function asArray(x) {
   return Array.isArray(x) ? x : (x ? [x] : []);
 }
@@ -807,12 +972,21 @@ function getGraphSafe(gid) {
   return Array.isArray(g) ? g : [];
 }
 
+  // Replace a named graph deterministically by clearing and loading a new graph.
+  // This avoids partial updates and keeps the stored graph consistent.
 async function replaceNamedGraph(gid, graphArray) {
-  // context optional; uRDF stores expanded IRIs anyway
   await urdf.clear(gid);
   await urdf.load({ "@id": gid, "@graph": graphArray });
 }
 
+  // ----------------------------------------------------------------------------
+  // POST /urdf/rules/create
+  // ----------------------------------------------------------------------------
+  // Body: { "rule": <JSON-LD rule resource> }
+  // Constraints:
+  //   - rule["@id"] is required
+  //   - rule["@type"] must include NRUA_RULE
+  //   - conflicts return HTTP 409
 RED.httpAdmin.post("/urdf/rules/create", jsonParser, async (req, res) => {
   const ts = Date.now();
   if (!requireUrdf(ts, "rulesCreate", { method: "POST", path: "/urdf/rules/create" }, res)) return;
@@ -838,6 +1012,14 @@ RED.httpAdmin.post("/urdf/rules/create", jsonParser, async (req, res) => {
   }
 });
 
+  // ----------------------------------------------------------------------------
+  // POST /urdf/rules/update
+  // ----------------------------------------------------------------------------
+  // Body: { "rule": <JSON-LD rule resource> }
+  // Constraints:
+  //   - rule["@id"] is required
+  //   - rule["@type"] must include NRUA_RULE
+  //   - missing rules return HTTP 404
 RED.httpAdmin.post("/urdf/rules/update", jsonParser, async (req, res) => {
   const ts = Date.now();
   if (!requireUrdf(ts, "rulesUpdate", { method: "POST", path: "/urdf/rules/update" }, res)) return;
@@ -861,6 +1043,13 @@ RED.httpAdmin.post("/urdf/rules/update", jsonParser, async (req, res) => {
   }
 });
 
+  // ----------------------------------------------------------------------------
+  // POST /urdf/rules/delete
+  // ----------------------------------------------------------------------------
+  // Body: { "id": "<rule @id>" }
+  // Behavior:
+  //   - removes any rule node whose "@id" matches the provided id
+  //   - missing rules return HTTP 404
 RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
   const ts = Date.now();
   if (!requireUrdf(ts, "rulesDelete", { method: "POST", path: "/urdf/rules/delete" }, res)) return;
@@ -881,12 +1070,26 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
   }
 });
 
-
-  // -------------------------
-  // Application load from /flows (on deploy/start)
-  // -------------------------
+  // ----------------------------------------------------------------------------
+  // Application model extraction from Node-RED flows
+  // ----------------------------------------------------------------------------
+  // This section converts the Node-RED flow configuration (GET /flows) into a
+  // JSON-LD knowledge graph describing:
+  //   - the application as a whole
+  //   - each flow/tab
+  //   - each node (including config nodes)
+  //   - wiring structure (node outputs and their targets)
+  //   - node configuration properties (captured losslessly)
+  //
+  // The resulting graph is stored in the named graph GID_APP and is refreshed
+  // whenever flows are deployed/updated.
   const GID_APP = process.env.URDF_APP_GID || "urn:nrua:app";
 
+  // ----------------------------------------------------------------------------
+  // Stable identifiers (URNs) for app/flow/node entities
+  // ----------------------------------------------------------------------------
+  // These helpers produce stable IDs derived from Node-RED ids so that repeated
+  // loads replace the same resources rather than creating new ones.
   function appId() {
     return "urn:nrua:app";
   }
@@ -900,17 +1103,22 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
     return `urn:nrua:out:${id}:${gate}`;
   }
 
+  // ----------------------------------------------------------------------------
+  // Node property capture rules
+  // ----------------------------------------------------------------------------
+  // Node-RED nodes include many keys that are either universal editor metadata
+  // or not relevant to a semantic configuration graph. Those keys are excluded.
+  //
+  // All remaining keys are stored as schema:PropertyValue entries linked via
+  // schema:additionalProperty to preserve configuration losslessly.
   const EXCLUDE_NODE_KEYS = new Set([
-    // universal / irrelevant:
     "id",
     "type",
     "z",
     "x",
     "y",
     "wires",
-    // not part of your KB goal for nodes:
     "info",
-    // occasional metadata
     "d",
     "g"
   ]);
@@ -919,16 +1127,29 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
     return v === null || ["string", "number", "boolean"].includes(typeof v);
   }
 
+  // ----------------------------------------------------------------------------
+  // Deterministic ID encoding for structured values
+  // ----------------------------------------------------------------------------
+  // Structured values (arrays/objects) are represented as additional JSON-LD
+  // nodes and linked from the owning PropertyValue. makeId ensures stable,
+  // URN-safe identifiers so that the same flow configuration always yields the
+  // same resource ids.
   function makeId(...parts) {
-    // URN-safe deterministic id component encoding
     const enc = (s) =>
       encodeURIComponent(String(s))
-        .replace(/%/g, "_"); // readable-ish and safe
+        .replace(/%/g, "_");
     return parts.map(enc).join(":");
   }
 
+  // ----------------------------------------------------------------------------
+  // Encode structured configuration values
+  // ----------------------------------------------------------------------------
+  // Arrays are encoded as schema:ItemList with schema:ListItem elements.
+  // Objects are encoded as schema:StructuredValue with schema:additionalProperty
+  // entries (schema:PropertyValue).
+  //
+  // The function returns the @id of the created structured resource node.
   function encodeStructuredValue(graph, value, idBase) {
-    // Arrays -> schema:ItemList with schema:ListItem elements
     if (Array.isArray(value)) {
       const listId = makeId(idBase, "list");
       const list = {
@@ -960,7 +1181,6 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
       return listId;
     }
 
-    // Objects -> schema:StructuredValue with additionalProperty entries
     const objId = makeId(idBase, "obj");
     const objNode = {
       "@id": objId,
@@ -970,7 +1190,6 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
 
     graph.push(objNode);
 
-    // stable order for reproducibility
     for (const k of Object.keys(value || {}).sort()) {
       const v = value[k];
 
@@ -991,6 +1210,13 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
     return objId;
   }
 
+  // ----------------------------------------------------------------------------
+  // Attach a schema:PropertyValue to an existing subject node
+  // ----------------------------------------------------------------------------
+  // The subject node must already exist in the graph array. This function:
+  //   1) creates a PropertyValue node with stable @id
+  //   2) pushes it into the graph
+  //   3) links it from the subject via schema:additionalProperty
   function addPropertyValue(graph, subjectId, key, value, baseId) {
     const pvId = makeId(baseId, "pv", key);
 
@@ -1009,7 +1235,6 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
 
     graph.push(pv);
 
-    // subject must already be in graph
     const subj = graph.find((x) => x && x["@id"] === subjectId);
     if (subj) {
       subj["schema:additionalProperty"] = subj["schema:additionalProperty"] || [];
@@ -1017,17 +1242,30 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
     }
   }
 
+  // ----------------------------------------------------------------------------
+  // Flow configuration -> JSON-LD application document
+  // ----------------------------------------------------------------------------
+  // Takes the raw array returned by GET /flows and builds a JSON-LD document:
+  //   { "@context": ..., "@id": <GID_APP>, "@graph": [...] }
+  //
+  // The graph contains:
+  //   - schema:Application root
+  //   - nrua:Flow nodes derived from "tab" entries
+  //   - nrua:Node nodes for all non-tab entries
+  //   - nrua:NodeOutput wiring nodes for each output gate
+  //   - schema:PropertyValue nodes for configuration keys
+  //
+  // Additionally, each flow collects a keyword list from node types as a compact
+  // summary under schema:keywords.
 function buildAppJsonLdFromFlows(flowsArray) {
   const graph = [];
 
-  // Application
   graph.push({
     "@id": appId(),
     "@type": "schema:Application"
   });
 
-  // --- NEW: collect keywords per flow (tab) ---
-  const flowKeywords = new Map(); // flowIri -> Set(keyword)
+  const flowKeywords = new Map();
 
   function addKw(flowIri, kw) {
     if (!kw) return;
@@ -1041,7 +1279,6 @@ function buildAppJsonLdFromFlows(flowsArray) {
     set.add(k);
   }
 
-  // Tabs -> Flow entities
   const tabs = flowsArray.filter((n) => n && n.type === "tab");
   for (const t of tabs) {
     const fid = flowId(t.id);
@@ -1054,11 +1291,9 @@ function buildAppJsonLdFromFlows(flowsArray) {
       "schema:isPartOf": { "@id": appId() }
     });
 
-    // ensure map exists even if flow has no nodes
     flowKeywords.set(fid, flowKeywords.get(fid) || new Set());
   }
 
-  // Nodes (including config nodes)
   for (const n of flowsArray) {
     if (!n || typeof n !== "object") continue;
     if (!n.id || !n.type) continue;
@@ -1068,9 +1303,8 @@ function buildAppJsonLdFromFlows(flowsArray) {
 
     const partOf = n.z ? flowId(String(n.z)) : appId();
 
-    // --- NEW: add node type as keyword to its flow ---
     if (n.z) {
-      addKw(partOf, n.type); // e.g. "inject", "change", "debug", ...
+      addKw(partOf, n.type);
     }
 
     const node = {
@@ -1084,7 +1318,6 @@ function buildAppJsonLdFromFlows(flowsArray) {
 
     graph.push(node);
 
-    // type-specific configuration (lossless; excludes common keys)
     for (const [k, v] of Object.entries(n)) {
       if (EXCLUDE_NODE_KEYS.has(k)) continue;
       if (k === "name") continue;
@@ -1092,7 +1325,6 @@ function buildAppJsonLdFromFlows(flowsArray) {
       addPropertyValue(graph, thisNodeId, k, v, thisNodeId);
     }
 
-    // Wiring via NodeOutput
     if (Array.isArray(n.wires)) {
       for (let gate = 0; gate < n.wires.length; gate++) {
         const targets = n.wires[gate];
@@ -1111,19 +1343,17 @@ function buildAppJsonLdFromFlows(flowsArray) {
     }
   }
 
-  // --- NEW: write schema:keywords onto each Flow node (sorted for determinism) ---
 for (const [flowIri, set] of flowKeywords.entries()) {
   if (!set || set.size === 0) continue;
   const flowNode = graph.find((x) => x && x["@id"] === flowIri);
   if (!flowNode) continue;
 
   flowNode["schema:keywords"] = Array.from(set)
-    .map((kw) => String(kw).trim())   // optional safety
-    .filter(Boolean)                  // optional safety
+    .map((kw) => String(kw).trim())
+    .filter(Boolean)
     .sort()
     .join(",");
 }
-
 
   return {
     "@context": { nrua: NRUA, schema: SCHEMA },
@@ -1132,6 +1362,11 @@ for (const [flowIri, set] of flowKeywords.entries()) {
   };
 }
 
+  // ----------------------------------------------------------------------------
+  // Refresh scheduling (debounce)
+  // ----------------------------------------------------------------------------
+  // Flow events can fire in quick succession during deployments. A short debounce
+  // avoids redundant reload work.
   let appReloadTimer = null;
 
   function scheduleAppReload(reason) {
@@ -1149,6 +1384,11 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     }, 250);
   }
 
+  // ----------------------------------------------------------------------------
+  // Load application graph from /flows and trigger inference
+  // ----------------------------------------------------------------------------
+  // This performs a full replace of the application graph to keep state
+  // deterministic across deploys/updates.
   async function loadApplicationFromFlows(reason) {
     if (!urdf) return;
 
@@ -1161,7 +1401,6 @@ for (const [flowIri, set] of flowKeywords.entries()) {
 
     const appDoc = buildAppJsonLdFromFlows(flows);
 
-    // Replace graph each time (deploy/update) to keep deterministic state
     await urdf.clear(GID_APP);
     await urdf.load(appDoc);
     await recomputeInferencesFromRules(reason);
@@ -1185,6 +1424,11 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     RED.log.info(`[uRDF] Application graph updated from /flows into gid=${GID_APP} (${reason})`);
   }
 
+  // ----------------------------------------------------------------------------
+  // Hook into Node-RED flow lifecycle events
+  // ----------------------------------------------------------------------------
+  // When flows start/deploy/update, refresh the application graph and recompute
+  // inferred knowledge derived from rules.
   if (RED.events && typeof RED.events.on === "function") {
     RED.events.on("flows:started", () => scheduleAppReload("flows:started"));
     RED.events.on("flows:deployed", () => scheduleAppReload("flows:deployed"));
@@ -1194,23 +1438,35 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     RED.log.warn("[uRDF] RED.events not available; deploy hook not registered");
   }
 
-  // -------------------------
-  // Existing endpoints (unchanged)
-  // -------------------------
+  // ----------------------------------------------------------------------------
+  // Admin HTTP API: uRDF store access and management
+  // ----------------------------------------------------------------------------
+  // These endpoints expose a minimal HTTP interface over the uRDF store via
+  // Node-RED's admin server (RED.httpAdmin).
+  //
+  // Design notes:
+  // - Endpoints are intentionally operational and diagnostic in nature.
+  // - All calls publish a structured event when possible (editor visibility).
+  // - The handler logic is defensive: failures return explicit errors and do not
+  //   crash the Node-RED runtime.
   function now() {
     return Date.now();
   }
 
+  // Reduce SPARQL text to a compact one-line preview for event logs.
   function summarizeSparql(s) {
     if (!s || typeof s !== "string") return "";
     const oneLine = s.replace(/\s+/g, " ").trim();
     return oneLine.length > 140 ? oneLine.slice(0, 137) + "..." : oneLine;
   }
 
+  // Convenience response helper: ok=true -> 200, ok=false -> 500.
   function okOr500(res, payload) {
     return res.status(payload.ok ? 200 : 500).json(payload);
   }
 
+  // Ensure uRDF is available before servicing a request. If not, publish an
+  // event and respond with 500.
   function requireUrdf(ts, type, reqMeta, res) {
     if (urdf) return true;
     const payload = { ok: false, ts, error: "uRDF module not loaded" };
@@ -1219,7 +1475,10 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     return false;
   }
 
+  // ----------------------------------------------------------------------------
   // GET /urdf/health
+  // ----------------------------------------------------------------------------
+  // Basic runtime check: confirms uRDF module load and reports store size.
   RED.httpAdmin.get("/urdf/health", function (req, res) {
     const ts = now();
     const ok = !!urdf;
@@ -1240,7 +1499,12 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     okOr500(res, payload);
   });
 
+  // ----------------------------------------------------------------------------
   // GET /urdf/size?gid=...
+  // ----------------------------------------------------------------------------
+  // Returns either:
+  // - total store size (no gid)
+  // - size of a named graph (gid provided)
   RED.httpAdmin.get("/urdf/size", function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "size", { method: "GET", path: "/urdf/size" }, res)) return;
@@ -1287,7 +1551,12 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     }
   });
 
+  // ----------------------------------------------------------------------------
   // GET /urdf/graph?gid=...
+  // ----------------------------------------------------------------------------
+  // Returns the JSON-LD graph array for:
+  // - the default graph (no gid)
+  // - a named graph (gid provided)
   RED.httpAdmin.get("/urdf/graph", function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "graph", { method: "GET", path: "/urdf/graph" }, res)) return;
@@ -1334,13 +1603,18 @@ for (const [flowIri, set] of flowKeywords.entries()) {
     }
   });
 
-  // GET /urdf/export  -> downloads full store as JSON-LD
+  // ----------------------------------------------------------------------------
+  // GET /urdf/export?gid=...
+  // ----------------------------------------------------------------------------
+  // Downloads a JSON-LD document containing either:
+  // - the whole store (no gid)
+  // - one named graph (gid provided)
 RED.httpAdmin.get("/urdf/export", function (req, res) {
   const ts = now();
   if (!requireUrdf(ts, "export", { method: "GET", path: "/urdf/export" }, res)) return;
 
   try {
-    const graph = req.query && req.query.gid ? urdf.findGraph(String(req.query.gid)) : urdf.findGraph(); 
+    const graph = req.query && req.query.gid ? urdf.findGraph(String(req.query.gid)) : urdf.findGraph();
     const doc = {
       "@context": {
         nrua: "https://w3id.org/nodered-static-program-analysis/user-application-ontology#",
@@ -1374,8 +1648,10 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
   }
 });
 
-
+  // ----------------------------------------------------------------------------
   // GET /urdf/node?id=...&gid=...
+  // ----------------------------------------------------------------------------
+  // Retrieves a single node/resource by @id, optionally scoped to a named graph.
   RED.httpAdmin.get("/urdf/node", async function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "node", { method: "GET", path: "/urdf/node" }, res)) return;
@@ -1422,7 +1698,13 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
     }
   });
 
-  // POST /urdf/clear  body: { "gid": "optional" }
+  // ----------------------------------------------------------------------------
+  // POST /urdf/clear
+  // ----------------------------------------------------------------------------
+  // Body: { "gid": "optional" }
+  // Clears either:
+  // - a named graph (gid present)
+  // - the whole store/default (gid absent)
   RED.httpAdmin.post("/urdf/clear", jsonParser, async function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "clear", { method: "POST", path: "/urdf/clear" }, res)) return;
@@ -1460,7 +1742,11 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
     }
   });
 
-  // POST /urdf/load  (JSON-LD)
+  // ----------------------------------------------------------------------------
+  // POST /urdf/load
+  // ----------------------------------------------------------------------------
+  // Loads a JSON-LD document into the store (append semantics).
+  // Body: a JSON object or array representing JSON-LD.
   RED.httpAdmin.post("/urdf/load", jsonParser, async function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "load", { method: "POST", path: "/urdf/load", summary: "JSON-LD" }, res)) return;
@@ -1514,7 +1800,11 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
     }
   });
 
-  // Load JSON-LD from URL
+  // ----------------------------------------------------------------------------
+  // POST /urdf/loadFrom
+  // ----------------------------------------------------------------------------
+  // Fetches JSON-LD from a remote URL and loads it into the store.
+  // Body: { "uri": "https://..." }
   RED.httpAdmin.post("/urdf/loadFrom", jsonParser, async function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "loadFrom", { method: "POST", path: "/urdf/loadFrom" }, res)) return;
@@ -1610,8 +1900,13 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
     }
   });
 
-// POST /urdf/loadFile  body: { "doc": <JSON-LD> }
-// Behavior: if doc has @id => treat it as gid, clear that gid, then load doc
+  // ----------------------------------------------------------------------------
+  // POST /urdf/loadFile
+  // ----------------------------------------------------------------------------
+  // Body: { "doc": <JSON-LD> }
+  // Behavior:
+  // - doc["@id"] is required and is used as the target named graph (gid)
+  // - the named graph is cleared then replaced with the provided doc
 RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
   const ts = now();
   if (!requireUrdf(ts, "loadFile", { method: "POST", path: "/urdf/loadFile" }, res)) return;
@@ -1629,7 +1924,6 @@ RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
     return res.status(400).json(payload);
   }
 
-  // Determine gid
   let gid = null;
   if (doc && typeof doc === "object" && typeof doc["@id"] === "string" && doc["@id"].trim()) {
     gid = doc["@id"].trim();
@@ -1642,7 +1936,6 @@ RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
   }
 
   try {
-    // Replace that named graph
     await urdf.clear(gid);
     await urdf.load(doc);
 
@@ -1656,8 +1949,14 @@ RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
   }
 });
 
-
-  // POST /urdf/query  body: { "sparql": "..." }
+  // ----------------------------------------------------------------------------
+  // POST /urdf/query
+  // ----------------------------------------------------------------------------
+  // Body: { "sparql": "..." }
+  // Executes a SPARQL query against the store.
+  // Response:
+  // - ASK queries -> { type: "ASK", result: boolean }
+  // - SELECT queries -> { type: "SELECT", results: ... }
   RED.httpAdmin.post("/urdf/query", jsonParser, async function (req, res) {
     const ts = now();
     if (!requireUrdf(ts, "query", { method: "POST", path: "/urdf/query" }, res)) return;
@@ -1707,6 +2006,10 @@ RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
     }
   });
 
+  // ----------------------------------------------------------------------------
+  // Startup log summary
+  // ----------------------------------------------------------------------------
+  // One-line overview of the runtime endpoints exposed by this plugin.
   RED.log.info(
     "[uRDF] runtime plugin loaded: /urdf/health /urdf/size /urdf/graph /urdf/node /urdf/clear /urdf/load /urdf/loadFrom /urdf/query"
   );

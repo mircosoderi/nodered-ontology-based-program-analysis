@@ -1,11 +1,37 @@
 <script type="text/javascript">
+/*
+  uRDF Sidebar (Node-RED Editor Plugin)
+
+  This file registers a Node-RED sidebar tab that acts as a lightweight “control panel”
+  for the uRDF runtime plugin. It is entirely client-side and runs inside the Node-RED editor.
+
+  What it does:
+  - Calls the runtime HTTP Admin API endpoints (e.g., /urdf/health, /urdf/query, /urdf/loadFile)
+  - Subscribes to server-published events on RED.comms (topic: "urdf/events")
+  - Provides simple UIs for: ping/load/search/query/export/clear + rule CRUD + reasoning view
+
+  Important separation of concerns:
+  - This sidebar never performs reasoning itself.
+  - It only sends requests to the runtime and renders the responses/events.
+*/
 (function () {
   "use strict";
 
-  const TOPIC = "urdf/events";
+  
+  /*
+    RED.comms topic used by the runtime to push structured events to the editor.
+    The runtime publishes objects that include request/response metadata, used here
+    to populate the Response panel and the Events log.
+  */
+const TOPIC = "urdf/events";
 
 
-  function createSidebar() {
+  
+  /*
+    createSidebar() builds the entire sidebar UI and registers it as a Node-RED tab.
+    It returns small helpers used by the plugin lifecycle (appendLog, setResponse, ...).
+  */
+function createSidebar() {
     const $root = $("<div>").css({
       height: "100%",
       padding: "8px",
@@ -15,7 +41,6 @@
       boxSizing: "border-box"
     });
 
-    // --- Helpers ---
 
     function mkInput(ph) {
       return $("<input>")
@@ -95,7 +120,6 @@ function termValue(t) {
 
 function ratingToNumber(r) {
   if (!r) return -1;
-  // your rating looks like urn:rating:issues:4070 -> extract trailing number
   const m = /(\d+)\s*$/.exec(String(r));
   return m ? parseInt(m[1], 10) : -1;
 }
@@ -115,7 +139,6 @@ function flowIdFromUrn(subjectIri) {
 
 function revealFlowInEditor(flowId) {
   try {
-    // Node-RED typically uses RED.workspaces.show(tabId) to switch tabs
     if (RED && RED.workspaces && typeof RED.workspaces.show === "function") {
       RED.workspaces.show(flowId);
       return true;
@@ -127,27 +150,30 @@ function revealFlowInEditor(flowId) {
 function localIdFromIri(iri) {
   if (!iri) return "";
   const s = String(iri);
-  // last token after / # :
   const m = /([^/#:]+)\s*$/.exec(s);
   return m ? m[1] : s;
 }
 
 function humanPredicateLabel(pIri, pLabel) {
-  // prefer label, else compact from IRI tail
   const lbl = (pLabel || "").trim();
   if (lbl) return lbl;
   return localIdFromIri(pIri);
 }
 
 
-    // --- Mode selector (dropdown) ---
     const $modeRow = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center" });
     const $modeLabel = $("<div>").css({ fontWeight: 600, minWidth: "58px" }).text("Action");
     const $mode = $("<select>")
       .addClass("red-ui-text")
       .css({ width: "100%", padding: "6px", boxSizing: "border-box" });
 
-    const MODES = [
+    
+    /*
+      Action selector:
+      The UI is split into independent “modes”. Only one mode section is visible at a time.
+      Each mode is a thin client to a runtime operation (or a higher-level composite view).
+    */
+const MODES = [
       { id: "health", label: "Ping" },
       { id: "load", label: "Load" },
       { id: "search", label: "Search" },
@@ -161,10 +187,8 @@ function humanPredicateLabel(pIri, pLabel) {
     MODES.forEach(m => $mode.append($("<option>").attr("value", m.id).text(m.label)));
     $modeRow.append($modeLabel, $mode);
 
-    // --- Section title (changes with dropdown) ---
     const $sectionTitle = mkTitle("Ping");
 
-    // --- Section containers (only one visible at a time) ---
     const $sectionHealth = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
     const $sectionLoad   = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
     const $sectionSearch = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
@@ -176,11 +200,9 @@ function humanPredicateLabel(pIri, pLabel) {
 
 
 
-    // ========== Health ==========
     const $btnHealth = $("<button>").addClass("red-ui-button").text("Ping");
     $sectionHealth.append($btnHealth);
 
-    // ========== Load ==========
     const $loadTitle = mkTitle("Load JSON-LD");
     const $loadArea = mkTextArea(
 `Paste JSON-LD here, e.g.
@@ -208,7 +230,6 @@ const $loadFileRow = mkRow($fileInput, $btnLoadFile);
 
     $sectionLoad.append($loadTitle, $loadArea, $btnLoad, $br, $loadFromTitle, $loadFromRow, $loadFileTitle, $loadFileRow);
 
-    // ========== Search ==========
     const $gidInput = mkInput("gid (optional)");
     const $btnSize = $("<button>").addClass("red-ui-button").text("Size");
     const $btnGraph = $("<button>").addClass("red-ui-button").text("Show");
@@ -220,7 +241,6 @@ const $loadFileRow = mkRow($fileInput, $btnLoadFile);
 
     $sectionSearch.append($searchRow1, $searchRow2);
 
-    // ========== Query ==========
     const $queryArea = mkTextArea(
 `Example:
 SELECT ?s ?name WHERE { ?s <http://schema.org/name> ?name }`, "140px"
@@ -228,20 +248,17 @@ SELECT ?s ?name WHERE { ?s <http://schema.org/name> ?name }`, "140px"
     const $btnQuery = $("<button>").addClass("red-ui-button").text("Run SPARQL query");
     $sectionQuery.append($queryArea, $btnQuery);
 
-    // ========== Export =========
     const $exportTitle = mkTitle("Export");
 const $exportGidInput = mkInput("gid (optional)");
 const $btnExport = $("<button>").addClass("red-ui-button").text("Export");
 const $exportRow = mkRow($exportGidInput, $btnExport);
     $sectionExport.append($exportRow);
 
-    // ========== Clear store ==========
     const $clearGidInput = mkInput("gid (optional)");
     const $btnClearStore = $("<button>").addClass("red-ui-button").text("Clear");
     const $clearRow = mkRow($clearGidInput, $btnClearStore);
     $sectionClear.append($clearRow);
 
-// ========== Configure ==========
 const RULES_GID = "urn:nrua:rules";
 const IRI_NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
 const IRI_SCHEMA_NAME = "https://schema.org/name";
@@ -387,7 +404,6 @@ const $projHint = $("<div>")
 
 const $projArea = mkTextArea("Projection SPARQL (N3 only)", "110px").val(projectionText);
 
-// Enable only if N3
 function refreshProjEnabled() {
   const lang = ($progLangInput.val() || "").trim().toUpperCase();
   const isN3 = (lang === "N3");
@@ -401,7 +417,6 @@ $progLangInput.on("input", refreshProjEnabled);
     $card.append($hdr, $nameInput, $descInput, $progLangInput, $encodingInput, $queryArea, $projHint, $projArea);
     $rulesList.append($card);
 
-    // ---- Update ----
     $btnSave.on("click", async () => {
       try {
         const updated = JSON.parse(JSON.stringify(rule)); // shallow clone safe enough for this structure
@@ -415,7 +430,6 @@ $progLangInput.on("input", refreshProjEnabled);
 if (lang === "N3") {
   const proj = ($projArea.val() || "").trim();
 
-  // Ensure schema:hasPart exists and is an array
   updated[IRI_SCHEMA_HAS_PART] = [{
     "@type": "https://schema.org/SoftwareSourceCode",
     [IRI_SCHEMA_PROG_LANG]: "SPARQL",
@@ -423,7 +437,6 @@ if (lang === "N3") {
     [IRI_SCHEMA_TEXT]: proj
   }];
 } else {
-  // Non-N3: remove projection (keeps rules clean)
   delete updated[IRI_SCHEMA_HAS_PART];
 }
 
@@ -446,7 +459,6 @@ if (lang === "N3") {
       }
     });
 
-    // ---- Delete ----
     $btnDelete.on("click", async () => {
       try {
         const { status, json } = await doFetchJson("urdf/rules/delete", {
@@ -520,8 +532,6 @@ if (lang === "N3") {
       $newId.val("");
       $newName.val("");
       $newDesc.val("");
-      // leave query in place or clear it—your choice:
-      // $newQuery.val("");
       await renderRules();
     }
   } catch (e) {
@@ -531,9 +541,7 @@ if (lang === "N3") {
 });
 
 
-// ========== End of Configure ============
 
-// ========== Reason ==========
 
 const $reasonList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
 $sectionReason.append($reasonList);
@@ -642,10 +650,6 @@ LIMIT 1000
   return Array.isArray(json.results) ? json.results : [];
 }
 
-function termValue(t) {
-  return t && typeof t === "object" ? t.value : undefined;
-}
-
 async function renderReasoning() {
   $reasonList.empty();
 
@@ -655,8 +659,6 @@ async function renderReasoning() {
     return;
   }
 
-  // group by subject IRI
-  // subject -> Map(key -> itemObj)
   const byS = new Map();
 
   for (const r of rows) {
@@ -679,7 +681,6 @@ async function renderReasoning() {
     if (!byS.has(s)) byS.set(s, new Map());
     const itemsMap = byS.get(s);
 
-    // key by (doc,p) so we can show predicate per line
 const key = p + "||" + doc;
 
     let d = itemsMap.get(key);
@@ -701,7 +702,6 @@ const key = p + "||" + doc;
       itemsMap.set(key, d);
     }
 
-    // keep first non-empty values (multiple rows may exist)
     if (!d.sClassLabel && sClassLabel) d.sClassLabel = sClassLabel;
     if (!d.pLabel && pLabel) d.pLabel = pLabel;
 
@@ -726,7 +726,6 @@ const key = p + "||" + doc;
       return rb - ra;
     });
 
-    // Card per subject
     const $card = $("<div>").css({
       border: "1px solid var(--red-ui-primary-border-color, #ddd)",
       borderRadius: "4px",
@@ -743,13 +742,11 @@ const key = p + "||" + doc;
       alignItems: "center"
     });
 
-    // compute subject "id"
     let subjId = "";
     if (isNodeUrn(s)) subjId = nodeIdFromUrn(s);
     else if (isFlowUrn(s)) subjId = flowIdFromUrn(s);
     else subjId = localIdFromIri(s);
 
-    // pick a class label if present in any item (best-effort)
     const firstItem = items[0] || {};
     const cls = (firstItem.sClassLabel || "").trim() || "Thing";
 
@@ -757,7 +754,6 @@ const key = p + "||" + doc;
 
     let $subjectLink;
 
-    // Header click behavior: Node -> reveal/highlight; Flow -> switch tab only
     if (isNodeUrn(s)) {
       const nodeId = nodeIdFromUrn(s);
       $subjectLink = $("<a href='#'>")
@@ -819,7 +815,6 @@ if (isNodeUrn(it.doc)) {
     borderRadius: "4px"
   });
 
-  // predicate chip
   const predText = humanPredicateLabel(it.p, it.pLabel);
   const $pred = $("<span>").text(predText).css({
     display: "inline-block",
@@ -833,7 +828,6 @@ if (isNodeUrn(it.doc)) {
   });
   $line.append($pred);
 
-  // site chip ("from <host>")
   const siteTxt = (it.site || "").trim();
   if (siteTxt) {
     const $from = $("<span>").text("from " + siteTxt).css({
@@ -849,7 +843,6 @@ if (isNodeUrn(it.doc)) {
     $line.append($from);
   }
 
-  // doc link: node/flow reveal, else external only if schema:url exists
   let $docEl;
 if (isLiteral) {
     $docEl = $("<span>")
@@ -895,7 +888,6 @@ if (isLiteral) {
 
   $line.append($docEl);
 
-  // category chips
   const cats = Array.from(it.categories || []).sort();
   for (const c of cats) {
     const $chip = $("<span>").text(c).css({
@@ -920,10 +912,7 @@ if (isLiteral) {
 }
 
 
-// ===========================
 
-    // --- Response viewer (always visible, bigger) ---
-// --- Response viewer header ---
 const $responseHeader = $("<div>").css({
   display: "flex",
   alignItems: "center",
@@ -940,7 +929,6 @@ const $btnClearResponse = $("<button>")
   .addClass("red-ui-button red-ui-button-small")
   .text("Clear");
 
-// Right-side button group
 const $responseActions = $("<div>").css({
   display: "flex",
   gap: "6px"
@@ -955,12 +943,10 @@ $responseHeader.append($responseTitle, $responseActions);
       border: "1px solid var(--red-ui-primary-border-color, #ddd)",
       borderRadius: "4px",
       overflow: "auto",
-      // Let it breathe: take remaining vertical space
       flex: "1 1 auto",
       minHeight: "220px"
     }).text("—");
 
-    // --- Events (push) - collapsible, collapsed by default ---
     const $eventsWrap = $("<div>").css({
       border: "1px solid var(--red-ui-primary-border-color, #ddd)",
       borderRadius: "4px",
@@ -1000,7 +986,6 @@ $responseHeader.append($responseTitle, $responseActions);
 
     $eventsWrap.append($eventsHeader, $log);
 
-    // --- Assemble UI ---
     $root.append(
       $modeRow,
       $sectionTitle,
@@ -1027,7 +1012,6 @@ $responseHeader.append($responseTitle, $responseActions);
       content: $root
     });
 
-    // --- Log + response helpers ---
     function appendLog(line) {
       const ts = new Date().toISOString();
       $log.prepend($("<div>").text("[" + ts + "] " + line));
@@ -1048,7 +1032,6 @@ $btnCopyResponse.on("click", function (e) {
   const text = $response.text();
   if (!text || text === "—") return;
 
-  // Modern API (secure contexts only)
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).catch(err => {
       console.warn("Clipboard API failed, falling back", err);
@@ -1092,7 +1075,6 @@ function legacyCopy(text) {
       setEventsExpanded(!expanded);
     });
 
-    // --- Mode switching ---
     const modeToSection = {
       health: $sectionHealth,
       load: $sectionLoad,
@@ -1151,17 +1133,19 @@ function scheduleReasonRefresh(source) {
       applyMode($mode.val());
     });
 
-    // Default mode
     $mode.val("health");
     applyMode("health");
     setEventsExpanded(false);
 
-    // --- Networking ---
+
+    /*
+      HTTP helper:
+      Node-RED may be hosted under a non-root admin path (RED.settings.httpAdminRoot).
+      doFetchJson() builds the correct URL and enforces a JSON response contract.
+    */
 async function doFetchJson(path, options) {
   const adminRoot = (RED.settings.httpAdminRoot || "").replace(/\/$/, "");
 
-  // If already absolute (starts with http(s):// or /), keep it.
-  // Otherwise treat it as relative to httpAdminRoot.
   let url = path;
   if (!/^https?:\/\//i.test(path) && !path.startsWith("/")) {
     url = adminRoot + "/" + path;
@@ -1173,7 +1157,6 @@ async function doFetchJson(path, options) {
   try {
     json = await r.json();
   } catch (e) {
-    // fallback if server returned non-JSON (e.g., HTML error page)
     const text = await r.text().catch(() => "");
     throw new Error(`Expected JSON from ${url} but got: ${text.slice(0, 200)}`);
   }
@@ -1182,7 +1165,6 @@ async function doFetchJson(path, options) {
 }
 
 
-    // --- Buttons wiring ---
     $btnHealth.on("click", async function () {
       try {
         const { status, json } = await doFetchJson("urdf/health", { method: "GET" });
@@ -1406,7 +1388,14 @@ $btnExport.on("click", async function () {
     return { appendLog, setResponse, scheduleReasonRefresh };
   }
 
-  RED.plugins.registerPlugin("urdf-editor", {
+  
+  /*
+    Plugin lifecycle:
+    Node-RED calls onadd() once when the editor loads. We create the sidebar, then subscribe
+    to runtime push events (RED.comms). When events arrive, we log them and optionally refresh
+    the Reason view after application updates.
+  */
+RED.plugins.registerPlugin("urdf-editor", {
     onadd: function () {
       const ui = createSidebar();
       ui.appendLog("Sidebar loaded. Subscribing to " + TOPIC + "...");
