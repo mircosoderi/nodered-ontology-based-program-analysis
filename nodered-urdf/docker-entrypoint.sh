@@ -31,6 +31,9 @@ SETTINGS_FILE="$USER_DIR/settings.js"
 
 SECRET_FILE="$USER_DIR/.node-red-credential-secret"
 
+DEFAULT_FLOWS="/opt/nodered-default-flows.json"
+FLOWS_FILE="$USER_DIR/flows.json"
+
 # ---------------------------------------------------------------------------
 # Base directory preparation
 # ---------------------------------------------------------------------------
@@ -67,6 +70,19 @@ if [ ! -f "$SETTINGS_FILE" ]; then
   echo "[entrypoint] Creating default settings.js in $SETTINGS_FILE ..."
   cp "$DEFAULT_SETTINGS" "$SETTINGS_FILE"
 fi
+
+# ---------------------------------------------------------------------------
+# Default flows initialization
+# ---------------------------------------------------------------------------
+# On a fresh volume, Node-RED has no flows file.
+# In that case, copy a predefined default flows file into /data.
+#
+# This mirrors the behavior used for settings.js:
+# - defaults are provided once
+# - user modifications persist across restarts
+echo "[entrypoint] Creating default flows file in $FLOWS_FILE ..."
+cp "$DEFAULT_FLOWS" "$FLOWS_FILE"
+
 
 # ---------------------------------------------------------------------------
 # Plugin installation into the persistent volume

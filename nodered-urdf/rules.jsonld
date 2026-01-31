@@ -3,7 +3,7 @@
     "schema": "https://schema.org/",
     "nrua": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
   },
-  "@id": "urn:graph:rules",
+  "@id": "urn:nrua:rules",
   "@graph": [
     {
       "@id": "urn:rule:node-type-title-seeAlso",
