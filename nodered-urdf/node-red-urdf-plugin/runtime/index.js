@@ -639,21 +639,9 @@ if (isN3Rule(rule)) {
   const ok = bindings.filter(hasSpo);
   const bad = bindings.length - ok.length;
 
-  RED.log.info(
-    "[uRDF] N3 projection executed for rule " + (rule["@id"] || "(no @id)") +
-    " -> bindings=" + bindings.length +
-    ", validSpo=" + ok.length +
-    (bad ? (", invalid=" + bad) : "")
-  );
-
   // Log a tiny sample (first 3) so we see term shapes without flooding logs
   for (let i = 0; i < Math.min(3, ok.length); i++) {
     const b = ok[i];
-    RED.log.info("[uRDF] N3 projection sample " + i + " for " + (rule["@id"] || "(no @id)") +
-      " s=" + JSON.stringify(b.s) +
-      " p=" + JSON.stringify(b.p) +
-      " o=" + JSON.stringify(b.o)
-    );
   }
 
 	let factsLines = [];
@@ -672,13 +660,6 @@ const factsText = factsLines.join("\n");
 
 // Preview only (avoid log spam)
 const previewCount = Math.min(10, factsLines.length);
-RED.log.info("[uRDF] N3 fact base serialized for rule " + (rule["@id"] || "(no @id)") +
-  " -> triples=" + factsLines.length +
-  ", previewLines=" + previewCount
-);
-for (let i = 0; i < previewCount; i++) {
-  RED.log.info("[uRDF] N3 facts preview " + i + ": " + factsLines[i]);
-}
 
 const n3Program = programText; // rule's schema:text (already validated)
 const n3Input = factsText + "\n\n" + n3Program;
@@ -715,17 +696,6 @@ function onDerived(ev) {
 try {
   const out = eyeling.reasonStream(n3Input, { onDerived });  // <-- correct signature
 
-RED.log.info(
-  "[uRDF] Eyeling finished for rule " + (rule["@id"] || "(no @id)") +
-  " -> derivedCount=" + derivedCount +
-  ", collectedDF=" + derivedDF.length +
-  ", out.derived=" + (out && out.derived ? out.derived.length : "n/a")
-);
-
-for (let i = 0; i < derivedPreview.length; i++) {
-  RED.log.info("[uRDF] Eyeling derived preview " + i + " for " + (rule["@id"] || "(no @id)") + ": " + derivedPreview[i]);
-}
-
 for (const df of derivedDF) {
   const spo = eyelingDfToSpo(df);
   if (!spo) {
@@ -744,9 +714,6 @@ if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
 
   addToBySubject(bySubject, sId, pIri, oJson);
 }
-
-RED.log.info("[uRDF] Added " + derivedDF.length + " derived facts to bySubject for rule " + (rule["@id"] || "(no @id)"));
-firedTriples+=derivedDF.length
 
 } catch (e) {
   RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
@@ -814,7 +781,6 @@ await urdf.load({
       response: payload
     });
 
-    RED.log.info(`[uRDF] Applied ${rules.length} rule(s): wrote ${firedTriples} inferred triple(s) to gid=${GID_INFERRED}`);
   } catch (e) {
     const payload = { ok: false, ts, gid: GID_INFERRED, error: e?.message || String(e) };
     publish({

@@ -249,27 +249,49 @@ const IRI_SCHEMA_TEXT = "https://schema.org/text";
 const IRI_SCHEMA_DESC = "https://schema.org/description";
 const IRI_SCHEMA_PROG_LANG = "https://schema.org/programmingLanguage";
 const IRI_SCHEMA_ENCODING = "https://schema.org/encodingFormat";
+const IRI_SCHEMA_HAS_PART = "https://schema.org/hasPart";
 
-const $btnRulesRefresh = $("<button>").addClass("red-ui-button").text("Refresh rules");
 const $rulesList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
 
 const $newTitle = mkTitle("Create new rule");
 const $newId = mkInput("Rule @id (optional, leave blank to auto-generate)");
 const $newName = mkInput("Rule name");
 const $newDesc = mkInput("Description (optional)");
-const $newQuery = mkTextArea("SPARQL SELECT returning ?s ?p ?o", "140px");
+const $newQuery = mkTextArea("Rule(s) definition. For SPARQL rules, a SPARQL SELECT returning ?s ?p ?o.", "140px");
+
+const $newProgLang = mkInput("Programming language (e.g. SPARQL, N3)");
+const $newEncoding = mkInput("Encoding format (e.g. application/sparql-query, text/n3)");
+
+const $newProjHint = $("<div>")
+  .css({ "margin": "6px 0 2px 0", "font-size": "11px", "opacity": 0.75 })
+  .text("Projection SPARQL (only applies to N3 rules):");
+
+const $newProjArea = mkTextArea("SPARQL SELECT returning ?s ?p ?o. N3 rules are applied on these triples.", "110px").val("");
+
+function refreshNewProjEnabled() {
+  const lang = ($newProgLang.val() || "").trim().toUpperCase();
+  const isN3 = (lang === "N3");
+  $newProjArea.prop("disabled", !isN3);
+  $newProjHint.css("opacity", isN3 ? 0.85 : 0.45);
+}
+refreshNewProjEnabled();
+$newProgLang.on("input", refreshNewProjEnabled);
+
 const $btnCreate = $("<button>").addClass("red-ui-button").text("Create");
 
 $sectionConfigure.append(
-  $btnRulesRefresh,
   mkTitle("Existing rules"),
   $rulesList,
   $newTitle,
   $newId,
   $newName,
   $newDesc,
+  $newProgLang,
+  $newEncoding,
   $newQuery,
-  $btnCreate
+$newProjHint,
+  $newProjArea,
+	$btnCreate
 );
 
 async function loadRulesDoc() {
@@ -291,6 +313,11 @@ async function renderRules() {
   const doc = await loadRulesDoc();
   const graph = Array.isArray(doc["@graph"]) ? doc["@graph"] : [];
   const rules = graph.filter(isRule);
+
+	const nodesById = new Map();
+for (const n of graph) {
+  if (n && n["@id"]) nodesById.set(n["@id"], n);
+}
 
   if (rules.length === 0) {
     $rulesList.append($("<div>").text("No rules found."));
@@ -325,11 +352,53 @@ async function renderRules() {
 
     $hdr.append($left, $right);
 
+    const $progLang = firstLiteral(rule, IRI_SCHEMA_PROG_LANG) || "SPARQL";
+    const $encoding = firstLiteral(rule, IRI_SCHEMA_ENCODING) || "application/sparql-query";
     const $nameInput = mkInput("Rule name").val(name);
     const $descInput = mkInput("Description (optional)").val(desc);
+    const $progLangInput = mkInput("Programming language").val($progLang);
+    const $encodingInput = mkInput("Encoding").val($encoding);
     const $queryArea = mkTextArea("SPARQL", "140px").val(query);
 
-    $card.append($hdr, $nameInput, $descInput, $queryArea);
+function deref(nodeOrRef) {
+  if (!nodeOrRef) return null;
+  if (typeof nodeOrRef === "string") return nodesById.get(nodeOrRef) || null;
+  if (nodeOrRef["@id"]) return nodesById.get(nodeOrRef["@id"]) || nodeOrRef; // fallback
+  return nodeOrRef;
+}
+
+function getFirstHasPartText(ruleObj) {
+  const parts = ruleObj[IRI_SCHEMA_HAS_PART] || [];
+  const arr = Array.isArray(parts) ? parts : [parts];
+  for (const partRef of arr) {
+    const part = deref(partRef);
+    if (!part) continue;
+    const t = firstLiteral(part, IRI_SCHEMA_TEXT);
+    if (t) return t;
+  }
+  return "";
+}
+
+const projectionText = getFirstHasPartText(rule);
+
+const $projHint = $("<div>")
+  .css({ "margin": "6px 0 2px 0", "font-size": "11px", "opacity": 0.75 })
+  .text("Projection SPARQL (only applies to N3 rules):");
+
+const $projArea = mkTextArea("Projection SPARQL (N3 only)", "110px").val(projectionText);
+
+// Enable only if N3
+function refreshProjEnabled() {
+  const lang = ($progLangInput.val() || "").trim().toUpperCase();
+  const isN3 = (lang === "N3");
+  $projArea.prop("disabled", !isN3);
+  $projHint.css("opacity", isN3 ? 0.85 : 0.45);
+}
+refreshProjEnabled();
+$progLangInput.on("input", refreshProjEnabled);
+
+
+    $card.append($hdr, $nameInput, $descInput, $progLangInput, $encodingInput, $queryArea, $projHint, $projArea);
     $rulesList.append($card);
 
     // ---- Update ----
@@ -339,8 +408,25 @@ async function renderRules() {
         setLiteral(updated, IRI_SCHEMA_NAME, ($nameInput.val() || "").trim());
         setLiteral(updated, IRI_SCHEMA_DESC, ($descInput.val() || "").trim());
         setLiteral(updated, IRI_SCHEMA_TEXT, ($queryArea.val() || "").trim());
-        setLiteral(updated, IRI_SCHEMA_PROG_LANG, "SPARQL");
-        setLiteral(updated, IRI_SCHEMA_ENCODING, "application/sparql-query");
+        setLiteral(updated, IRI_SCHEMA_PROG_LANG, ($progLangInput.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_ENCODING, ($encodingInput.val() || "").trim());
+
+	      const lang = ($progLangInput.val() || "").trim().toUpperCase();
+if (lang === "N3") {
+  const proj = ($projArea.val() || "").trim();
+
+  // Ensure schema:hasPart exists and is an array
+  updated[IRI_SCHEMA_HAS_PART] = [{
+    "@type": "https://schema.org/SoftwareSourceCode",
+    [IRI_SCHEMA_PROG_LANG]: "SPARQL",
+    [IRI_SCHEMA_ENCODING]: "application/sparql-query",
+    [IRI_SCHEMA_TEXT]: proj
+  }];
+} else {
+  // Non-N3: remove projection (keeps rules clean)
+  delete updated[IRI_SCHEMA_HAS_PART];
+}
+
 
         const { status, json } = await doFetchJson("urdf/rules/update", {
           method: "POST",
@@ -383,16 +469,6 @@ async function renderRules() {
   });
 }
 
-$btnRulesRefresh.on("click", async () => {
-  try {
-    await renderRules();
-    appendLog("Rules refreshed");
-  } catch (e) {
-    setResponse({ ok: false, error: String(e) });
-    appendLog("ERROR refreshing rules: " + String(e));
-  }
-});
-
 $btnCreate.on("click", async () => {
   try {
     const idRaw = ($newId.val() || "").trim();
@@ -401,7 +477,7 @@ $btnCreate.on("click", async () => {
     const query = ($newQuery.val() || "").trim();
 
     if (!name) throw new Error("Rule name is required.");
-    if (!query) throw new Error("SPARQL query is required.");
+    if (!query) throw new Error("Rule definition is required.");
 
     const rid = idRaw || ("urn:rule:" + Date.now());
 
@@ -413,8 +489,23 @@ $btnCreate.on("click", async () => {
     setLiteral(rule, IRI_SCHEMA_NAME, name);
     setLiteral(rule, IRI_SCHEMA_DESC, desc);
     setLiteral(rule, IRI_SCHEMA_TEXT, query);
-    setLiteral(rule, IRI_SCHEMA_PROG_LANG, "SPARQL");
-    setLiteral(rule, IRI_SCHEMA_ENCODING, "application/sparql-query");
+
+	  const lang = ($newProgLang.val() || "").trim().toUpperCase();
+	  const enc  = ($newEncoding.val() || "").trim();
+	  setLiteral(rule, IRI_SCHEMA_PROG_LANG, lang);
+setLiteral(rule, IRI_SCHEMA_ENCODING, enc);
+if (lang === "N3") {
+  const proj = ($newProjArea.val() || "").trim();
+
+  rule[IRI_SCHEMA_HAS_PART] = [{
+    "@type": "https://schema.org/SoftwareSourceCode",
+    [IRI_SCHEMA_PROG_LANG]: "SPARQL",
+    [IRI_SCHEMA_ENCODING]: "application/sparql-query",
+    [IRI_SCHEMA_TEXT]: proj
+  }];
+} else {
+  delete rule[IRI_SCHEMA_HAS_PART];
+}
 
     const { status, json } = await doFetchJson("urdf/rules/create", {
       method: "POST",
