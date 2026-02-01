@@ -1,0 +1,15 @@
+===== SUMMARY: COLD (fresh /data volumes) =====
+container,phase,cpu_avg_pct,cpu_max_pct,mem_avg_bytes,mem_max_bytes,net_rx_delta_bytes,net_tx_delta_bytes,blk_read_delta_bytes,blk_write_delta_bytes,pids_avg
+imgA,idle,0.133167,7.780000,67289394,67748495,518,0,0,0,12.00
+imgA,startup,1.316167,34.860000,66697997,73610035,350,0,0,0,12.00
+imgB,idle,0.467333,9.920000,49734834,50247762,520,0,0,0,12.00
+imgB,startup,2.077333,100.470000,49304917,57000591,642,42,0,24500,12.00
+RAW: metrics_cold_20260201_122240.csv
+
+===== SUMMARY: WARM (reused /data volumes) =====
+container,phase,cpu_avg_pct,cpu_max_pct,mem_avg_bytes,mem_max_bytes,net_rx_delta_bytes,net_tx_delta_bytes,blk_read_delta_bytes,blk_write_delta_bytes,pids_avg
+imgA,idle,0.134333,7.870000,63335388,64036536,3240,2664,0,0,12.00
+imgA,startup,1.322500,69.610000,62880132,68901929,570,0,0,0,12.00
+imgB,idle,0.276500,8.300000,48931449,49492787,510,0,0,0,12.00
+imgB,startup,1.725167,79.970000,48306498,56360960,430,42,0,0,12.00
+RAW: metrics_warm_20260201_123236.csv

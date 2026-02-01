@@ -1,0 +1,66 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "nrua": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#",
+    "pv": "urn:nrua:pv:"
+  },
+  "@id": "urn:nrua:rules",
+  "@graph": [
+    {
+      "@id": "urn:rule:sparql:pv-edge",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "Edge projection: Node hasOutput/toNode => pv:edge",
+      "schema:description": "Projects the wiring structure into a direct Node→Node edge: (?n nrua:hasOutput ?out . ?out nrua:toNode ?m) ⇒ (?n pv:edge ?m). Zone A: single-step join/projection.",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX pv:   <urn:nrua:pv:>\nPREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?n nrua:hasOutput ?out .\n    ?out nrua:toNode ?m .\n  }\n  BIND(?n AS ?s)\n  BIND(pv:edge AS ?p)\n  BIND(?m AS ?o)\n}\n"
+    },
+    {
+      "@id": "urn:rule:sparql:pv-path2",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "2-hop reachability (fixed length): wiring ∘ wiring => pv:path2",
+      "schema:description": "Derives a fixed-length (2-hop) path directly from wiring (no recursion): n→mid→end yields pv:path2(n,end). Zone A: fixed-depth join.",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX pv:   <urn:nrua:pv:>\nPREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?a nrua:hasOutput ?out1 .\n    ?out1 nrua:toNode ?b .\n    ?b nrua:hasOutput ?out2 .\n    ?out2 nrua:toNode ?c .\n  }\n  BIND(?a AS ?s)\n  BIND(pv:path2 AS ?p)\n  BIND(?c AS ?o)\n}\n"
+    },
+    {
+      "@id": "urn:rule:sparql:pv-edge-inverse",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "Inverse edge: wiring => pv:edgeInv",
+      "schema:description": "Materializes the inverse direction of the wiring-derived edge: (?n hasOutput/out toNode ?m) ⇒ (?m pv:edgeInv ?n). Zone A: single-step.",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX pv:   <urn:nrua:pv:>\nPREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?n nrua:hasOutput ?out .\n    ?out nrua:toNode ?m .\n  }\n  BIND(?m AS ?s)\n  BIND(pv:edgeInv AS ?p)\n  BIND(?n AS ?o)\n}\n"
+    },
+    {
+      "@id": "urn:rule:sparql:pv-function-type",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "Type inference: nrua:type \"function\" => rdf:type pv:FunctionNode",
+      "schema:description": "Classifies nodes whose nrua:type literal is exactly \"function\" as pv:FunctionNode. Zone A: positive pattern match (no negation, no recursion).",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX pv:   <urn:nrua:pv:>\nPREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\nPREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n\nSELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?n nrua:type \"function\" .\n  }\n  BIND(?n AS ?s)\n  BIND(rdf:type AS ?p)\n  BIND(pv:FunctionNode AS ?o)\n}\n"
+    },
+    {
+      "@id": "urn:rule:sparql:pv-function-has-output-flag",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "Conjunctive annotation: function node that hasOutput => pv:functionHasOutput \"true\"",
+      "schema:description": "Annotates function nodes that have at least one output. This is a conjunctive match (type + structure) and produces a constant literal flag. Zone A: no negation, no recursion.",
+      "schema:programmingLanguage": "SPARQL",
+      "schema:encodingFormat": "application/sparql-query",
+      "schema:text": "PREFIX pv:   <urn:nrua:pv:>\nPREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT DISTINCT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    ?n nrua:type \"function\" .\n    ?n nrua:hasOutput ?out .\n  }\n  BIND(?n AS ?s)\n  BIND(pv:functionHasOutput AS ?p)\n  BIND(\"true\" AS ?o)\n}\n"
+    }
+  ]
+}

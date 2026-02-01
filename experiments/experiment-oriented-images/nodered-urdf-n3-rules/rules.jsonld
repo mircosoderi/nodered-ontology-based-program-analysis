@@ -1,0 +1,106 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "nrua": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#",
+    "pv": "urn:nrua:pv:"
+  },
+  "@id": "urn:nrua:rules",
+  "@graph": [
+    {
+      "@id": "urn:rule:n3:pv-edge",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "N3 Edge projection: Node hasOutput/toNode => pv:edge",
+      "schema:description": "Same semantics as the SPARQL-only pv:edge rule: projects Node→Output→Node into pv:edge(Node,Node).",
+      "schema:programmingLanguage": "N3",
+      "schema:encodingFormat": "text/n3",
+      "schema:text": "@prefix pv:   <urn:nrua:pv:> .\n@prefix nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#> .\n\n{ ?n nrua:hasOutput ?out . ?out nrua:toNode ?m } => { ?n pv:edge ?m } .\n",
+      "schema:hasPart": [
+        {
+          "@type": "schema:SoftwareSourceCode",
+          "schema:programmingLanguage": "SPARQL",
+          "schema:encodingFormat": "application/sparql-query",
+          "schema:text": "PREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    { ?s nrua:hasOutput ?o . BIND(nrua:hasOutput AS ?p) }\n    UNION\n    { ?s nrua:toNode ?o    . BIND(nrua:toNode AS ?p) }\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "@id": "urn:rule:n3:pv-path2",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "N3 fixed 2-hop reachability from wiring => pv:path2",
+      "schema:description": "Same semantics as SPARQL-only pv:path2 rule: derives a 2-hop path directly from wiring without recursion.",
+      "schema:programmingLanguage": "N3",
+      "schema:encodingFormat": "text/n3",
+      "schema:text": "@prefix pv:   <urn:nrua:pv:> .\n@prefix nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#> .\n\n{ ?a nrua:hasOutput ?out1 . ?out1 nrua:toNode ?b . ?b nrua:hasOutput ?out2 . ?out2 nrua:toNode ?c }\n  => { ?a pv:path2 ?c } .\n",
+      "schema:hasPart": [
+        {
+          "@type": "schema:SoftwareSourceCode",
+          "schema:programmingLanguage": "SPARQL",
+          "schema:encodingFormat": "application/sparql-query",
+          "schema:text": "PREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    { ?s nrua:hasOutput ?o . BIND(nrua:hasOutput AS ?p) }\n    UNION\n    { ?s nrua:toNode ?o    . BIND(nrua:toNode AS ?p) }\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "@id": "urn:rule:n3:pv-edge-inverse",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "N3 inverse edge from wiring => pv:edgeInv",
+      "schema:description": "Same semantics as SPARQL-only pv:edgeInv rule: materializes the inverse direction of wiring-derived edges.",
+      "schema:programmingLanguage": "N3",
+      "schema:encodingFormat": "text/n3",
+      "schema:text": "@prefix pv:   <urn:nrua:pv:> .\n@prefix nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#> .\n\n{ ?n nrua:hasOutput ?out . ?out nrua:toNode ?m } => { ?m pv:edgeInv ?n } .\n",
+      "schema:hasPart": [
+        {
+          "@type": "schema:SoftwareSourceCode",
+          "schema:programmingLanguage": "SPARQL",
+          "schema:encodingFormat": "application/sparql-query",
+          "schema:text": "PREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    { ?s nrua:hasOutput ?o . BIND(nrua:hasOutput AS ?p) }\n    UNION\n    { ?s nrua:toNode ?o    . BIND(nrua:toNode AS ?p) }\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "@id": "urn:rule:n3:pv-function-type",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "N3 classify function nodes: nrua:type \"function\" => rdf:type pv:FunctionNode",
+      "schema:description": "Same semantics as SPARQL-only function classification: exact literal match on nrua:type.",
+      "schema:programmingLanguage": "N3",
+      "schema:encodingFormat": "text/n3",
+      "schema:text": "@prefix pv:   <urn:nrua:pv:> .\n@prefix nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#> .\n@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n{ ?n nrua:type \"function\" } => { ?n rdf:type pv:FunctionNode } .\n",
+      "schema:hasPart": [
+        {
+          "@type": "schema:SoftwareSourceCode",
+          "schema:programmingLanguage": "SPARQL",
+          "schema:encodingFormat": "application/sparql-query",
+          "schema:text": "PREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\nPREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    { ?s nrua:type ?o . BIND(nrua:type AS ?p) }\n    UNION\n    { ?s rdf:type ?o  . BIND(rdf:type AS ?p) }\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "@id": "urn:rule:n3:pv-function-has-output-flag",
+      "@type": [
+        "nrua:Rule"
+      ],
+      "schema:name": "N3 conjunctive flag: function node with outputs => pv:functionHasOutput \"true\"",
+      "schema:description": "Same semantics as SPARQL-only conjunctive flag rule (type + hasOutput).",
+      "schema:programmingLanguage": "N3",
+      "schema:encodingFormat": "text/n3",
+      "schema:text": "@prefix pv:   <urn:nrua:pv:> .\n@prefix nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#> .\n\n{ ?n nrua:type \"function\" . ?n nrua:hasOutput ?out } => { ?n pv:functionHasOutput \"true\" } .\n",
+      "schema:hasPart": [
+        {
+          "@type": "schema:SoftwareSourceCode",
+          "schema:programmingLanguage": "SPARQL",
+          "schema:encodingFormat": "application/sparql-query",
+          "schema:text": "PREFIX nrua: <https://w3id.org/nodered-static-program-analysis/user-application-ontology#>\n\nSELECT ?s ?p ?o\nWHERE {\n  GRAPH <urn:nrua:app> {\n    { ?s nrua:type ?o      . BIND(nrua:type AS ?p) }\n    UNION\n    { ?s nrua:hasOutput ?o . BIND(nrua:hasOutput AS ?p) }\n  }\n}\n"
+        }
+      ]
+    }
+  ]
+}

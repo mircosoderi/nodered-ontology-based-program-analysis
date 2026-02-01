@@ -13,3 +13,5 @@
 !discourse-forum-to-jsonld/**
 !flows-json-to-jsonld/
 !flows-json-to-jsonld/**
+!experiments/
+!experiments/**

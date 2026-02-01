@@ -1,0 +1,1433 @@
+<script type="text/javascript">
+/*
+  uRDF Sidebar (Node-RED Editor Plugin)
+
+  This file registers a Node-RED sidebar tab that acts as a lightweight “control panel”
+  for the uRDF runtime plugin. It is entirely client-side and runs inside the Node-RED editor.
+
+  What it does:
+  - Calls the runtime HTTP Admin API endpoints (e.g., /urdf/health, /urdf/query, /urdf/loadFile)
+  - Subscribes to server-published events on RED.comms (topic: "urdf/events")
+  - Provides simple UIs for: ping/load/search/query/export/clear + rule CRUD + reasoning view
+
+  Important separation of concerns:
+  - This sidebar never performs reasoning itself.
+  - It only sends requests to the runtime and renders the responses/events.
+*/
+(function () {
+  "use strict";
+
+  
+  /*
+    RED.comms topic used by the runtime to push structured events to the editor.
+    The runtime publishes objects that include request/response metadata, used here
+    to populate the Response panel and the Events log.
+  */
+const TOPIC = "urdf/events";
+
+
+  
+  /*
+    createSidebar() builds the entire sidebar UI and registers it as a Node-RED tab.
+    It returns small helpers used by the plugin lifecycle (appendLog, setResponse, ...).
+  */
+function createSidebar() {
+    const $root = $("<div>").css({
+      height: "100%",
+      padding: "8px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      boxSizing: "border-box"
+    });
+
+
+    function mkInput(ph) {
+      return $("<input>")
+        .attr("type", "text")
+        .attr("placeholder", ph)
+        .css({ width: "100%", padding: "6px", fontFamily: "monospace", fontSize: "12px", boxSizing: "border-box" });
+    }
+
+    function mkTextArea(ph, minH) {
+      return $("<textarea>")
+        .attr("placeholder", ph)
+        .css({
+          width: "100%",
+          minHeight: minH || "110px",
+          fontFamily: "monospace",
+          fontSize: "12px",
+          padding: "8px",
+          boxSizing: "border-box"
+        });
+    }
+
+    function mkRow(...elts) {
+      const $r = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center" });
+      elts.forEach(e => $r.append(e));
+      return $r;
+    }
+
+    function mkTitle(t) {
+      return $("<div>").css({ fontWeight: 600 }).text(t);
+    }
+
+    function setVisible($el, on) {
+      $el.css("display", on ? "" : "none");
+    }
+
+    function firstLiteral(node, iri) {
+  const arr = node && node[iri];
+  if (!Array.isArray(arr) || arr.length === 0) return "";
+  const v = arr[0];
+  return (v && typeof v === "object" && v["@value"] !== undefined) ? String(v["@value"]) : "";
+}
+
+function setLiteral(node, iri, value) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    delete node[iri];
+    return;
+  }
+  node[iri] = [{ "@value": value }];
+}
+
+function isRule(node) {
+  const t = node && node["@type"];
+  const types = Array.isArray(t) ? t : (t ? [t] : []);
+  return types.includes(IRI_NRUA_RULE);
+}
+
+function isNodeUrn(subjectIri) {
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:node:");
+}
+function nodeIdFromUrn(subjectIri) {
+  return subjectIri.slice("urn:nrua:node:".length);
+}
+
+function revealNodeInEditor(nodeId) {
+  try {
+    if (RED && RED.view && typeof RED.view.reveal === "function") {
+      RED.view.reveal(nodeId);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function termValue(t) {
+  return t && typeof t === "object" ? t.value : undefined;
+}
+
+function ratingToNumber(r) {
+  if (!r) return -1;
+  const m = /(\d+)\s*$/.exec(String(r));
+  return m ? parseInt(m[1], 10) : -1;
+}
+
+function dateToMs(d) {
+  if (!d) return 0;
+  const ms = Date.parse(String(d));
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function isFlowUrn(subjectIri) {
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:flow:");
+}
+function flowIdFromUrn(subjectIri) {
+  return subjectIri.slice("urn:nrua:flow:".length);
+}
+
+function revealFlowInEditor(flowId) {
+  try {
+    if (RED && RED.workspaces && typeof RED.workspaces.show === "function") {
+      RED.workspaces.show(flowId);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function localIdFromIri(iri) {
+  if (!iri) return "";
+  const s = String(iri);
+  const m = /([^/#:]+)\s*$/.exec(s);
+  return m ? m[1] : s;
+}
+
+function humanPredicateLabel(pIri, pLabel) {
+  const lbl = (pLabel || "").trim();
+  if (lbl) return lbl;
+  return localIdFromIri(pIri);
+}
+
+
+    const $modeRow = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center" });
+    const $modeLabel = $("<div>").css({ fontWeight: 600, minWidth: "58px" }).text("Action");
+    const $mode = $("<select>")
+      .addClass("red-ui-text")
+      .css({ width: "100%", padding: "6px", boxSizing: "border-box" });
+
+    
+    /*
+      Action selector:
+      The UI is split into independent “modes”. Only one mode section is visible at a time.
+      Each mode is a thin client to a runtime operation (or a higher-level composite view).
+    */
+const MODES = [
+      { id: "health", label: "Ping" },
+      { id: "load", label: "Load" },
+      { id: "search", label: "Search" },
+      { id: "query", label: "Query" },
+      { id: "export", label: "Export" },
+      { id: "clear", label: "Clear" },
+      { id: "configure", label: "Configure" },
+      { id: "reason", label: "Reason" }
+    ];
+
+    MODES.forEach(m => $mode.append($("<option>").attr("value", m.id).text(m.label)));
+    $modeRow.append($modeLabel, $mode);
+
+    const $sectionTitle = mkTitle("Ping");
+
+    const $sectionHealth = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionLoad   = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionSearch = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionQuery  = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionExport = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionClear  = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionConfigure = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionReason = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+
+
+
+    const $btnHealth = $("<button>").addClass("red-ui-button").text("Ping");
+    $sectionHealth.append($btnHealth);
+
+    const $loadTitle = mkTitle("Load JSON-LD");
+    const $loadArea = mkTextArea(
+`Paste JSON-LD here, e.g.
+{
+  "@context": {"name":"http://schema.org/name"},
+  "@id": "http://example.org/a",
+  "name": "Alice"
+}`, "140px"
+    );
+    const $btnLoad = $("<button>").addClass("red-ui-button").text("Load");
+
+    const $loadFromTitle = mkTitle("Load JSON-LD from URI");
+    const $uriInput = mkInput("https://example.org/data.jsonld");
+    const $br = $("<br>");
+    const $btnLoadFrom = $("<button>").addClass("red-ui-button").text("Load");
+    const $loadFromRow = mkRow($uriInput, $btnLoadFrom);
+
+const $loadFileTitle = mkTitle("Load JSON-LD from file");
+const $fileInput = $("<input>")
+  .attr("type", "file")
+  .attr("accept", ".json,.jsonld,application/json,application/ld+json")
+  .css({ width: "100%" });
+const $btnLoadFile = $("<button>").addClass("red-ui-button").text("Load file");
+const $loadFileRow = mkRow($fileInput, $btnLoadFile);
+
+    $sectionLoad.append($loadTitle, $loadArea, $btnLoad, $br, $loadFromTitle, $loadFromRow, $loadFileTitle, $loadFileRow);
+
+    const $gidInput = mkInput("gid (optional)");
+    const $btnSize = $("<button>").addClass("red-ui-button").text("Size");
+    const $btnGraph = $("<button>").addClass("red-ui-button").text("Show");
+    const $searchRow1 = mkRow($gidInput, $btnSize, $btnGraph);
+
+    const $nodeIdInput = mkInput("node id (required for Node)");
+    const $btnNode = $("<button>").addClass("red-ui-button").text("Node");
+    const $searchRow2 = mkRow($nodeIdInput, $btnNode);
+
+    $sectionSearch.append($searchRow1, $searchRow2);
+
+    const $queryArea = mkTextArea(
+`Example:
+SELECT ?s ?name WHERE { ?s <http://schema.org/name> ?name }`, "140px"
+    );
+    const $btnQuery = $("<button>").addClass("red-ui-button").text("Run SPARQL query");
+    $sectionQuery.append($queryArea, $btnQuery);
+
+    const $exportTitle = mkTitle("Export");
+const $exportGidInput = mkInput("gid (optional)");
+const $btnExport = $("<button>").addClass("red-ui-button").text("Export");
+const $exportRow = mkRow($exportGidInput, $btnExport);
+    $sectionExport.append($exportRow);
+
+    const $clearGidInput = mkInput("gid (optional)");
+    const $btnClearStore = $("<button>").addClass("red-ui-button").text("Clear");
+    const $clearRow = mkRow($clearGidInput, $btnClearStore);
+    $sectionClear.append($clearRow);
+
+const RULES_GID = "urn:nrua:rules";
+const IRI_NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
+const IRI_SCHEMA_NAME = "https://schema.org/name";
+const IRI_SCHEMA_TEXT = "https://schema.org/text";
+const IRI_SCHEMA_DESC = "https://schema.org/description";
+const IRI_SCHEMA_PROG_LANG = "https://schema.org/programmingLanguage";
+const IRI_SCHEMA_ENCODING = "https://schema.org/encodingFormat";
+const IRI_SCHEMA_HAS_PART = "https://schema.org/hasPart";
+
+const $rulesList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
+
+const $newTitle = mkTitle("Create new rule");
+const $newId = mkInput("Rule @id (optional, leave blank to auto-generate)");
+const $newName = mkInput("Rule name");
+const $newDesc = mkInput("Description (optional)");
+const $newQuery = mkTextArea("Rule(s) definition. For SPARQL rules, a SPARQL SELECT returning ?s ?p ?o.", "140px");
+
+const $newProgLang = mkInput("Programming language (e.g. SPARQL, N3)");
+const $newEncoding = mkInput("Encoding format (e.g. application/sparql-query, text/n3)");
+
+const $newProjHint = $("<div>")
+  .css({ "margin": "6px 0 2px 0", "font-size": "11px", "opacity": 0.75 })
+  .text("Projection SPARQL (only applies to N3 rules):");
+
+const $newProjArea = mkTextArea("SPARQL SELECT returning ?s ?p ?o. N3 rules are applied on these triples.", "110px").val("");
+
+function refreshNewProjEnabled() {
+  const lang = ($newProgLang.val() || "").trim().toUpperCase();
+  const isN3 = (lang === "N3");
+  $newProjArea.prop("disabled", !isN3);
+  $newProjHint.css("opacity", isN3 ? 0.85 : 0.45);
+}
+refreshNewProjEnabled();
+$newProgLang.on("input", refreshNewProjEnabled);
+
+const $btnCreate = $("<button>").addClass("red-ui-button").text("Create");
+
+$sectionConfigure.append(
+  mkTitle("Existing rules"),
+  $rulesList,
+  $newTitle,
+  $newId,
+  $newName,
+  $newDesc,
+  $newProgLang,
+  $newEncoding,
+  $newQuery,
+$newProjHint,
+  $newProjArea,
+	$btnCreate
+);
+
+async function loadRulesDoc() {
+  const r = await fetch(`urdf/export?gid=${encodeURIComponent(RULES_GID)}`, { method: "GET" });
+
+  if (r.status === 404) {
+    return { "@id": RULES_GID, "@graph": [] };
+  }
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw new Error(`Failed to export rules: HTTP ${r.status} ${text.slice(0, 200)}`);
+  }
+  return await r.json();
+}
+
+async function renderRules() {
+  $rulesList.empty();
+
+  const doc = await loadRulesDoc();
+  const graph = Array.isArray(doc["@graph"]) ? doc["@graph"] : [];
+  const rules = graph.filter(isRule);
+
+	const nodesById = new Map();
+for (const n of graph) {
+  if (n && n["@id"]) nodesById.set(n["@id"], n);
+}
+
+  if (rules.length === 0) {
+    $rulesList.append($("<div>").text("No rules found."));
+    return;
+  }
+
+  rules.forEach((rule) => {
+    const rid = rule["@id"] || "(no @id)";
+    const name = firstLiteral(rule, IRI_SCHEMA_NAME) || rid;
+    const desc = firstLiteral(rule, IRI_SCHEMA_DESC);
+    const query = firstLiteral(rule, IRI_SCHEMA_TEXT);
+
+    const $card = $("<div>").css({
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      padding: "8px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px"
+    });
+
+    const $hdr = $("<div>").css({ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" });
+    const $left = $("<div>");
+    $left.append(
+      $("<div>").css({ fontWeight: 600 }).text(name),
+      $("<div>").css({ fontFamily: "monospace", fontSize: "11px", opacity: 0.8 }).text(rid)
+    );
+
+    const $btnSave = $("<button>").addClass("red-ui-button red-ui-button-small").text("Save");
+    const $btnDelete = $("<button>").addClass("red-ui-button red-ui-button-small").text("Delete");
+    const $right = $("<div>").css({ display: "flex", gap: "8px" }).append($btnSave, $btnDelete);
+
+    $hdr.append($left, $right);
+
+    const $progLang = firstLiteral(rule, IRI_SCHEMA_PROG_LANG) || "SPARQL";
+    const $encoding = firstLiteral(rule, IRI_SCHEMA_ENCODING) || "application/sparql-query";
+    const $nameInput = mkInput("Rule name").val(name);
+    const $descInput = mkInput("Description (optional)").val(desc);
+    const $progLangInput = mkInput("Programming language").val($progLang);
+    const $encodingInput = mkInput("Encoding").val($encoding);
+    const $queryArea = mkTextArea("SPARQL", "140px").val(query);
+
+function deref(nodeOrRef) {
+  if (!nodeOrRef) return null;
+  if (typeof nodeOrRef === "string") return nodesById.get(nodeOrRef) || null;
+  if (nodeOrRef["@id"]) return nodesById.get(nodeOrRef["@id"]) || nodeOrRef; // fallback
+  return nodeOrRef;
+}
+
+function getFirstHasPartText(ruleObj) {
+  const parts = ruleObj[IRI_SCHEMA_HAS_PART] || [];
+  const arr = Array.isArray(parts) ? parts : [parts];
+  for (const partRef of arr) {
+    const part = deref(partRef);
+    if (!part) continue;
+    const t = firstLiteral(part, IRI_SCHEMA_TEXT);
+    if (t) return t;
+  }
+  return "";
+}
+
+const projectionText = getFirstHasPartText(rule);
+
+const $projHint = $("<div>")
+  .css({ "margin": "6px 0 2px 0", "font-size": "11px", "opacity": 0.75 })
+  .text("Projection SPARQL (only applies to N3 rules):");
+
+const $projArea = mkTextArea("Projection SPARQL (N3 only)", "110px").val(projectionText);
+
+function refreshProjEnabled() {
+  const lang = ($progLangInput.val() || "").trim().toUpperCase();
+  const isN3 = (lang === "N3");
+  $projArea.prop("disabled", !isN3);
+  $projHint.css("opacity", isN3 ? 0.85 : 0.45);
+}
+refreshProjEnabled();
+$progLangInput.on("input", refreshProjEnabled);
+
+
+    $card.append($hdr, $nameInput, $descInput, $progLangInput, $encodingInput, $queryArea, $projHint, $projArea);
+    $rulesList.append($card);
+
+    $btnSave.on("click", async () => {
+      try {
+        const updated = JSON.parse(JSON.stringify(rule)); // shallow clone safe enough for this structure
+        setLiteral(updated, IRI_SCHEMA_NAME, ($nameInput.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_DESC, ($descInput.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_TEXT, ($queryArea.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_PROG_LANG, ($progLangInput.val() || "").trim());
+        setLiteral(updated, IRI_SCHEMA_ENCODING, ($encodingInput.val() || "").trim());
+
+	      const lang = ($progLangInput.val() || "").trim().toUpperCase();
+if (lang === "N3") {
+  const proj = ($projArea.val() || "").trim();
+
+  updated[IRI_SCHEMA_HAS_PART] = [{
+    "@type": "https://schema.org/SoftwareSourceCode",
+    [IRI_SCHEMA_PROG_LANG]: "SPARQL",
+    [IRI_SCHEMA_ENCODING]: "application/sparql-query",
+    [IRI_SCHEMA_TEXT]: proj
+  }];
+} else {
+  delete updated[IRI_SCHEMA_HAS_PART];
+}
+
+
+        const { status, json } = await doFetchJson("urdf/rules/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rule: updated })
+        });
+
+        setResponse(json);
+        appendLog(`HTTP ${status} POST /urdf/rules/update ${rid}`);
+
+        if (status >= 200 && status < 300 && json && json.ok) {
+          await renderRules();
+        }
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR updating rule: " + String(e));
+      }
+    });
+
+    $btnDelete.on("click", async () => {
+      try {
+        const { status, json } = await doFetchJson("urdf/rules/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: rid })
+        });
+
+        setResponse(json);
+        appendLog(`HTTP ${status} POST /urdf/rules/delete ${rid}`);
+
+        if (status >= 200 && status < 300 && json && json.ok) {
+          await renderRules();
+        }
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR deleting rule: " + String(e));
+      }
+    });
+  });
+}
+
+$btnCreate.on("click", async () => {
+  try {
+    const idRaw = ($newId.val() || "").trim();
+    const name = ($newName.val() || "").trim();
+    const desc = ($newDesc.val() || "").trim();
+    const query = ($newQuery.val() || "").trim();
+
+    if (!name) throw new Error("Rule name is required.");
+    if (!query) throw new Error("Rule definition is required.");
+
+    const rid = idRaw || ("urn:rule:" + Date.now());
+
+    const rule = {
+      "@id": rid,
+      "@type": [IRI_NRUA_RULE]
+    };
+
+    setLiteral(rule, IRI_SCHEMA_NAME, name);
+    setLiteral(rule, IRI_SCHEMA_DESC, desc);
+    setLiteral(rule, IRI_SCHEMA_TEXT, query);
+
+	  const lang = ($newProgLang.val() || "").trim().toUpperCase();
+	  const enc  = ($newEncoding.val() || "").trim();
+	  setLiteral(rule, IRI_SCHEMA_PROG_LANG, lang);
+setLiteral(rule, IRI_SCHEMA_ENCODING, enc);
+if (lang === "N3") {
+  const proj = ($newProjArea.val() || "").trim();
+
+  rule[IRI_SCHEMA_HAS_PART] = [{
+    "@type": "https://schema.org/SoftwareSourceCode",
+    [IRI_SCHEMA_PROG_LANG]: "SPARQL",
+    [IRI_SCHEMA_ENCODING]: "application/sparql-query",
+    [IRI_SCHEMA_TEXT]: proj
+  }];
+} else {
+  delete rule[IRI_SCHEMA_HAS_PART];
+}
+
+    const { status, json } = await doFetchJson("urdf/rules/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rule })
+    });
+
+    setResponse(json);
+    appendLog(`HTTP ${status} POST /urdf/rules/create ${rid}`);
+
+    if (status >= 200 && status < 300 && json && json.ok) {
+      $newId.val("");
+      $newName.val("");
+      $newDesc.val("");
+      await renderRules();
+    }
+  } catch (e) {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR creating rule: " + String(e));
+  }
+});
+
+
+
+
+const $reasonList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
+$sectionReason.append($reasonList);
+
+async function loadReasoningResults() {
+const sparql = `
+SELECT
+  ?s ?p ?doc
+  ?sClass ?sClassLabel
+  ?pLabel
+  ?title ?url ?site ?date ?rating ?cat
+WHERE {
+  # 1) Reasoning links: ONLY from inferred graph
+  GRAPH <urn:graph:inferred> {
+    ?s ?p ?doc .
+  }
+
+  # 2) Subject type is in the app graph
+  OPTIONAL {
+    GRAPH <urn:nrua:app> {
+      ?s a ?sClass .
+    }
+  }
+
+  # 3) Subject class label is in the ontology graph
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?sClass <http://www.w3.org/2000/01/rdf-schema#label> ?sClassLabel .
+    }
+  }
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?sClass <https://schema.org/name> ?sClassLabel .
+    }
+  }
+
+  # 4) Predicate label (best-effort)
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?p <http://www.w3.org/2000/01/rdf-schema#label> ?pLabel .
+    }
+  }
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?p <https://schema.org/name> ?pLabel .
+    }
+  }
+  # 5) Document metadata: doc MAY be in one of these graphs (or none / literal)
+  OPTIONAL {
+    {
+      GRAPH <urn:graph:issues> {
+        ?doc <https://schema.org/url> ?url .
+        OPTIONAL { ?doc <https://schema.org/title> ?title . }
+        OPTIONAL { ?doc <https://schema.org/date> ?date . }
+        OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+        OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+      }
+    }
+    UNION
+    {
+      GRAPH <urn:graph:forum> {
+        ?doc <https://schema.org/url> ?url .
+        OPTIONAL { ?doc <https://schema.org/title> ?title . }
+        OPTIONAL { ?doc <https://schema.org/date> ?date . }
+        OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+        OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+      }
+    }
+    UNION
+    {
+      GRAPH <urn:graph:flowslib> {
+        ?doc <https://schema.org/url> ?url .
+        OPTIONAL { ?doc <https://schema.org/title> ?title . }
+        OPTIONAL { ?doc <https://schema.org/date> ?date . }
+        OPTIONAL { ?doc <https://schema.org/contentRating> ?rating . }
+        OPTIONAL { ?doc <https://schema.org/category> ?cat . }
+      }
+    }
+    UNION
+    {
+      GRAPH <urn:nrua:app> {
+        OPTIONAL { ?doc <https://schema.org/name> ?name . }
+      }
+    }
+  }
+
+  # 6) Site from schema:url (only if ?url is bound)
+  BIND(
+    IF(BOUND(?url),
+      REPLACE(STR(?url), '^https?://([^/]+).*$', '$1'),
+      ""
+    ) AS ?site
+  )
+
+}
+LIMIT 1000
+
+`;
+
+  const { status, json } = await doFetchJson("urdf/query", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sparql })
+  });
+  if (status !== 200 || !json || !json.ok) throw new Error("Reason query failed: " + JSON.stringify(json));
+  return Array.isArray(json.results) ? json.results : [];
+}
+
+async function renderReasoning() {
+  $reasonList.empty();
+
+  let rows = await loadReasoningResults();
+  if (!Array.isArray(rows) || rows.length === 0) {
+    $reasonList.append($("<div>").text("No inferred links found."));
+    return;
+  }
+
+  const byS = new Map();
+
+  for (const r of rows) {
+    const s = termValue(r.s);
+    const p = termValue(r.p);
+    const doc = termValue(r.doc);
+    const docType = r.doc && r.doc.type; 
+    if (!s || !p || !doc) continue;
+
+    const sClassLabel = termValue(r.sClassLabel) || "";
+    const pLabel = termValue(r.pLabel) || "";
+
+    const title  = termValue(r.title)  || "";
+    const url    = termValue(r.url)    || "";
+    const site   = termValue(r.site)   || ""; // NEW (host extracted from url in SPARQL)
+    const date   = termValue(r.date)   || "";
+    const rating = termValue(r.rating) || "";
+    const cat    = termValue(r.cat)    || "";
+
+    if (!byS.has(s)) byS.set(s, new Map());
+    const itemsMap = byS.get(s);
+
+const key = p + "||" + doc;
+
+    let d = itemsMap.get(key);
+    if (!d) {
+      d = {
+        s,
+        sClassLabel,
+        p,
+        pLabel,
+        doc,
+	docType,
+        title,
+        url,
+        site,
+        date,
+        rating,
+        categories: new Set()
+      };
+      itemsMap.set(key, d);
+    }
+
+    if (!d.sClassLabel && sClassLabel) d.sClassLabel = sClassLabel;
+    if (!d.pLabel && pLabel) d.pLabel = pLabel;
+
+    if (!d.title && title) d.title = title;
+    if (!d.url && url) d.url = url;
+    if (!d.site && site) d.site = site;
+
+    if (!d.date && date) d.date = date;
+    if (!d.rating && rating) d.rating = rating;
+
+    if (cat) d.categories.add(cat);
+  }
+
+  for (const [s, itemsMap] of byS.entries()) {
+    const items = Array.from(itemsMap.values()).sort((a, b) => {
+      const da = dateToMs(a.date);
+      const db = dateToMs(b.date);
+      if (db !== da) return db - da;
+
+      const ra = ratingToNumber(a.rating);
+      const rb = ratingToNumber(b.rating);
+      return rb - ra;
+    });
+
+    const $card = $("<div>").css({
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      padding: "8px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px"
+    });
+
+    const $hdr = $("<div>").css({
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "8px",
+      alignItems: "center"
+    });
+
+    let subjId = "";
+    if (isNodeUrn(s)) subjId = nodeIdFromUrn(s);
+    else if (isFlowUrn(s)) subjId = flowIdFromUrn(s);
+    else subjId = localIdFromIri(s);
+
+    const firstItem = items[0] || {};
+    const cls = (firstItem.sClassLabel || "").trim() || "Thing";
+
+    const hdrText = `${cls} ${subjId}`;
+
+    let $subjectLink;
+
+    if (isNodeUrn(s)) {
+      const nodeId = nodeIdFromUrn(s);
+      $subjectLink = $("<a href='#'>")
+        .text(hdrText)
+        .css({ fontWeight: 600 })
+        .on("click", function (e) {
+          e.preventDefault();
+          const ok = revealNodeInEditor(nodeId);
+          if (!ok) appendLog("WARN: cannot reveal node in editor (RED.view.reveal not available)");
+        });
+    } else if (isFlowUrn(s)) {
+      const flowId = flowIdFromUrn(s);
+      $subjectLink = $("<a href='#'>")
+        .text(hdrText)
+        .css({ fontWeight: 600 })
+        .on("click", function (e) {
+          e.preventDefault();
+          const ok = revealFlowInEditor(flowId);
+          if (!ok) appendLog("WARN: cannot switch to flow (RED.workspaces.show not available)");
+        });
+    } else {
+      $subjectLink = $("<div>")
+        .css({ fontWeight: 600, fontFamily: "monospace" })
+        .text(hdrText + " — " + s);
+    }
+
+    const $count = $("<div>").css({ opacity: 0.8 }).text(`${items.length} link(s)`);
+    $hdr.append($subjectLink, $count);
+
+    const $ul = $("<div>").css({
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      marginTop: "4px"
+    });
+
+items.forEach((it) => {
+
+	let label;
+	const isLiteral = (it.docType === "literal");
+
+
+if (isNodeUrn(it.doc)) {
+  label = "Node " + nodeIdFromUrn(it.doc);
+} else if (isFlowUrn(it.doc)) {
+  label = "Flow " + flowIdFromUrn(it.doc);
+} else {
+  label = it.title ? it.title : it.doc;
+}
+
+  const $line = $("<div>").css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    alignItems: "center",
+    padding: "6px 8px",
+    background: "#f5f5f5",
+    border: "1px solid #ddd",
+    borderRadius: "4px"
+  });
+
+  const predText = humanPredicateLabel(it.p, it.pLabel);
+  const $pred = $("<span>").text(predText).css({
+    display: "inline-block",
+    padding: "1px 6px",
+    border: "1px solid #999",
+    borderRadius: "10px",
+    background: "#fff",
+    fontSize: "11px",
+    lineHeight: "16px",
+    opacity: 0.9
+  });
+  $line.append($pred);
+
+  const siteTxt = (it.site || "").trim();
+  if (siteTxt) {
+    const $from = $("<span>").text("from " + siteTxt).css({
+      display: "inline-block",
+      padding: "1px 6px",
+      border: "1px solid #999",
+      borderRadius: "10px",
+      background: "#fff",
+      fontSize: "11px",
+      lineHeight: "16px",
+      opacity: 0.85
+    });
+    $line.append($from);
+  }
+
+  let $docEl;
+if (isLiteral) {
+    $docEl = $("<span>")
+      .text(label)
+      .css({ wordBreak: "break-word", opacity: 0.85, cursor: "default" });
+
+  } else if (isNodeUrn(it.doc)) {
+    const nodeId = nodeIdFromUrn(it.doc);
+    $docEl = $("<a href='#'>")
+      .text(label)
+      .css({ wordBreak: "break-word" })
+      .on("click", function (e) {
+        e.preventDefault();
+        const ok = revealNodeInEditor(nodeId);
+        if (!ok) appendLog("WARN: cannot reveal node in editor (RED.view.reveal not available)");
+      });
+  } else if (isFlowUrn(it.doc)) {
+    const flowId = flowIdFromUrn(it.doc);
+    $docEl = $("<a href='#'>")
+      .text(label)
+      .css({ wordBreak: "break-word" })
+      .on("click", function (e) {
+        e.preventDefault();
+        const ok = revealFlowInEditor(flowId);
+        if (!ok) appendLog("WARN: cannot switch to flow (RED.workspaces.show not available)");
+      });
+  } else if (it.url) {
+    $docEl = $("<a>")
+      .attr("href", it.url)
+      .attr("target", "_blank")
+      .attr("rel", "noopener noreferrer")
+      .text(label)
+      .css({ wordBreak: "break-word" });
+  } else {
+    $docEl = $("<span>")
+      .text(label)
+      .css({
+        wordBreak: "break-word",
+        opacity: 0.85,
+        cursor: "default"
+      });
+  }
+
+  $line.append($docEl);
+
+  const cats = Array.from(it.categories || []).sort();
+  for (const c of cats) {
+    const $chip = $("<span>").text(c).css({
+      display: "inline-block",
+      padding: "1px 6px",
+      border: "1px solid #111",
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#111",
+      fontSize: "11px",
+      lineHeight: "16px"
+    });
+    $line.append($chip);
+  }
+
+  $ul.append($line);
+});
+
+    $card.append($hdr, $ul);
+    $reasonList.append($card);
+  }
+}
+
+
+
+const $responseHeader = $("<div>").css({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between"
+});
+
+const $responseTitle = mkTitle("Response");
+
+const $btnCopyResponse = $("<button>")
+  .addClass("red-ui-button red-ui-button-small")
+  .text("Copy");
+
+const $btnClearResponse = $("<button>")
+  .addClass("red-ui-button red-ui-button-small")
+  .text("Clear");
+
+const $responseActions = $("<div>").css({
+  display: "flex",
+  gap: "6px"
+});
+
+$responseActions.append($btnCopyResponse, $btnClearResponse);
+$responseHeader.append($responseTitle, $responseActions);
+
+    const $response = $("<pre>").css({
+      margin: 0,
+      padding: "8px",
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      overflow: "auto",
+      flex: "1 1 auto",
+      minHeight: "220px"
+    }).text("—");
+
+    const $eventsWrap = $("<div>").css({
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      overflow: "hidden"
+    });
+
+    const $eventsHeader = $("<div>").css({
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "6px 8px",
+      cursor: "pointer",
+      userSelect: "none"
+    });
+
+    const $eventsLeft = $("<div>").css({ display: "flex", alignItems: "center", gap: "8px" });
+    const $eventsChevron = $("<span>").css({ fontFamily: "monospace" }).text("▸");
+    const $eventsTitle = $("<div>").css({ fontWeight: 600 }).text("Events (push)");
+
+    const $eventsRight = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center" });
+    const $btnClearEvents = $("<button>").addClass("red-ui-button red-ui-button-small").text("Clear");
+
+    $eventsLeft.append($eventsChevron, $eventsTitle);
+    $eventsRight.append($btnClearEvents);
+    $eventsHeader.append($eventsLeft, $eventsRight);
+
+    const $log = $("<div>").css({
+      display: "none", // collapsed by default
+      padding: "8px",
+      fontFamily: "monospace",
+      fontSize: "12px",
+      whiteSpace: "pre-wrap",
+      maxHeight: "180px",
+      overflow: "auto",
+      borderTop: "1px solid var(--red-ui-primary-border-color, #ddd)"
+    });
+
+    $eventsWrap.append($eventsHeader, $log);
+
+    $root.append(
+      $modeRow,
+      $sectionTitle,
+
+      $sectionHealth,
+      $sectionLoad,
+      $sectionSearch,
+      $sectionQuery,
+      $sectionExport,
+      $sectionClear,
+      $sectionConfigure,
+      $sectionReason,
+
+      $responseHeader,
+      $response,
+      $eventsWrap
+    );
+
+    RED.sidebar.addTab({
+      id: "urdf-sidebar",
+      name: "uRDF",
+      label: "uRDF",
+      iconClass: "fa fa-database",
+      content: $root
+    });
+
+    function appendLog(line) {
+      const ts = new Date().toISOString();
+      $log.prepend($("<div>").text("[" + ts + "] " + line));
+    }
+
+    function setResponse(obj) {
+      try {
+        $response.text(JSON.stringify(obj, null, 2));
+      } catch (e) {
+        $response.text(String(obj));
+      }
+    }
+
+$btnCopyResponse.on("click", function (e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const text = $response.text();
+  if (!text || text === "—") return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(err => {
+      console.warn("Clipboard API failed, falling back", err);
+      legacyCopy(text);
+    });
+  } else {
+    legacyCopy(text);
+  }
+});
+
+function legacyCopy(text) {
+  const $tmp = $("<textarea>")
+    .val(text)
+    .css({ position: "fixed", left: "-9999px" })
+    .appendTo("body");
+
+  $tmp[0].select();
+  document.execCommand("copy");
+  $tmp.remove();
+}
+
+    $btnClearResponse.on("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      $response.text("—");
+    });
+
+    $btnClearEvents.on("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      $log.empty();
+    });
+
+    function setEventsExpanded(expanded) {
+      setVisible($log, expanded);
+      $eventsChevron.text(expanded ? "▾" : "▸");
+    }
+
+    $eventsHeader.on("click", function () {
+      const expanded = $log.css("display") !== "none";
+      setEventsExpanded(!expanded);
+    });
+
+    const modeToSection = {
+      health: $sectionHealth,
+      load: $sectionLoad,
+      search: $sectionSearch,
+      query: $sectionQuery,
+      export: $sectionExport,
+      clear: $sectionClear,
+      configure: $sectionConfigure,
+      reason: $sectionReason
+    };
+
+    const modeToTitle = {
+      health: "Ping",
+      load: "Load",
+      search: "Search",
+      query: "Query",
+      export: "Export",
+      clear: "Clear",
+      configure: "Configure",
+      reason: "Reason"
+    };
+
+    function applyMode(modeId) {
+      currentMode = modeId;
+      Object.keys(modeToSection).forEach(k => setVisible(modeToSection[k], k === modeId));
+      if (modeId === "configure") {
+  renderRules().catch(e => {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR loading rules: " + String(e));
+  });
+}
+if (modeId === "reason") {
+  renderReasoning().catch(e => { setResponse({ ok:false, error:String(e) }); });
+}
+
+      $sectionTitle.text(modeToTitle[modeId] || "uRDF");
+    }
+
+    let currentMode = "health";
+let reasonRefreshTimer = null;
+
+function scheduleReasonRefresh(source) {
+  if (currentMode !== "reason") return;
+
+  if (reasonRefreshTimer) clearTimeout(reasonRefreshTimer);
+  reasonRefreshTimer = setTimeout(() => {
+    renderReasoning().catch(err => {
+      setResponse({ ok: false, error: String(err) });
+      appendLog("ERROR renderReasoning (" + source + "): " + String(err));
+    });
+  }, 300);
+}
+
+
+    $mode.on("change", function () {
+      applyMode($mode.val());
+    });
+
+    $mode.val("health");
+    applyMode("health");
+    setEventsExpanded(false);
+
+
+    /*
+      HTTP helper:
+      Node-RED may be hosted under a non-root admin path (RED.settings.httpAdminRoot).
+      doFetchJson() builds the correct URL and enforces a JSON response contract.
+    */
+async function doFetchJson(path, options) {
+  const adminRoot = (RED.settings.httpAdminRoot || "").replace(/\/$/, "");
+
+  let url = path;
+  if (!/^https?:\/\//i.test(path) && !path.startsWith("/")) {
+    url = adminRoot + "/" + path;
+  }
+
+  const r = await fetch(url, options);
+
+  let json;
+  try {
+    json = await r.json();
+  } catch (e) {
+    const text = await r.text().catch(() => "");
+    throw new Error(`Expected JSON from ${url} but got: ${text.slice(0, 200)}`);
+  }
+
+  return { status: r.status, json };
+}
+
+
+    $btnHealth.on("click", async function () {
+      try {
+        const { status, json } = await doFetchJson("urdf/health", { method: "GET" });
+        setResponse(json);
+        appendLog("HTTP " + status + " GET /urdf/health");
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/health: " + String(e));
+      }
+    });
+
+    $btnSize.on("click", async function () {
+      const gid = ($gidInput.val() || "").trim();
+      const qs = gid ? ("?gid=" + encodeURIComponent(gid)) : "";
+      try {
+        const { status, json } = await doFetchJson("urdf/size" + qs, { method: "GET" });
+        setResponse(json);
+        appendLog("HTTP " + status + " GET /urdf/size" + (gid ? (" gid=" + gid) : ""));
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/size: " + String(e));
+      }
+    });
+
+    $btnGraph.on("click", async function () {
+      const gid = ($gidInput.val() || "").trim();
+      const qs = gid ? ("?gid=" + encodeURIComponent(gid)) : "";
+      try {
+        const { status, json } = await doFetchJson("urdf/graph" + qs, { method: "GET" });
+        setResponse(json);
+        appendLog("HTTP " + status + " GET /urdf/graph" + (gid ? (" gid=" + gid) : ""));
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/graph: " + String(e));
+      }
+    });
+
+    $btnNode.on("click", async function () {
+      const gid = ($gidInput.val() || "").trim();
+      const id = ($nodeIdInput.val() || "").trim();
+
+      if (!id) {
+        setResponse({ ok: false, error: "Please provide a node id." });
+        appendLog("ERROR: missing node id");
+        return;
+      }
+
+      const qs =
+        "?id=" + encodeURIComponent(id) +
+        (gid ? ("&gid=" + encodeURIComponent(gid)) : "");
+
+      try {
+        const { status, json } = await doFetchJson("urdf/node" + qs, { method: "GET" });
+        setResponse(json);
+        appendLog("HTTP " + status + " GET /urdf/node id=" + id + (gid ? (" gid=" + gid) : ""));
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/node: " + String(e));
+      }
+    });
+
+    $btnClearStore.on("click", async function () {
+      const gid = ($clearGidInput.val() || "").trim();
+      const body = gid ? { gid } : {};
+      try {
+        const { status, json } = await doFetchJson("urdf/clear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        setResponse(json);
+        appendLog("HTTP " + status + " POST /urdf/clear" + (gid ? (" gid=" + gid) : ""));
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/clear: " + String(e));
+      }
+    });
+
+    $btnLoad.on("click", async function () {
+      let parsed;
+      const raw = $loadArea.val();
+
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        setResponse({ ok: false, error: "Invalid JSON: " + (e && e.message ? e.message : String(e)) });
+        appendLog("ERROR: invalid JSON-LD input");
+        return;
+      }
+
+      try {
+        const { status, json } = await doFetchJson("urdf/load", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed)
+        });
+        setResponse(json);
+        appendLog("HTTP " + status + " POST /urdf/load");
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/load: " + String(e));
+      }
+    });
+
+    $btnLoadFrom.on("click", async function () {
+      const uri = ($uriInput.val() || "").trim();
+      if (!uri) {
+        setResponse({ ok: false, error: "Please provide a URI." });
+        appendLog("ERROR: missing uri");
+        return;
+      }
+
+      try {
+        const { status, json } = await doFetchJson("urdf/loadFrom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uri })
+        });
+        setResponse(json);
+        appendLog("HTTP " + status + " POST /urdf/loadFrom uri=" + uri);
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/loadFrom: " + String(e));
+      }
+    });
+
+    $btnLoadFile.on("click", async function () {
+  const f = ($fileInput[0] && $fileInput[0].files && $fileInput[0].files[0]) ? $fileInput[0].files[0] : null;
+  if (!f) {
+    setResponse({ ok: false, error: "Please choose a JSON-LD file first." });
+    appendLog("ERROR: missing file");
+    return;
+  }
+
+  try {
+    const text = await f.text();
+    let doc;
+    try {
+      doc = JSON.parse(text);
+    } catch (e) {
+      setResponse({ ok: false, error: "Invalid JSON in file: " + (e?.message || String(e)) });
+      appendLog("ERROR: invalid JSON file");
+      return;
+    }
+
+    const { status, json } = await doFetchJson("urdf/loadFile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ doc })
+    });
+
+    setResponse(json);
+    appendLog("HTTP " + status + " POST /urdf/loadFile (" + f.name + ")");
+  } catch (e) {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR calling /urdf/loadFile: " + String(e));
+  }
+});
+
+
+    $btnQuery.on("click", async function () {
+      const sparql = ($queryArea.val() || "").trim();
+      if (!sparql) {
+        setResponse({ ok: false, error: "Please enter a SPARQL query." });
+        appendLog("ERROR: empty query");
+        return;
+      }
+
+      try {
+        const { status, json } = await doFetchJson("urdf/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sparql })
+        });
+        setResponse(json);
+        appendLog("HTTP " + status + " POST /urdf/query");
+      } catch (e) {
+        setResponse({ ok: false, error: String(e) });
+        appendLog("ERROR calling /urdf/query: " + String(e));
+      }
+    });
+
+$btnExport.on("click", async function () {
+  try {
+    const gid = ($exportGidInput.val() || "").trim();
+    const qs = gid ? ("?gid=" + encodeURIComponent(gid)) : "";
+    const r = await fetch("urdf/export" + qs, { method: "GET" });
+
+    if (!r.ok) {
+      const text = await r.text().catch(() => "");
+      setResponse({ ok: false, status: r.status, error: "Export failed", body: text.slice(0, 300) });
+      appendLog("ERROR export: HTTP " + r.status);
+      return;
+    }
+
+    const cd = r.headers.get("Content-Disposition") || "";
+    let filename = "urdf-export.jsonld";
+    const m = /filename="([^"]+)"/.exec(cd);
+    if (m && m[1]) filename = m[1];
+
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+    setResponse({ ok: true, filename, bytes: blob.size, gid: gid || "(default)" });
+    appendLog("Downloaded export: " + filename);
+  } catch (e) {
+    setResponse({ ok: false, error: String(e) });
+    appendLog("ERROR export: " + String(e));
+  }
+});
+
+    return { appendLog, setResponse, scheduleReasonRefresh };
+  }
+
+  
+  /*
+    Plugin lifecycle:
+    Node-RED calls onadd() once when the editor loads. We create the sidebar, then subscribe
+    to runtime push events (RED.comms). When events arrive, we log them and optionally refresh
+    the Reason view after application updates.
+  */
+RED.plugins.registerPlugin("urdf-editor", {
+    onadd: function () {
+      const ui = createSidebar();
+      ui.appendLog("Sidebar loaded. Subscribing to " + TOPIC + "...");
+
+      if (!RED.comms || typeof RED.comms.subscribe !== "function") {
+        ui.appendLog("ERROR: RED.comms.subscribe is not available.");
+        return;
+      }
+
+      RED.comms.subscribe(TOPIC, function (a, b) {
+      const msg =
+    (b !== undefined) ? b :
+    (a && typeof a === "object") ? a :
+    null;
+
+        if (!msg) return;
+
+        const summary = (msg.request && msg.request.summary) ? (" — " + msg.request.summary) : "";
+        const req = msg.request ? (msg.request.method + " " + msg.request.path) : "event";
+        ui.appendLog(JSON.stringify(msg));
+
+        if (msg.response) {
+          ui.setResponse(msg.response);
+        }
+
+	if (msg.type && msg.type == "appUpdate") {
+	  ui.scheduleReasonRefresh(msg);
+	}
+
+      });
+    }
+  });
+})();
+</script>
+

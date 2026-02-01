@@ -1,0 +1,2017 @@
+module.exports = function (RED) {
+  "use strict";
+
+  // ============================================================================
+  // Runtime plugin entrypoint
+  // ============================================================================
+  // Node-RED loads this module once at startup. Everything here runs in-process
+  // inside Node-RED, so error handling must be defensive: failures should be
+  // logged and surfaced, but must not crash the runtime.
+  // ============================================================================
+
+  // ----------------------------------------------------------------------------
+  // Editor event push channel
+  // ----------------------------------------------------------------------------
+  // The runtime emits structured events (startup loads, inference, API calls)
+  // to the Node-RED editor using RED.comms when available.
+  //
+  // This creates a "runtime → editor" visibility path without requiring the
+  // editor to poll runtime endpoints.
+  const TOPIC = "urdf/events";
+
+  const express = require("express");
+  const jsonParser = express.json({ limit: "5mb" });
+  const fs = require("fs");
+
+  // ----------------------------------------------------------------------------
+  // Optional reasoning engine (Eyeling)
+  // ----------------------------------------------------------------------------
+  // Eyeling is treated as an optional dependency: the runtime remains usable
+  // without it (e.g., SPARQL-only operation). If Eyeling is missing or does not
+  // expose the expected API, N3 execution is skipped and a warning is logged.
+  let eyeling;
+try {
+  eyeling = require("eyeling/eyeling.js");
+} catch (e) {
+  eyeling = null;
+}
+
+if (eyeling && typeof eyeling.reasonStream === "function") {
+  RED.log.info("[uRDF] Eyeling reasonStream loaded");
+} else {
+  RED.log.warn("[uRDF] Eyeling not available (reasonStream missing)");
+}
+
+  // ----------------------------------------------------------------------------
+  // RDF store (uRDF)
+  // ----------------------------------------------------------------------------
+  // uRDF provides the in-memory RDF store and the query/load APIs used by all
+  // runtime endpoints and by startup loaders. This module is required for the
+  // plugin to operate meaningfully.
+  let urdf;
+  try {
+    urdf = require("urdf");
+    RED.log.info("[uRDF] module loaded");
+  } catch (e) {
+    RED.log.error("[uRDF] failed to load module 'urdf': " + e.message);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Runtime → editor event emitter
+  // ----------------------------------------------------------------------------
+  // Never allow event-push failures to break the Node-RED runtime.
+  // If the comms channel is unavailable (headless deployments), publishing is
+  // simply skipped.
+  function publish(event) {
+    try {
+      if (RED.comms && typeof RED.comms.publish === "function") {
+        RED.comms.publish(TOPIC, event);
+      }
+    } catch (_) {
+      // Intentionally ignored: observability must not impact availability.
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Local Admin API fetch helper
+  // ----------------------------------------------------------------------------
+  // This runtime relies on Node-RED's Admin HTTP API to obtain:
+  // - diagnostics and settings for environment modeling
+  // - /flows for building an application knowledge graph
+  //
+  // Using localhost HTTP keeps a clean boundary: the runtime consumes the same
+  // API an external admin client would, rather than reaching into internals.
+  async function fetchAdminJson(path) {
+    const port = Number(process.env.PORT || 1880);
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const url = `http://127.0.0.1:${port}${p}`;
+
+    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!r.ok) {
+      const text = await r.text().catch(() => "");
+      throw new Error(
+        `Admin API fetch failed: ${url} -> HTTP ${r.status}${text ? `; body=${text.slice(0, 200)}` : ""}`
+      );
+    }
+    return await r.json();
+  }
+
+  // ----------------------------------------------------------------------------
+  // Startup loader: ontology graph
+  // ----------------------------------------------------------------------------
+  // On container start, a default ontology (JSON-LD) can be loaded into a named
+  // graph to bootstrap the knowledge base.
+  //
+  // - URDF_ONTOLOGY_PATH selects the source file
+  // - URDF_ONTOLOGY_GID selects the target named graph id (gid)
+  //
+  // This loader is designed to be safe:
+  // - missing files are not fatal
+  // - parse/load errors are logged
+  // - success is published to the editor event channel
+  async function loadOntologyJsonLdOnStartup() {
+    if (!urdf) return;
+
+    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/app-ontology.jsonld";
+    const gid = process.env.URDF_ONTOLOGY_GID || "urn:nrua:ontology";
+
+    if (!fs.existsSync(filePath)) {
+      RED.log.warn("[uRDF] Ontology file not found: " + filePath);
+      return;
+    }
+
+    try {
+      const raw = fs.readFileSync(filePath, "utf8");
+      const doc = JSON.parse(raw);
+
+      const toLoad = Array.isArray(doc) ? { "@id": gid, "@graph": doc } : { ...doc, "@id": gid };
+      await urdf.load(toLoad);
+
+      RED.log.info("[uRDF] Ontology JSON-LD loaded into gid=" + gid + " from " + filePath);
+
+      publish({
+        ts: Date.now(),
+        type: "startupLoad",
+        request: { method: "INIT", path: "ontology", summary: filePath },
+        response: { ok: true, gid, filePath, totalSize: urdf.size() }
+      });
+    } catch (e) {
+      RED.log.error("[uRDF] Failed to load ontology JSON-LD: " + (e?.message || String(e)));
+    }
+  }
+
+  loadOntologyJsonLdOnStartup();
+
+  // ----------------------------------------------------------------------------
+  // Startup loader: rules graph
+  // ----------------------------------------------------------------------------
+  // On container start, a default rule set (JSON-LD) can be loaded into a named
+  // graph. These rule resources are later read by the inference orchestration.
+  //
+  // - URDF_RULES_PATH selects the source file
+  // - URDF_RULES_GID selects the target named graph id (gid)
+  async function loadRulesJsonLdOnStartup() {
+    if (!urdf) return;
+  
+    const filePath = process.env.URDF_RULES_PATH || "/opt/urdf/rules.jsonld";
+    const gid = process.env.URDF_RULES_GID || "urn:nrua:rules";
+
+    if (!fs.existsSync(filePath)) {
+      RED.log.warn("[uRDF] Rules file not found: " + filePath);
+      return;
+    }
+    
+    try {
+      const raw = fs.readFileSync(filePath, "utf8");
+      const doc = JSON.parse(raw);
+
+      const toLoad = Array.isArray(doc) ? { "@id": gid, "@graph": doc } : { ...doc, "@id": gid };
+      await urdf.load(toLoad);
+
+      RED.log.info("[uRDF] Rules JSON-LD loaded into gid=" + gid + " from " + filePath);
+
+      publish({
+        ts: Date.now(),
+        type: "startupLoad",
+        request: { method: "INIT", path: "rules", summary: filePath },
+        response: { ok: true, gid, filePath, totalSize: urdf.size() }
+      });
+    } catch (e) {
+      RED.log.error("[uRDF] Failed to load rules JSON-LD: " + (e?.message || String(e)));
+    }
+  }
+
+  loadRulesJsonLdOnStartup();
+
+  // ----------------------------------------------------------------------------
+  // Startup loader: runtime environment model (from Node-RED Admin API)
+  // ----------------------------------------------------------------------------
+  // This section builds a small "environment knowledge graph" that describes:
+  // - the Operating System details (platform/release/containerised/etc.)
+  // - the Node.js runtime version
+  // - the Node-RED runtime version
+  //
+  // The data source is the local Node-RED Admin API:
+  //   - GET /diagnostics
+  //   - GET /settings
+  //
+  // Because the plugin is loaded during Node-RED startup, those endpoints may
+  // not be immediately reachable. The loader therefore includes a retry loop
+  // that waits until the Admin API is ready.
+  const NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#";
+  const SCHEMA = "https://schema.org/";
+  const GID_ENV = process.env.URDF_ENV_GID || "urn:nrua:env";
+
+  // ----------------------------------------------------------------------------
+  // Small helpers used by the environment mapping
+  // ----------------------------------------------------------------------------
+  function notUnset(v) {
+    return typeof v !== "undefined" && v !== null && v !== "UNSET";
+  }
+
+  // Deterministic JSON serialization helper (stable key ordering).
+  // Note: kept as-is even if not used elsewhere, to preserve behavior and
+  // because it may be referenced in future extensions.
+  function stableJson(obj) {
+    if (!obj || typeof obj !== "object") return JSON.stringify(obj);
+    const out = {};
+    Object.keys(obj)
+      .sort()
+      .forEach((k) => {
+        out[k] = obj[k];
+      });
+    return JSON.stringify(out);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Build JSON-LD environment graph
+  // ----------------------------------------------------------------------------
+  // Converts Node-RED Admin API responses into a JSON-LD document that can be
+  // loaded into uRDF as a named graph. The model uses:
+  // - schema.org types/properties for broadly understandable runtime metadata
+  // - NRUA-specific types for Node-RED / Node.js concepts
+  //
+  // The returned document is shaped as:
+  //   { "@context": ..., "@id": <GID_ENV>, "@graph": [ ...nodes... ] }
+  function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
+    const osId = "urn:nrua:os";
+    const nodeJsId = "urn:nrua:nodejs";
+    const nodeRedId = "urn:nrua:nodered";
+
+    const d = diagnostics || {};
+    const s = settings || {};
+
+    const osInfo = d.os || {};
+    const nodeInfo = d.nodejs || {};
+    const rt = d.runtime || {};
+    const rtSettings = rt.settings && typeof rt.settings === "object" ? rt.settings : {};
+
+    const graph = [];
+
+    graph.push({
+      "@id": osId,
+      "@type": "schema:OperatingSystem",
+      ...(notUnset(osInfo.type) ? { "schema:name": osInfo.platform } : {}),
+      ...(notUnset(osInfo.release) ? { "schema:softwareVersion": osInfo.release } : {}),
+      ...(notUnset(osInfo.version) ? { "schema:description": osInfo.version } : {}),
+      ...(typeof osInfo.containerised === "boolean" ? { "nrua:isContainerised": osInfo.containerised } : {}),
+      ...(typeof osInfo.wsl === "boolean" ? { "nrua:isWsl": osInfo.wsl } : {})
+    });
+
+    graph.push({
+      "@id": nodeJsId,
+      "@type": "nrua:NodeJs",
+      ...(notUnset(nodeInfo.version) ? { "schema:version": nodeInfo.version } : {}),
+      "schema:operatingSystem": { "@id": osId }
+    });
+
+    const nodeRed = {
+      "@id": nodeRedId,
+      "@type": "nrua:NodeRed",
+      ...(notUnset(rt.version) ? { "schema:version": rt.version } : {}),
+      "schema:runtimePlatform": { "@id": nodeJsId }
+    };
+
+    graph.push(nodeRed);
+
+    return {
+      "@context": { nrua: NRUA, schema: SCHEMA },
+      "@id": GID_ENV,
+      "@graph": graph
+    };
+  }
+
+  // ----------------------------------------------------------------------------
+  // Load environment graph into uRDF
+  // ----------------------------------------------------------------------------
+  // Reads Admin API JSON, builds the JSON-LD environment document, loads it into
+  // uRDF, then publishes an event for observability.
+  async function loadEnvironmentOnStartupFromAdminApi() {
+    if (!urdf) return;
+
+    const ts = Date.now();
+    try {
+      const diagnostics = await fetchAdminJson("/diagnostics");
+      const settings = await fetchAdminJson("/settings");
+
+      const envDoc = buildEnvJsonLdFromAdmin({ diagnostics, settings });
+      await urdf.load(envDoc);
+
+      const payload = { ok: true, ts, gid: GID_ENV, size: urdf.size(GID_ENV), totalSize: urdf.size() };
+      publish({
+        ts,
+        type: "envLoad",
+        request: { method: "INIT", path: "env", summary: "from /diagnostics + /settings" },
+        response: payload
+      });
+      RED.log.info("[uRDF] Environment loaded from Node-RED Admin API into gid=" + GID_ENV);
+    } catch (e) {
+      const payload = { ok: false, ts, gid: GID_ENV, error: e?.message || String(e) };
+      publish({
+        ts,
+        type: "envLoad",
+        request: { method: "INIT", path: "env", summary: "from /diagnostics + /settings" },
+        response: payload
+      });
+      RED.log.error("[uRDF] Environment load failed: " + payload.error);
+      RED.log.error(
+        "[uRDF] fetch error details: " +
+          JSON.stringify({ message: e?.message, cause: e?.cause ? String(e.cause) : undefined })
+      );
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Admin API readiness wait loop
+  // ----------------------------------------------------------------------------
+  // The Admin API may not be available at the instant this plugin is loaded.
+  // This loop probes /diagnostics until it is reachable, then performs the
+  // environment load exactly once.
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function loadEnvironmentWhenAdminApiReady() {
+    const ts0 = Date.now();
+    const maxAttempts = 30;
+    const delayMs = 1000;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await fetchAdminJson("/diagnostics");
+        await loadEnvironmentOnStartupFromAdminApi();
+        RED.log.info(`[uRDF] Environment load succeeded after attempt ${attempt} (${Date.now() - ts0}ms)`);
+        return;
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        RED.log.warn(`[uRDF] Env load attempt ${attempt}/${maxAttempts} failed: ${msg}`);
+        await sleep(delayMs);
+      }
+    }
+    RED.log.error("[uRDF] Env load aborted: Admin API never became reachable");
+  }
+
+  loadEnvironmentWhenAdminApiReady();
+
+  // ----------------------------------------------------------------------------
+  // Inference and rules management
+  // ----------------------------------------------------------------------------
+  // This section provides the "bridge layer" between:
+  //   - uRDF: storage, named graphs, SPARQL querying
+  //   - eyeling: N3 rule execution (optional)
+  //
+  // The key output is an "inferred" named graph rebuilt deterministically from:
+  //   - rules stored in GID_RULES
+  //   - facts computed either via SPARQL (direct) or via N3 reasoning (eyeling)
+  //
+  // Note: the actual orchestration that executes rules and replaces the inferred
+  // graph appears later; this chunk focuses on the utilities and rule decoding.
+
+  const GID_RULES = process.env.URDF_RULES_GID || "urn:nrua:rules";
+  const GID_INFERRED = process.env.URDF_INFERRED_GID || "urn:graph:inferred";
+
+  // ----------------------------------------------------------------------------
+  // Rule encoding vocabulary (schema.org + NRUA)
+  // ----------------------------------------------------------------------------
+  // Rules are represented as JSON-LD resources of type NRUA_RULE.
+  // Their executable program is stored in schema:text, and metadata indicates
+  // the "language" and "format" of that program. Some rules may also contain
+  // parts (schema:hasPart) to store auxiliary code such as a projection query.
+  const SCHEMA_TEXT = "https://schema.org/text";
+  const NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
+  const SCHEMA_PROGRAMMING_LANGUAGE = "https://schema.org/programmingLanguage";
+  const SCHEMA_ENCODING_FORMAT = "https://schema.org/encodingFormat";
+  const SCHEMA_HASPART = "https://schema.org/hasPart";
+  const SCHEMA_SOFTWARE_SOURCE_CODE = "https://schema.org/SoftwareSourceCode";
+
+  // ----------------------------------------------------------------------------
+  // Eyeling output normalization
+  // ----------------------------------------------------------------------------
+  // Eyeling emits derived facts through callbacks. The values representing
+  // literals may arrive as quoted N3-like strings (e.g. "\"Flow 1\"").
+  // These helpers normalize those shapes into JSON-LD objects suitable for
+  // loading into uRDF.
+function stripN3Quotes(v) {
+  if (typeof v !== "string") return String(v ?? "");
+
+  const s = v.trim();
+
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    const inner = s.slice(1, -1);
+    return inner
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\")
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\r")
+      .replace(/\\t/g, "\t");
+  }
+
+  return s;
+}
+
+function looksLikeIri(v) {
+  return typeof v === "string" && (v.startsWith("urn:") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("_:"));
+}
+
+function eyelingDfToSpo(df) {
+  const f = df && df.fact;
+  const s = f && f.s && f.s.value;
+  const p = f && f.p && f.p.value;
+  const o = f && f.o && f.o.value;
+
+  if (!s || !p || o == null) return null;
+  return { s, p, o };
+}
+
+function eyelingObjectToJsonLd(oVal) {
+  if (looksLikeIri(oVal)) return { "@id": oVal };
+  return { "@value": stripN3Quotes(oVal) };
+}
+
+  // ----------------------------------------------------------------------------
+  // RDFJS term -> JSON-LD conversion
+  // ----------------------------------------------------------------------------
+  // Some uRDF or binding paths can expose RDFJS-like terms. This conversion
+  // preserves:
+  // - IRIs as {"@id": "..."}
+  // - Blank nodes as {"@id": "_:..."}
+  // - Literals with language or datatype annotations when present
+function rdfjsTermToJsonLd(term) {
+  if (!term || typeof term !== "object") {
+    throw new Error("Invalid RDFJS term: " + JSON.stringify(term));
+  }
+
+  if (term.termType === "NamedNode") {
+    return { "@id": term.value };
+  }
+
+  if (term.termType === "BlankNode") {
+    return { "@id": "_:" + term.value };
+  }
+
+  if (term.termType === "Literal") {
+    const out = { "@value": term.value };
+
+    if (term.language) {
+      out["@language"] = term.language;
+    } else if (term.datatype && term.datatype.value && term.datatype.value !== "http://www.w3.org/2001/XMLSchema#string") {
+      out["@type"] = term.datatype.value;
+    }
+
+    return out;
+  }
+
+  throw new Error("Unsupported RDFJS termType: " + term.termType);
+}
+
+  // ----------------------------------------------------------------------------
+  // JSON-LD graph assembly helper
+  // ----------------------------------------------------------------------------
+  // Inference results are assembled by grouping triples by subject into JSON-LD
+  // node objects. This helper ensures:
+  // - each subject node exists once
+  // - predicate values are stored as arrays (JSON-LD multi-valued properties)
+function addToBySubject(bySubject, sId, pIri, oJsonLd) {
+  let node = bySubject.get(sId);
+  if (!node) {
+    node = { "@id": sId };
+    bySubject.set(sId, node);
+  }
+  if (!node[pIri]) node[pIri] = [];
+  node[pIri].push(oJsonLd);
+}
+
+  // ----------------------------------------------------------------------------
+  // SPARQL binding -> N-Triples serialization (for Eyeling input)
+  // ----------------------------------------------------------------------------
+  // The N3 execution path uses a two-step approach:
+  //   1) run a SPARQL "projection" query over uRDF to produce a set of facts
+  //   2) serialize those facts as N-Triples lines
+  //   3) concatenate facts + the N3 program text and pass it to eyeling
+  //
+  // These functions normalize common binding shapes into N-Triples safely.
+function escapeNTriplesString(s) {
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+}
+
+function termToNTriples(term) {
+  if (term == null) throw new Error("Null term");
+
+  if (typeof term === "object") {
+    const t = (term.type || "").toLowerCase();
+    const v = term.value;
+
+    if (t === "uri") {
+      if (!v) throw new Error("URI term missing value");
+      return `<${v}>`;
+    }
+
+    if (t === "bnode" || t === "blanknode") {
+      if (!v) throw new Error("Blank node term missing value");
+      return v.startsWith("_:") ? v : `_:${v}`;
+    }
+
+    if (t === "literal") {
+      const lex = escapeNTriplesString(v ?? "");
+      if (term["xml:lang"] || term.lang) {
+        const lang = term["xml:lang"] || term.lang;
+        return `"${lex}"@${lang}`;
+      }
+      if (term.datatype) {
+        return `"${lex}"^^<${term.datatype}>`;
+      }
+      return `"${lex}"`;
+    }
+
+    if (typeof term["@id"] === "string") {
+      const id = term["@id"];
+      if (id.startsWith("_:")) return id;
+      return `<${id}>`;
+    }
+  }
+
+  if (typeof term === "string") {
+    if (term.startsWith("_:")) return term;
+    return `<${term}>`;
+  }
+
+  throw new Error("Unsupported term shape: " + JSON.stringify(term));
+}
+
+function bindingToNTripleLine(b) {
+  const s = termToNTriples(b.s);
+  const p = termToNTriples(b.p);
+  const o = termToNTriples(b.o);
+  return `${s} ${p} ${o} .`;
+}
+
+function normalizeQueryResults(qres) {
+  if (Array.isArray(qres)) return qres;
+  if (qres && Array.isArray(qres.results)) return qres.results;
+  return [];
+}
+
+function hasSpo(binding) {
+  if (!binding || typeof binding !== "object") return false;
+  return binding.s != null && binding.p != null && binding.o != null;
+}
+
+  // ----------------------------------------------------------------------------
+  // Rule decoding helpers
+  // ----------------------------------------------------------------------------
+  // Rules can be executed in two main modes:
+  //   - SPARQL: schema:text contains a SPARQL query, executed directly via urdf.query
+  //   - N3: schema:text contains a Notation3 program executed by eyeling
+  //
+  // For N3 rules, an additional SPARQL "projection" query is expected in a part
+  // resource referenced by schema:hasPart. That query is executed to generate
+  // the facts passed as input to the N3 program.
+function normalizeLang(x) {
+  if (!x) return "";
+  return String(x).trim().toLowerCase();
+}
+
+function isN3Rule(rule) {
+  const lang = normalizeLang(getPropFirstValue(rule, SCHEMA_PROGRAMMING_LANGUAGE));
+  const fmt  = normalizeLang(getPropFirstValue(rule, SCHEMA_ENCODING_FORMAT));
+
+  return (
+    lang === "n3" ||
+    lang === "notation3" ||
+    lang.includes("n3") ||
+    fmt.includes("n3") ||
+    fmt.includes("notation3")
+  );
+}
+
+function extractN3ProjectionSparql(rule, nodesById) {
+  const parts = rule && rule[SCHEMA_HASPART];
+  if (!Array.isArray(parts) || parts.length === 0) return undefined;
+
+  for (const partRef of parts) {
+    if (!partRef || typeof partRef !== "object") continue;
+
+    let part = partRef;
+    const pid = partRef["@id"];
+    if (pid && nodesById && nodesById.has(pid)) {
+      part = nodesById.get(pid);
+    }
+
+    const pl = normalizeLang(getPropFirstValue(part, SCHEMA_PROGRAMMING_LANGUAGE));
+    const types = part["@type"];
+    const t = Array.isArray(types) ? types : (types ? [types] : []);
+    const hasSoftwareSourceCodeType = t.includes(SCHEMA_SOFTWARE_SOURCE_CODE);
+
+    if (hasSoftwareSourceCodeType || pl === "sparql") {
+      const q = getPropFirstValue(part, SCHEMA_TEXT);
+      if (typeof q === "string" && q.trim()) return q;
+    }
+  }
+  return undefined;
+}
+
+function getPropFirstValue(node, iri) {
+  const arr = node && node[iri];
+  if (!Array.isArray(arr) || arr.length === 0) return undefined;
+  const v = arr[0];
+  if (v && typeof v === "object") {
+    if (typeof v["@value"] !== "undefined") return v["@value"];
+    if (typeof v["@id"] !== "undefined") return v["@id"];
+  }
+  return v;
+}
+
+  // ----------------------------------------------------------------------------
+  // SPARQL binding normalization to JSON-LD
+  // ----------------------------------------------------------------------------
+  // In the SPARQL rule path, urdf.query results are interpreted as bindings for
+  // {s,p,o}. These helpers normalize the different shapes seen in practice into:
+  // - a subject IRI (string)
+  // - a predicate IRI (string)
+  // - an object as JSON-LD ({ "@id": ... } or { "@value": ... } ...)
+function bindingToJsonLdObject(term) {
+  if (term == null) return null;
+
+  if (typeof term === "string") {
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(term)) return { "@id": term };
+    return { "@value": term };
+  }
+
+  if (typeof term === "object") {
+    if (term.termType === "NamedNode") return { "@id": term.value };
+    if (term.termType === "BlankNode") return { "@id": "_:" + term.value };
+    if (term.termType === "Literal") {
+      const lit = { "@value": term.value };
+      if (term.language) lit["@language"] = term.language;
+      const dt = term.datatype && (term.datatype.value || term.datatype);
+      if (dt && typeof dt === "string" && dt !== "http://www.w3.org/2001/XMLSchema#string") {
+        lit["@type"] = dt;
+      }
+      return lit;
+    }
+
+    const value = term.value ?? term["@value"] ?? term["@id"];
+    const type = term.type;
+    if (type === "uri") return { "@id": value };
+    if (type === "bnode") return { "@id": "_:" + value };
+    if (type === "literal") {
+      const lit = { "@value": value };
+      if (term["xml:lang"]) lit["@language"] = term["xml:lang"];
+      if (term.datatype && term.datatype !== "http://www.w3.org/2001/XMLSchema#string") lit["@type"] = term.datatype;
+      return lit;
+    }
+
+    if (typeof term["@id"] === "string") return { "@id": term["@id"] };
+    if (typeof term["@value"] !== "undefined") {
+      const lit = { "@value": term["@value"] };
+      if (term["@language"]) lit["@language"] = term["@language"];
+      if (term["@type"]) lit["@type"] = term["@type"];
+      return lit;
+    }
+
+    if (typeof value === "string") {
+      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return { "@id": value };
+      return { "@value": value };
+    }
+  }
+
+  return { "@value": String(term) };
+}
+
+function bindingToIri(term) {
+  if (term == null) return null;
+  if (typeof term === "string") return term;
+  if (typeof term === "object") {
+    if (term.termType === "NamedNode") return term.value;
+    if (term.type === "uri") return term.value;
+    if (typeof term["@id"] === "string") return term["@id"];
+    if (typeof term.value === "string") return term.value;
+  }
+  return null;
+}
+
+  // ----------------------------------------------------------------------------
+  // Inference orchestration: rebuild inferred graph from rules
+  // ----------------------------------------------------------------------------
+  // This function recomputes the inferred knowledge graph deterministically.
+  //
+  // Inputs:
+  //   - Rules are read from the named graph GID_RULES
+  //   - Facts are read from the rest of the uRDF store via SPARQL queries
+  //
+  // Execution modes:
+  //   - SPARQL rule: schema:text is executed directly as SPARQL
+  //   - N3 rule: schema:text is an N3 program executed by eyeling, and a separate
+  //     "projection" SPARQL query (from schema:hasPart) is used to generate the
+  //     facts fed into the reasoner
+  //
+  // Output:
+  //   - The inferred named graph (GID_INFERRED) is cleared and replaced entirely
+  //     with the new inferred graph (graph replacement is deterministic and
+  //     avoids incremental drift).
+async function recomputeInferencesFromRules(triggerReason) {
+  if (!urdf) return;
+
+  const ts = Date.now();
+
+  try {
+    // ------------------------------------------------------------------------
+    // Step 1: read the rules graph
+    // ------------------------------------------------------------------------
+    const rulesGraph = urdf.findGraph(GID_RULES);
+    if (!Array.isArray(rulesGraph) || rulesGraph.length === 0) {
+      await urdf.clear(GID_INFERRED);
+      publish({
+        ts,
+        type: "inference",
+        request: { method: "AUTO", path: "rules", summary: `no rules (${triggerReason || ""})` },
+        response: { ok: true, ts, rules: 0, triples: 0, gid: GID_INFERRED }
+      });
+      return;
+    }
+
+    // Build a lookup of nodes by @id to allow dereferencing schema:hasPart refs.
+    const nodesById = new Map();
+for (const n of rulesGraph) {
+  if (n && typeof n === "object" && typeof n["@id"] === "string") {
+    nodesById.set(n["@id"], n);
+  }
+}
+
+    // ------------------------------------------------------------------------
+    // Step 2: extract rule resources
+    // ------------------------------------------------------------------------
+    const rules = rulesGraph.filter((n) => {
+      const types = n && n["@type"];
+      if (!types) return false;
+      const t = Array.isArray(types) ? types : [types];
+      return t.includes(NRUA_RULE);
+    });
+
+    // ------------------------------------------------------------------------
+    // Step 3: execute rules and aggregate inferred triples
+    // ------------------------------------------------------------------------
+    // Inferred results are assembled as JSON-LD node objects grouped by subject.
+    // This makes it easy to load the inferred graph as JSON-LD afterward.
+    const bySubject = new Map();
+
+    let firedTriples = 0;
+for (const rule of rules) {
+  const programText = getPropFirstValue(rule, SCHEMA_TEXT);
+  if (!programText || typeof programText !== "string" || !programText.trim()) continue;
+
+  // ----------------------------------------------------------------------
+  // N3 rule path (Eyeling)
+  // ----------------------------------------------------------------------
+if (isN3Rule(rule)) {
+  const projection = extractN3ProjectionSparql(rule, nodesById);
+
+  if (!projection) {
+    RED.log.warn("[uRDF] N3 rule found but missing schema:hasPart projection SPARQL query: " + (rule["@id"] || "(no @id)"));
+    continue;
+  }
+
+  // Execute the projection query to produce bindings of {s,p,o} facts.
+  let projRes;
+  try {
+    projRes = await urdf.query(projection);
+  } catch (e) {
+    RED.log.warn("[uRDF] N3 projection query failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
+    continue;
+  }
+
+  const bindings = normalizeQueryResults(projRes);
+  const ok = bindings.filter(hasSpo);
+  const bad = bindings.length - ok.length;
+
+  // Serialize projection bindings into N-Triples facts to feed the reasoner.
+  let factsLines = [];
+for (const b of ok) {
+  try {
+    factsLines.push(bindingToNTripleLine(b));
+  } catch (e) {
+    RED.log.warn("[uRDF] Failed to serialize binding to N-Triples for rule " + (rule["@id"] || "(no @id)") +
+      ": " + (e && e.message ? e.message : e) +
+      " binding=" + JSON.stringify(b)
+    );
+  }
+}
+
+const factsText = factsLines.join("\n");
+
+const previewCount = Math.min(10, factsLines.length);
+
+  // Prepare the N3 input as:
+  //   <facts as N-Triples>
+  //   <blank line>
+  //   <N3 program text>
+  const n3Program = programText;
+  const n3Input = factsText + "\n\n" + n3Program;
+
+  // If Eyeling is unavailable at runtime, N3 execution is skipped safely.
+  if (!eyeling || typeof eyeling.reasonStream !== "function") {
+    RED.log.warn("[uRDF] Eyeling reasonStream not available at runtime, skipping N3 execution for " + (rule["@id"] || "(no @id)"));
+    continue;
+  }
+
+  let derivedCount = 0;
+  const maxPreview = 10;
+
+  const derivedDF = [];
+  const derivedPreview = [];
+
+  let loggedFirstDf = false;
+
+  // Callback invoked by Eyeling when new facts are derived.
+  function onDerived(ev) {
+    derivedCount++;
+
+    if (ev && ev.df) {
+      derivedDF.push(ev.df);
+
+      if (!loggedFirstDf) {
+        loggedFirstDf = true;
+      }
+    }
+
+    if (derivedPreview.length < 2 && ev && typeof ev.triple === "string") {
+      derivedPreview.push(ev.triple);
+    }
+  }
+
+  try {
+    const out = eyeling.reasonStream(n3Input, { onDerived });
+
+for (const df of derivedDF) {
+  const spo = eyelingDfToSpo(df);
+  if (!spo) {
+    RED.log.warn("[uRDF] Derived df missing fact.s/p/o: " + JSON.stringify(df));
+    continue;
+  }
+
+  const sId = spo.s;
+  const pIri = spo.p;
+  const oJson = eyelingObjectToJsonLd(spo.o);
+
+	const INTERNAL_PRED_PREFIX = "urn:nrua:pv:";
+if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
+  continue;
+}
+
+  addToBySubject(bySubject, sId, pIri, oJson);
+}
+
+  } catch (e) {
+    RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
+  }
+
+  // N3 path ends here; results are already merged into bySubject.
+  continue;
+
+}
+
+  // ----------------------------------------------------------------------
+  // SPARQL rule path (direct)
+  // ----------------------------------------------------------------------
+  const q = programText;
+  const qres = await urdf.query(q);
+  const bindings = Array.isArray(qres) ? qres : (qres && Array.isArray(qres.results) ? qres.results : []);
+
+  for (const b of bindings) {
+        const sTerm = b.s ?? b["?s"] ?? b.subject ?? b.S;
+        const pTerm = b.p ?? b["?p"] ?? b.predicate ?? b.P;
+        const oTerm = b.o ?? b["?o"] ?? b.object ?? b.O;
+
+        const sIri = bindingToIri(sTerm);
+        const pIri = bindingToIri(pTerm);
+        const oJson = bindingToJsonLdObject(oTerm);
+
+        if (!sIri || !pIri || !oJson) continue;
+
+        let subjNode = bySubject.get(sIri);
+        if (!subjNode) {
+          subjNode = { "@id": sIri };
+          bySubject.set(sIri, subjNode);
+        }
+
+        subjNode[pIri] = subjNode[pIri] || [];
+        subjNode[pIri].push(oJson);
+
+        firedTriples++;
+  }
+}
+
+    // ------------------------------------------------------------------------
+    // Step 4: replace inferred graph deterministically
+    // ------------------------------------------------------------------------
+const inferredGraphToLoad = Array.from(bySubject.values());
+
+await urdf.clear(GID_INFERRED);
+await urdf.load({
+  "@id": GID_INFERRED,
+  "@graph": inferredGraphToLoad
+});
+
+    const payload = {
+      ok: true,
+      ts,
+      rules: rules.length,
+      triples: firedTriples,
+      gid: GID_INFERRED,
+      reason: triggerReason || "manual",
+      size: urdf.size(GID_INFERRED),
+      totalSize: urdf.size()
+    };
+
+    publish({
+      ts,
+      type: "inference",
+      request: { method: "AUTO", path: "rules", summary: `applied ${rules.length} rule(s)` },
+      response: payload
+    });
+
+  } catch (e) {
+    const payload = { ok: false, ts, gid: GID_INFERRED, error: e?.message || String(e) };
+    publish({
+      ts,
+      type: "inference",
+      request: { method: "AUTO", path: "rules", summary: "FAILED" },
+      response: payload
+    });
+    RED.log.error("[uRDF] Rule inference failed: " + payload.error);
+  }
+}
+
+  // ----------------------------------------------------------------------------
+  // Rule graph utilities and rule CRUD endpoints
+  // ----------------------------------------------------------------------------
+  // The rules graph (GID_RULES) is stored as JSON-LD in uRDF. These helpers and
+  // endpoints provide a minimal management API to:
+  //   - create a new rule resource
+  //   - update an existing rule resource
+  //   - delete a rule by @id
+  //
+  // The API operates on full rule objects (no patching): create/update replace
+  // the entire rule resource entry in the rules graph.
+function asArray(x) {
+  return Array.isArray(x) ? x : (x ? [x] : []);
+}
+
+function isRuleNode(n) {
+  const t = asArray(n && n["@type"]);
+  return t.includes(NRUA_RULE);
+}
+
+function getGraphSafe(gid) {
+  const g = urdf.findGraph(gid);
+  return Array.isArray(g) ? g : [];
+}
+
+  // Replace a named graph deterministically by clearing and loading a new graph.
+  // This avoids partial updates and keeps the stored graph consistent.
+async function replaceNamedGraph(gid, graphArray) {
+  await urdf.clear(gid);
+  await urdf.load({ "@id": gid, "@graph": graphArray });
+}
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/rules/create
+  // ----------------------------------------------------------------------------
+  // Body: { "rule": <JSON-LD rule resource> }
+  // Constraints:
+  //   - rule["@id"] is required
+  //   - rule["@type"] must include NRUA_RULE
+  //   - conflicts return HTTP 409
+RED.httpAdmin.post("/urdf/rules/create", jsonParser, async (req, res) => {
+  const ts = Date.now();
+  if (!requireUrdf(ts, "rulesCreate", { method: "POST", path: "/urdf/rules/create" }, res)) return;
+
+  const rule = req.body && req.body.rule;
+  if (!rule || typeof rule !== "object") return res.status(400).json({ ok: false, ts, error: 'Body must be { "rule": { ... } }' });
+  if (!rule["@id"] || typeof rule["@id"] !== "string") return res.status(400).json({ ok: false, ts, error: 'rule["@id"] is required' });
+  if (!isRuleNode(rule)) return res.status(400).json({ ok: false, ts, error: `rule["@type"] must include ${NRUA_RULE}` });
+
+  try {
+    const graph = getGraphSafe(GID_RULES);
+
+    if (graph.some(n => n && n["@id"] === rule["@id"])) {
+      return res.status(409).json({ ok: false, ts, error: "Rule already exists", id: rule["@id"] });
+    }
+
+    graph.push(rule);
+    await replaceNamedGraph(GID_RULES, graph);
+
+    return res.status(200).json({ ok: true, ts, gid: GID_RULES, created: rule["@id"], count: graph.length });
+  } catch (e) {
+    return res.status(500).json({ ok: false, ts, error: e?.message || String(e) });
+  }
+});
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/rules/update
+  // ----------------------------------------------------------------------------
+  // Body: { "rule": <JSON-LD rule resource> }
+  // Constraints:
+  //   - rule["@id"] is required
+  //   - rule["@type"] must include NRUA_RULE
+  //   - missing rules return HTTP 404
+RED.httpAdmin.post("/urdf/rules/update", jsonParser, async (req, res) => {
+  const ts = Date.now();
+  if (!requireUrdf(ts, "rulesUpdate", { method: "POST", path: "/urdf/rules/update" }, res)) return;
+
+  const rule = req.body && req.body.rule;
+  if (!rule || typeof rule !== "object") return res.status(400).json({ ok: false, ts, error: 'Body must be { "rule": { ... } }' });
+  if (!rule["@id"] || typeof rule["@id"] !== "string") return res.status(400).json({ ok: false, ts, error: 'rule["@id"] is required' });
+  if (!isRuleNode(rule)) return res.status(400).json({ ok: false, ts, error: `rule["@type"] must include ${NRUA_RULE}` });
+
+  try {
+    const graph = getGraphSafe(GID_RULES);
+    const idx = graph.findIndex(n => n && n["@id"] === rule["@id"]);
+    if (idx < 0) return res.status(404).json({ ok: false, ts, error: "Rule not found", id: rule["@id"] });
+
+    graph[idx] = rule;
+    await replaceNamedGraph(GID_RULES, graph);
+
+    return res.status(200).json({ ok: true, ts, gid: GID_RULES, updated: rule["@id"], count: graph.length });
+  } catch (e) {
+    return res.status(500).json({ ok: false, ts, error: e?.message || String(e) });
+  }
+});
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/rules/delete
+  // ----------------------------------------------------------------------------
+  // Body: { "id": "<rule @id>" }
+  // Behavior:
+  //   - removes any rule node whose "@id" matches the provided id
+  //   - missing rules return HTTP 404
+RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
+  const ts = Date.now();
+  if (!requireUrdf(ts, "rulesDelete", { method: "POST", path: "/urdf/rules/delete" }, res)) return;
+
+  const id = req.body && req.body.id ? String(req.body.id) : "";
+  if (!id.trim()) return res.status(400).json({ ok: false, ts, error: 'Body must be { "id": "..." }' });
+
+  try {
+    const graph = getGraphSafe(GID_RULES);
+    const next = graph.filter(n => !(n && n["@id"] === id));
+    if (next.length === graph.length) return res.status(404).json({ ok: false, ts, error: "Rule not found", id });
+
+    await replaceNamedGraph(GID_RULES, next);
+
+    return res.status(200).json({ ok: true, ts, gid: GID_RULES, deleted: id, count: next.length });
+  } catch (e) {
+    return res.status(500).json({ ok: false, ts, error: e?.message || String(e) });
+  }
+});
+
+  // ----------------------------------------------------------------------------
+  // Application model extraction from Node-RED flows
+  // ----------------------------------------------------------------------------
+  // This section converts the Node-RED flow configuration (GET /flows) into a
+  // JSON-LD knowledge graph describing:
+  //   - the application as a whole
+  //   - each flow/tab
+  //   - each node (including config nodes)
+  //   - wiring structure (node outputs and their targets)
+  //   - node configuration properties (captured losslessly)
+  //
+  // The resulting graph is stored in the named graph GID_APP and is refreshed
+  // whenever flows are deployed/updated.
+  const GID_APP = process.env.URDF_APP_GID || "urn:nrua:app";
+
+  // ----------------------------------------------------------------------------
+  // Stable identifiers (URNs) for app/flow/node entities
+  // ----------------------------------------------------------------------------
+  // These helpers produce stable IDs derived from Node-RED ids so that repeated
+  // loads replace the same resources rather than creating new ones.
+  function appId() {
+    return "urn:nrua:app";
+  }
+  function flowId(tabId) {
+    return `urn:nrua:flow:${tabId}`;
+  }
+  function nodeId(id) {
+    return `urn:nrua:node:${id}`;
+  }
+  function outId(id, gate) {
+    return `urn:nrua:out:${id}:${gate}`;
+  }
+
+  // ----------------------------------------------------------------------------
+  // Node property capture rules
+  // ----------------------------------------------------------------------------
+  // Node-RED nodes include many keys that are either universal editor metadata
+  // or not relevant to a semantic configuration graph. Those keys are excluded.
+  //
+  // All remaining keys are stored as schema:PropertyValue entries linked via
+  // schema:additionalProperty to preserve configuration losslessly.
+  const EXCLUDE_NODE_KEYS = new Set([
+    "id",
+    "type",
+    "z",
+    "x",
+    "y",
+    "wires",
+    "info",
+    "d",
+    "g"
+  ]);
+
+  function isPrimitive(v) {
+    return v === null || ["string", "number", "boolean"].includes(typeof v);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Deterministic ID encoding for structured values
+  // ----------------------------------------------------------------------------
+  // Structured values (arrays/objects) are represented as additional JSON-LD
+  // nodes and linked from the owning PropertyValue. makeId ensures stable,
+  // URN-safe identifiers so that the same flow configuration always yields the
+  // same resource ids.
+  function makeId(...parts) {
+    const enc = (s) =>
+      encodeURIComponent(String(s))
+        .replace(/%/g, "_");
+    return parts.map(enc).join(":");
+  }
+
+  // ----------------------------------------------------------------------------
+  // Encode structured configuration values
+  // ----------------------------------------------------------------------------
+  // Arrays are encoded as schema:ItemList with schema:ListItem elements.
+  // Objects are encoded as schema:StructuredValue with schema:additionalProperty
+  // entries (schema:PropertyValue).
+  //
+  // The function returns the @id of the created structured resource node.
+  function encodeStructuredValue(graph, value, idBase) {
+    if (Array.isArray(value)) {
+      const listId = makeId(idBase, "list");
+      const list = {
+        "@id": listId,
+        "@type": "schema:ItemList",
+        "schema:itemListElement": []
+      };
+
+      value.forEach((item, idx) => {
+        const liId = makeId(listId, "li", String(idx));
+        const li = {
+          "@id": liId,
+          "@type": "schema:ListItem",
+          "schema:position": idx
+        };
+
+        if (isPrimitive(item)) {
+          li["schema:item"] = item;
+        } else {
+          const itemId = encodeStructuredValue(graph, item, makeId(liId, "item"));
+          li["schema:item"] = { "@id": itemId };
+        }
+
+        graph.push(li);
+        list["schema:itemListElement"].push({ "@id": liId });
+      });
+
+      graph.push(list);
+      return listId;
+    }
+
+    const objId = makeId(idBase, "obj");
+    const objNode = {
+      "@id": objId,
+      "@type": "schema:StructuredValue",
+      "schema:additionalProperty": []
+    };
+
+    graph.push(objNode);
+
+    for (const k of Object.keys(value || {}).sort()) {
+      const v = value[k];
+
+      const pvId = makeId(objId, "pv", k);
+      const pv = { "@id": pvId, "@type": "schema:PropertyValue", "schema:name": k };
+
+      if (isPrimitive(v)) {
+        pv["schema:value"] = v;
+      } else {
+        const nestedId = encodeStructuredValue(graph, v, makeId(objId, "v", k));
+        pv["schema:valueReference"] = { "@id": nestedId };
+      }
+
+      graph.push(pv);
+      objNode["schema:additionalProperty"].push({ "@id": pvId });
+    }
+
+    return objId;
+  }
+
+  // ----------------------------------------------------------------------------
+  // Attach a schema:PropertyValue to an existing subject node
+  // ----------------------------------------------------------------------------
+  // The subject node must already exist in the graph array. This function:
+  //   1) creates a PropertyValue node with stable @id
+  //   2) pushes it into the graph
+  //   3) links it from the subject via schema:additionalProperty
+  function addPropertyValue(graph, subjectId, key, value, baseId) {
+    const pvId = makeId(baseId, "pv", key);
+
+    const pv = {
+      "@id": pvId,
+      "@type": "schema:PropertyValue",
+      "schema:name": key
+    };
+
+    if (isPrimitive(value)) {
+      pv["schema:value"] = value;
+    } else {
+      const structuredId = encodeStructuredValue(graph, value, makeId(baseId, "v", key));
+      pv["schema:valueReference"] = { "@id": structuredId };
+    }
+
+    graph.push(pv);
+
+    const subj = graph.find((x) => x && x["@id"] === subjectId);
+    if (subj) {
+      subj["schema:additionalProperty"] = subj["schema:additionalProperty"] || [];
+      subj["schema:additionalProperty"].push({ "@id": pvId });
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Flow configuration -> JSON-LD application document
+  // ----------------------------------------------------------------------------
+  // Takes the raw array returned by GET /flows and builds a JSON-LD document:
+  //   { "@context": ..., "@id": <GID_APP>, "@graph": [...] }
+  //
+  // The graph contains:
+  //   - schema:Application root
+  //   - nrua:Flow nodes derived from "tab" entries
+  //   - nrua:Node nodes for all non-tab entries
+  //   - nrua:NodeOutput wiring nodes for each output gate
+  //   - schema:PropertyValue nodes for configuration keys
+  //
+  // Additionally, each flow collects a keyword list from node types as a compact
+  // summary under schema:keywords.
+function buildAppJsonLdFromFlows(flowsArray) {
+  const graph = [];
+
+  graph.push({
+    "@id": appId(),
+    "@type": "schema:Application"
+  });
+
+  const flowKeywords = new Map();
+
+  function addKw(flowIri, kw) {
+    if (!kw) return;
+    const k = String(kw).trim();
+    if (!k) return;
+    let set = flowKeywords.get(flowIri);
+    if (!set) {
+      set = new Set();
+      flowKeywords.set(flowIri, set);
+    }
+    set.add(k);
+  }
+
+  const tabs = flowsArray.filter((n) => n && n.type === "tab");
+  for (const t of tabs) {
+    const fid = flowId(t.id);
+
+    graph.push({
+      "@id": fid,
+      "@type": "nrua:Flow",
+      "schema:identifier": String(t.id),
+      ...(t.label ? { "schema:name": String(t.label) } : {}),
+      "schema:isPartOf": { "@id": appId() }
+    });
+
+    flowKeywords.set(fid, flowKeywords.get(fid) || new Set());
+  }
+
+  for (const n of flowsArray) {
+    if (!n || typeof n !== "object") continue;
+    if (!n.id || !n.type) continue;
+    if (n.type === "tab") continue;
+
+    const thisNodeId = nodeId(n.id);
+
+    const partOf = n.z ? flowId(String(n.z)) : appId();
+
+    if (n.z) {
+      addKw(partOf, n.type);
+    }
+
+    const node = {
+      "@id": thisNodeId,
+      "@type": "nrua:Node",
+      "schema:identifier": String(n.id),
+      "nrua:type": String(n.type),
+      ...(n.name ? { "schema:name": String(n.name) } : {}),
+      "schema:isPartOf": { "@id": partOf }
+    };
+
+    graph.push(node);
+
+    for (const [k, v] of Object.entries(n)) {
+      if (EXCLUDE_NODE_KEYS.has(k)) continue;
+      if (k === "name") continue;
+      if (k === "label" || k === "disabled" || k === "env") continue;
+      addPropertyValue(graph, thisNodeId, k, v, thisNodeId);
+    }
+
+    if (Array.isArray(n.wires)) {
+      for (let gate = 0; gate < n.wires.length; gate++) {
+        const targets = n.wires[gate];
+        if (!Array.isArray(targets) || targets.length === 0) continue;
+
+        graph.push({
+          "@id": outId(n.id, gate),
+          "@type": "nrua:NodeOutput",
+          "nrua:fromGate": gate,
+          "nrua:toNode": targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
+        });
+
+        node["nrua:hasOutput"] = node["nrua:hasOutput"] || [];
+        node["nrua:hasOutput"].push({ "@id": outId(n.id, gate) });
+      }
+    }
+  }
+
+for (const [flowIri, set] of flowKeywords.entries()) {
+  if (!set || set.size === 0) continue;
+  const flowNode = graph.find((x) => x && x["@id"] === flowIri);
+  if (!flowNode) continue;
+
+  flowNode["schema:keywords"] = Array.from(set)
+    .map((kw) => String(kw).trim())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
+
+  return {
+    "@context": { nrua: NRUA, schema: SCHEMA },
+    "@id": GID_APP,
+    "@graph": graph
+  };
+}
+
+  // ----------------------------------------------------------------------------
+  // Refresh scheduling (debounce)
+  // ----------------------------------------------------------------------------
+  // Flow events can fire in quick succession during deployments. A short debounce
+  // avoids redundant reload work.
+  let appReloadTimer = null;
+
+  function scheduleAppReload(reason) {
+    if (appReloadTimer) clearTimeout(appReloadTimer);
+    appReloadTimer = setTimeout(() => {
+      loadApplicationFromFlows(reason).catch((e) => {
+        RED.log.error("[uRDF] Application load failed: " + (e?.message || String(e)));
+        publish({
+          ts: Date.now(),
+          type: "appLoad",
+          request: { method: "INIT", path: "app", summary: `failed (${reason})` },
+          response: { ok: false, error: e?.message || String(e) }
+        });
+      });
+    }, 250);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Load application graph from /flows and trigger inference
+  // ----------------------------------------------------------------------------
+  // This performs a full replace of the application graph to keep state
+  // deterministic across deploys/updates.
+  async function loadApplicationFromFlows(reason) {
+    if (!urdf) return;
+
+    const ts = Date.now();
+    const flows = await fetchAdminJson("/flows");
+
+    if (!Array.isArray(flows)) {
+      throw new Error("Expected /flows to return an array; got " + typeof flows);
+    }
+
+    const appDoc = buildAppJsonLdFromFlows(flows);
+
+    await urdf.clear(GID_APP);
+    await urdf.load(appDoc);
+    await recomputeInferencesFromRules(reason);
+
+    const payload = {
+      ok: true,
+      ts,
+      gid: GID_APP,
+      reason,
+      size: urdf.size(GID_APP),
+      totalSize: urdf.size()
+    };
+
+    publish({
+      ts,
+      type: "appUpdate",
+      request: { method: "REPLACE", path: "/flows", summary: reason },
+      response: payload
+    });
+
+    RED.log.info(`[uRDF] Application graph updated from /flows into gid=${GID_APP} (${reason})`);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Hook into Node-RED flow lifecycle events
+  // ----------------------------------------------------------------------------
+  // When flows start/deploy/update, refresh the application graph and recompute
+  // inferred knowledge derived from rules.
+  if (RED.events && typeof RED.events.on === "function") {
+    RED.events.on("flows:started", () => scheduleAppReload("flows:started"));
+    RED.events.on("flows:deployed", () => scheduleAppReload("flows:deployed"));
+    RED.events.on("flows:updated", () => scheduleAppReload("flows:updated"));
+    RED.log.info("[uRDF] Registered flow lifecycle hooks");
+  } else {
+    RED.log.warn("[uRDF] RED.events not available; deploy hook not registered");
+  }
+
+  // ----------------------------------------------------------------------------
+  // Admin HTTP API: uRDF store access and management
+  // ----------------------------------------------------------------------------
+  // These endpoints expose a minimal HTTP interface over the uRDF store via
+  // Node-RED's admin server (RED.httpAdmin).
+  //
+  // Design notes:
+  // - Endpoints are intentionally operational and diagnostic in nature.
+  // - All calls publish a structured event when possible (editor visibility).
+  // - The handler logic is defensive: failures return explicit errors and do not
+  //   crash the Node-RED runtime.
+  function now() {
+    return Date.now();
+  }
+
+  // Reduce SPARQL text to a compact one-line preview for event logs.
+  function summarizeSparql(s) {
+    if (!s || typeof s !== "string") return "";
+    const oneLine = s.replace(/\s+/g, " ").trim();
+    return oneLine.length > 140 ? oneLine.slice(0, 137) + "..." : oneLine;
+  }
+
+  // Convenience response helper: ok=true -> 200, ok=false -> 500.
+  function okOr500(res, payload) {
+    return res.status(payload.ok ? 200 : 500).json(payload);
+  }
+
+  // Ensure uRDF is available before servicing a request. If not, publish an
+  // event and respond with 500.
+  function requireUrdf(ts, type, reqMeta, res) {
+    if (urdf) return true;
+    const payload = { ok: false, ts, error: "uRDF module not loaded" };
+    publish({ ts, type, request: reqMeta, response: payload });
+    res.status(500).json(payload);
+    return false;
+  }
+
+  // ----------------------------------------------------------------------------
+  // GET /urdf/health
+  // ----------------------------------------------------------------------------
+  // Basic runtime check: confirms uRDF module load and reports store size.
+  RED.httpAdmin.get("/urdf/health", function (req, res) {
+    const ts = now();
+    const ok = !!urdf;
+    const payload = {
+      ok,
+      ts,
+      module: "urdf",
+      size: ok && typeof urdf.size === "function" ? urdf.size() : undefined
+    };
+
+    publish({
+      ts,
+      type: "health",
+      request: { method: "GET", path: "/urdf/health" },
+      response: payload
+    });
+
+    okOr500(res, payload);
+  });
+
+  // ----------------------------------------------------------------------------
+  // GET /urdf/size?gid=...
+  // ----------------------------------------------------------------------------
+  // Returns either:
+  // - total store size (no gid)
+  // - size of a named graph (gid provided)
+  RED.httpAdmin.get("/urdf/size", function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "size", { method: "GET", path: "/urdf/size" }, res)) return;
+
+    const gid = req.query && req.query.gid ? String(req.query.gid) : undefined;
+
+    try {
+      if (!gid) {
+        const totalSize = urdf.size();
+        const payload = { ok: true, ts, totalSize };
+
+        publish({
+          ts,
+          type: "size",
+          request: { method: "GET", path: "/urdf/size", summary: "total size" },
+          response: payload
+        });
+
+        return res.status(200).json(payload);
+      }
+
+      const size = urdf.size(gid);
+      const payload = { ok: true, ts, gid, size };
+
+      publish({
+        ts,
+        type: "size",
+        request: { method: "GET", path: "/urdf/size", summary: `gid=${gid}` },
+        response: payload
+      });
+
+      return res.status(200).json(payload);
+    } catch (e) {
+      const payload = { ok: false, ts, error: e && e.message ? e.message : String(e) };
+
+      publish({
+        ts,
+        type: "size",
+        request: { method: "GET", path: "/urdf/size", summary: gid ? `gid=${gid}` : "total size" },
+        response: payload
+      });
+
+      return res.status(500).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // GET /urdf/graph?gid=...
+  // ----------------------------------------------------------------------------
+  // Returns the JSON-LD graph array for:
+  // - the default graph (no gid)
+  // - a named graph (gid provided)
+  RED.httpAdmin.get("/urdf/graph", function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "graph", { method: "GET", path: "/urdf/graph" }, res)) return;
+
+    const gid = req.query && req.query.gid ? String(req.query.gid) : undefined;
+
+    try {
+      const graph = gid ? urdf.findGraph(gid) : urdf.findGraph();
+
+      if (gid && graph == null) {
+        const payload = { ok: false, ts, gid, error: "Graph not found" };
+
+        publish({
+          ts,
+          type: "graph",
+          request: { method: "GET", path: "/urdf/graph", summary: `gid=${gid}` },
+          response: payload
+        });
+
+        return res.status(404).json(payload);
+      }
+
+      const payload = { ok: true, ts, gid: gid || null, graph };
+
+      publish({
+        ts,
+        type: "graph",
+        request: { method: "GET", path: "/urdf/graph", summary: gid ? `gid=${gid}` : "default graph" },
+        response: payload
+      });
+
+      return res.status(200).json(payload);
+    } catch (e) {
+      const payload = { ok: false, ts, error: e && e.message ? e.message : String(e) };
+
+      publish({
+        ts,
+        type: "graph",
+        request: { method: "GET", path: "/urdf/graph", summary: gid ? `gid=${gid}` : "default graph" },
+        response: payload
+      });
+
+      return res.status(500).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // GET /urdf/export?gid=...
+  // ----------------------------------------------------------------------------
+  // Downloads a JSON-LD document containing either:
+  // - the whole store (no gid)
+  // - one named graph (gid provided)
+RED.httpAdmin.get("/urdf/export", function (req, res) {
+  const ts = now();
+  if (!requireUrdf(ts, "export", { method: "GET", path: "/urdf/export" }, res)) return;
+
+  try {
+    const graph = req.query && req.query.gid ? urdf.findGraph(String(req.query.gid)) : urdf.findGraph();
+    const doc = {
+      "@context": {
+        nrua: "https://w3id.org/nodered-static-program-analysis/user-application-ontology#",
+        schema: "https://schema.org/"
+      },
+      "@id": req.query && req.query.gid ? req.query.gid : "",
+      "@graph": graph
+    };
+
+    const filename = `urdf-export-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonld`;
+
+    res.setHeader("Content-Type", "application/ld+json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.status(200).send(JSON.stringify(doc, null, 2));
+
+    publish({
+      ts,
+      type: "export",
+      request: { method: "GET", path: "/urdf/export" },
+      response: { ok: true, ts, filename }
+    });
+  } catch (e) {
+    const payload = { ok: false, ts, error: e?.message || String(e) };
+    publish({
+      ts,
+      type: "export",
+      request: { method: "GET", path: "/urdf/export" },
+      response: payload
+    });
+    res.status(500).json(payload);
+  }
+});
+
+  // ----------------------------------------------------------------------------
+  // GET /urdf/node?id=...&gid=...
+  // ----------------------------------------------------------------------------
+  // Retrieves a single node/resource by @id, optionally scoped to a named graph.
+  RED.httpAdmin.get("/urdf/node", async function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "node", { method: "GET", path: "/urdf/node" }, res)) return;
+
+    const id = req.query && req.query.id ? String(req.query.id) : "";
+    const gid = req.query && req.query.gid ? String(req.query.gid) : undefined;
+
+    if (!id.trim()) {
+      const payload = { ok: false, ts, error: "Missing required query param: id" };
+      publish({
+        ts,
+        type: "node",
+        request: { method: "GET", path: "/urdf/node", summary: "missing id" },
+        response: payload
+      });
+      return res.status(400).json(payload);
+    }
+
+    try {
+      const node = gid ? await urdf.find(id, gid) : await urdf.find(id);
+      const payload = { ok: true, ts, id, gid: gid || null, node };
+
+      publish({
+        ts,
+        type: "node",
+        request: { method: "GET", path: "/urdf/node", summary: gid ? `id=${id} gid=${gid}` : `id=${id}` },
+        response: payload
+      });
+
+      res.status(200).json(payload);
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      const status = /not found/i.test(message) ? 404 : 500;
+      const payload = { ok: false, ts, error: message };
+
+      publish({
+        ts,
+        type: "node",
+        request: { method: "GET", path: "/urdf/node", summary: gid ? `id=${id} gid=${gid}` : `id=${id}` },
+        response: payload
+      });
+
+      res.status(status).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/clear
+  // ----------------------------------------------------------------------------
+  // Body: { "gid": "optional" }
+  // Clears either:
+  // - a named graph (gid present)
+  // - the whole store/default (gid absent)
+  RED.httpAdmin.post("/urdf/clear", jsonParser, async function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "clear", { method: "POST", path: "/urdf/clear" }, res)) return;
+
+    const gid = req.body && req.body.gid ? String(req.body.gid) : undefined;
+
+    try {
+      if (gid) {
+        await urdf.clear(gid);
+      } else {
+        await urdf.clear();
+      }
+
+      const payload = gid ? { ok: true, ts, gid } : { ok: true, ts };
+
+      publish({
+        ts,
+        type: "clear",
+        request: { method: "POST", path: "/urdf/clear", summary: gid ? `gid=${gid}` : "default/all" },
+        response: payload
+      });
+
+      res.status(200).json(payload);
+    } catch (e) {
+      const payload = { ok: false, ts, error: e && e.message ? e.message : String(e) };
+
+      publish({
+        ts,
+        type: "clear",
+        request: { method: "POST", path: "/urdf/clear", summary: gid ? `gid=${gid}` : "default/all" },
+        response: payload
+      });
+
+      res.status(500).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/load
+  // ----------------------------------------------------------------------------
+  // Loads a JSON-LD document into the store (append semantics).
+  // Body: a JSON object or array representing JSON-LD.
+  RED.httpAdmin.post("/urdf/load", jsonParser, async function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "load", { method: "POST", path: "/urdf/load", summary: "JSON-LD" }, res)) return;
+
+    const body = req.body;
+
+    const isValid =
+      body !== null &&
+      typeof body !== "undefined" &&
+      (Array.isArray(body) || (typeof body === "object" && !Array.isArray(body)));
+
+    if (!isValid) {
+      const payload = { ok: false, ts, error: "Request body must be JSON-LD (a JSON object or array)." };
+      publish({
+        ts,
+        type: "load",
+        request: { method: "POST", path: "/urdf/load", summary: "invalid body" },
+        response: payload
+      });
+      return res.status(400).json(payload);
+    }
+
+    try {
+      await urdf.load(body);
+
+      const payload = { ok: true, ts, size: urdf.size() };
+
+      publish({
+        ts,
+        type: "load",
+        request: {
+          method: "POST",
+          path: "/urdf/load",
+          summary: Array.isArray(body) ? `JSON-LD array (${body.length})` : "JSON-LD object"
+        },
+        response: payload
+      });
+
+      res.status(200).json(payload);
+    } catch (e) {
+      const payload = { ok: false, ts, error: e && e.message ? e.message : String(e) };
+
+      publish({
+        ts,
+        type: "load",
+        request: { method: "POST", path: "/urdf/load", summary: "JSON-LD" },
+        response: payload
+      });
+
+      res.status(500).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/loadFrom
+  // ----------------------------------------------------------------------------
+  // Fetches JSON-LD from a remote URL and loads it into the store.
+  // Body: { "uri": "https://..." }
+  RED.httpAdmin.post("/urdf/loadFrom", jsonParser, async function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "loadFrom", { method: "POST", path: "/urdf/loadFrom" }, res)) return;
+
+    const uri = req.body && req.body.uri ? String(req.body.uri) : "";
+    if (!uri.trim()) {
+      const payload = { ok: false, ts, error: 'Body must be JSON: { "uri": "https://..." }' };
+      publish({
+        ts,
+        type: "loadFrom",
+        request: { method: "POST", path: "/urdf/loadFrom", summary: "missing uri" },
+        response: payload
+      });
+      return res.status(400).json(payload);
+    }
+
+    try {
+      const r = await fetch(uri, {
+        headers: { Accept: "application/ld+json, application/json;q=0.9, */*;q=0.1" }
+      });
+
+      if (!r.ok) {
+        const payload = { ok: false, ts, error: `Fetch failed: HTTP ${r.status}` };
+        publish({
+          ts,
+          type: "loadFrom",
+          request: { method: "POST", path: "/urdf/loadFrom", summary: uri },
+          response: payload
+        });
+        return res.status(502).json(payload);
+      }
+
+      const text = await r.text();
+
+      let doc;
+      try {
+        doc = JSON.parse(text);
+      } catch (e) {
+        const payload = { ok: false, ts, error: "Fetched content is not valid JSON/JSON-LD" };
+        publish({
+          ts,
+          type: "loadFrom",
+          request: { method: "POST", path: "/urdf/loadFrom", summary: uri },
+          response: payload
+        });
+        return res.status(415).json(payload);
+      }
+
+      let toLoad;
+
+      if (Array.isArray(doc)) {
+        toLoad = { "@id": uri, "@graph": doc };
+      } else if (doc && typeof doc === "object") {
+        toLoad = { ...doc, "@id": uri };
+        if (!Array.isArray(toLoad["@graph"])) {
+          const { "@context": ctx, ...node } = toLoad;
+          toLoad = {
+            ...(ctx ? { "@context": ctx } : {}),
+            "@id": uri,
+            "@graph": [node]
+          };
+        }
+      } else {
+        const payload = { ok: false, ts, error: "Fetched JSON must be an object or array" };
+        publish({
+          ts,
+          type: "loadFrom",
+          request: { method: "POST", path: "/urdf/loadFrom", summary: uri },
+          response: payload
+        });
+        return res.status(415).json(payload);
+      }
+
+      await urdf.load(toLoad);
+
+      const payload = { ok: true, ts, uri, totalSize: urdf.size() };
+      publish({
+        ts,
+        type: "loadFrom",
+        request: { method: "POST", path: "/urdf/loadFrom", summary: uri },
+        response: payload
+      });
+      return res.status(200).json(payload);
+    } catch (e) {
+      const payload = { ok: false, ts, error: e && e.message ? e.message : String(e) };
+      publish({
+        ts,
+        type: "loadFrom",
+        request: { method: "POST", path: "/urdf/loadFrom", summary: uri },
+        response: payload
+      });
+      return res.status(500).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/loadFile
+  // ----------------------------------------------------------------------------
+  // Body: { "doc": <JSON-LD> }
+  // Behavior:
+  // - doc["@id"] is required and is used as the target named graph (gid)
+  // - the named graph is cleared then replaced with the provided doc
+RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
+  const ts = now();
+  if (!requireUrdf(ts, "loadFile", { method: "POST", path: "/urdf/loadFile" }, res)) return;
+
+  const doc = req.body && req.body.doc;
+
+  const isValid =
+    doc !== null &&
+    typeof doc !== "undefined" &&
+    (Array.isArray(doc) || (typeof doc === "object" && !Array.isArray(doc)));
+
+  if (!isValid) {
+    const payload = { ok: false, ts, error: 'Body must be JSON: { "doc": <JSON-LD object/array> }' };
+    publish({ ts, type: "loadFile", request: { method: "POST", path: "/urdf/loadFile", summary: "invalid body" }, response: payload });
+    return res.status(400).json(payload);
+  }
+
+  let gid = null;
+  if (doc && typeof doc === "object" && typeof doc["@id"] === "string" && doc["@id"].trim()) {
+    gid = doc["@id"].trim();
+  }
+
+  if (!gid) {
+    const payload = { ok: false, ts, error: 'Uploaded JSON-LD must contain an "@id" to identify the named graph (gid).' };
+    publish({ ts, type: "loadFile", request: { method: "POST", path: "/urdf/loadFile", summary: "missing @id" }, response: payload });
+    return res.status(400).json(payload);
+  }
+
+  try {
+    await urdf.clear(gid);
+    await urdf.load(doc);
+
+    const payload = { ok: true, ts, gid, size: urdf.size(gid), totalSize: urdf.size() };
+    publish({ ts, type: "loadFile", request: { method: "POST", path: "/urdf/loadFile", summary: `gid=${gid}` }, response: payload });
+    return res.status(200).json(payload);
+  } catch (e) {
+    const payload = { ok: false, ts, gid, error: e?.message || String(e) };
+    publish({ ts, type: "loadFile", request: { method: "POST", path: "/urdf/loadFile", summary: `gid=${gid}` }, response: payload });
+    return res.status(500).json(payload);
+  }
+});
+
+  // ----------------------------------------------------------------------------
+  // POST /urdf/query
+  // ----------------------------------------------------------------------------
+  // Body: { "sparql": "..." }
+  // Executes a SPARQL query against the store.
+  // Response:
+  // - ASK queries -> { type: "ASK", result: boolean }
+  // - SELECT queries -> { type: "SELECT", results: ... }
+  RED.httpAdmin.post("/urdf/query", jsonParser, async function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "query", { method: "POST", path: "/urdf/query" }, res)) return;
+
+    const sparql = req.body && req.body.sparql;
+
+    if (!sparql || typeof sparql !== "string" || !sparql.trim()) {
+      const payload = { ok: false, ts, error: 'Body must be JSON: { "sparql": "..." }' };
+      publish({
+        ts,
+        type: "query",
+        request: { method: "POST", path: "/urdf/query", summary: "missing sparql" },
+        response: payload
+      });
+      return res.status(400).json(payload);
+    }
+
+    const summary = summarizeSparql(sparql);
+
+    try {
+      const result = await urdf.query(sparql);
+
+      const payload =
+        typeof result === "boolean" ? { ok: true, ts, type: "ASK", result } : { ok: true, ts, type: "SELECT", results: result };
+
+      publish({
+        ts,
+        type: "query",
+        request: { method: "POST", path: "/urdf/query", summary },
+        response: payload
+      });
+
+      res.status(200).json(payload);
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      const status = /not implemented/i.test(message) ? 501 : 500;
+      const payload = { ok: false, ts, error: message };
+
+      publish({
+        ts,
+        type: "query",
+        request: { method: "POST", path: "/urdf/query", summary },
+        response: payload
+      });
+
+      res.status(status).json(payload);
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // Startup log summary
+  // ----------------------------------------------------------------------------
+  // One-line overview of the runtime endpoints exposed by this plugin.
+  RED.log.info(
+    "[uRDF] runtime plugin loaded: /urdf/health /urdf/size /urdf/graph /urdf/node /urdf/clear /urdf/load /urdf/loadFrom /urdf/query"
+  );
+};
+
