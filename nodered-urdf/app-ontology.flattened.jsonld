@@ -1,0 +1,386 @@
+[
+  {
+    "@id": "urn:nrua:ontology",
+    "@graph": [
+      {
+        "@id": "http://schema.org/Action",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ]
+      },
+      {
+        "@id": "https://schema.org/Application",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ]
+      },
+      {
+        "@id": "https://schema.org/OperatingSystem",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ]
+      },
+      {
+        "@id": "https://schema.org/RuntimePlatform",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ]
+      },
+      {
+        "@id": "https://schema.org/SoftwareSourceCode",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Ontology"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#comment": [
+          {
+            "@value": "This ontology models a selection of aspects related to the hardware/software architecture (including operating system, Node.js runtime, Node-RED platform) and most importantly the Node-RED user application that lives on top of it (including flows, subflows, nodes and connections between them), with the purpose of connecting the user application to external official and community knowledge and ultimately enabling efficient and context-rich static program analysis of Node-RED applications, including reachability, dependency tracing, policy compliance, misconfiguration detection, context-aware correctness checks or code smells detection."
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node-RED Program Analysis Ontology"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#seeAlso": [
+          {
+            "@value": "https://w3id.org/nodered-static-program-analysis/"
+          }
+        ],
+        "http://www.w3.org/2002/07/owl#versionIRI": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology/1.0.0"
+          }
+        ],
+        "http://www.w3.org/2002/07/owl#versionInfo": [
+          {
+            "@value": "1.0.0"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Flow"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/SoftwareSourceCode"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/SoftwareSourceCode"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node.js Runtime"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/RuntimePlatform"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node Output"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/SoftwareSourceCode"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node-RED Platform"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/RuntimePlatform"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/SoftwareSourceCode"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Subflow"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+          {
+            "@id": "https://schema.org/SoftwareSourceCode"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#app",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#NamedIndividual"
+        ],
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": [
+          {
+            "@id": "https://schema.org/Application"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "User application"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "from gate"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#integer"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "has output"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://schema.org/OperatingSystem"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "containerised"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#boolean"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isWsl",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://schema.org/OperatingSystem"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "WSL"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#boolean"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodejs",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#NamedIndividual"
+        ],
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node.js runtime"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#nodered",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#NamedIndividual"
+        ],
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Node-RED platform"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#os",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#NamedIndividual"
+        ],
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": [
+          {
+            "@id": "https://schema.org/OperatingSystem"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "Operating system"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#runsSubflow",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "runs subflow"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Subflow"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "to node"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#type",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#label": [
+          {
+            "@value": "type"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      }
+    ]
+  }
+]

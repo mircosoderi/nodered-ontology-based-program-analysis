@@ -88,48 +88,33 @@ def clamp(v: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, v))
 
 
-def jsonld_context() -> Dict[str, Any]:
+def build_defined_term_set(set_id: str, name: str) -> Dict[str, Any]:
+    # values must be arrays
     return {
-        "schema": SCHEMA,
-        "nrua": NRUA,
-        "xsd": XSD,
-        "title": "schema:title",
-        "date": {"@id": "schema:date", "@type": "xsd:dateTime"},
-        "url": {"@id": "schema:url", "@type": "@id"},
-        "about": {"@id": "schema:about", "@type": "@id"},
-        "category": {"@id": "schema:category", "@type": "@id"},
-        "contentRating": {"@id": "schema:contentRating", "@type": "@id"},
-        "ratingValue": "schema:ratingValue",
-        "bestRating": "schema:bestRating",
-        "worstRating": "schema:worstRating",
-        "name": "schema:name",
-        "version": "schema:version",
-        "softwareVersion": "schema:softwareVersion",
-        "isContainerised": "nrua:isContainerised",
-        "inDefinedTermSet": {"@id": "schema:inDefinedTermSet", "@type": "@id"},
+        "@id": set_id,
+        "@type": ["https://schema.org/DefinedTermSet"],
+        "https://schema.org/name": [{"@value": name}],
     }
 
 
-def build_defined_term_set(set_id: str, name: str) -> Dict[str, Any]:
-    return {"@id": set_id, "@type": "schema:DefinedTermSet", "schema:name": name}
-
-
 def build_defined_term(term_id: str, label: str, set_id: str) -> Dict[str, Any]:
+    # values must be arrays
     return {
         "@id": term_id,
-        "@type": "schema:DefinedTerm",
-        "schema:name": label,
-        "schema:inDefinedTermSet": {"@id": set_id},
+        "@type": ["https://schema.org/DefinedTerm"],
+        "https://schema.org/name": [{"@value": label}],
+        "https://schema.org/inDefinedTermSet": [{"@id": set_id}],
     }
 
 
 def build_rating(rating_id: str, value: int) -> Dict[str, Any]:
+    # values must be arrays
     return {
         "@id": rating_id,
-        "@type": "schema:Rating",
-        "schema:worstRating": -10,
-        "schema:bestRating": 10,
-        "schema:ratingValue": value,
+        "@type": ["https://schema.org/Rating"],
+        "https://schema.org/worstRating": [{"@value": -10}],
+        "https://schema.org/bestRating": [{"@value": 10}],
+        "https://schema.org/ratingValue": [{"@value": value}],
     }
 
 
@@ -239,7 +224,7 @@ def nodejs_version_span(title: str) -> Optional[Tuple[int, int]]:
     return (start, end)
 
 
-def transform_file(path: Path) -> Dict[str, Any]:
+def transform_file(path: Path) -> List[Dict[str, Any]]:
     base = path.stem
     slug = safe_slug(base)
     graph_id = urn("graph", slug)
@@ -294,8 +279,8 @@ def transform_file(path: Path) -> Dict[str, Any]:
             os_id = urn("os", slug, local_key, os_platform)
             nodes.append({
                 "@id": os_id,
-                "@type": "schema:OperatingSystem",
-                "schema:name": os_platform,
+                "@type": ["https://schema.org/OperatingSystem"],
+                "https://schema.org/name": [{"@value": os_platform}],
             })
             about_ids.append(os_id)
 
@@ -306,8 +291,8 @@ def transform_file(path: Path) -> Dict[str, Any]:
             nodejs_id = urn("runtime", slug, local_key, "nodejs", safe_slug(nodejs_ver))
             nodes.append({
                 "@id": nodejs_id,
-                "@type": "nrua:NodeJs",
-                "schema:version": nodejs_ver,
+                "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs"],
+                "https://schema.org/version": [{"@value": nodejs_ver}],
             })
             about_ids.append(nodejs_id)
 
@@ -317,8 +302,8 @@ def transform_file(path: Path) -> Dict[str, Any]:
             nodered_id = urn("runtime", slug, local_key, "nodered", safe_slug(v))
             nodes.append({
                 "@id": nodered_id,
-                "@type": "nrua:NodeRed",
-                "schema:version": v,
+                "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"],
+                "https://schema.org/version": [{"@value": v}],
             })
             about_ids.append(nodered_id)
 
@@ -331,25 +316,25 @@ def transform_file(path: Path) -> Dict[str, Any]:
 
         doc: Dict[str, Any] = {
             "@id": doc_id,
-            "@type": "schema:DigitalDocument",
-            "schema:title": title,
-            "schema:date": updated_at if updated_at else None,
-            "schema:url": html_url if html_url else None,
-            "schema:category": [{"@id": c} for c in cats] if cats else None,
-            "schema:contentRating": {"@id": rating_id},
-            "nrua:isContainerised": True if is_containerised else None,
-            "schema:about": [{"@id": a} for a in about_ids] if about_ids else None,
+            "@type": ["https://schema.org/DigitalDocument"],
+            "https://schema.org/title": [{"@value": title}],
+            **({"https://schema.org/date": [{"@value": updated_at}]} if updated_at else {}),
+            **({"https://schema.org/url": [{"@value": html_url}]} if html_url else {}),
+            **({"https://schema.org/category": [{"@id": c} for c in cats]} if cats else {}),
+            "https://schema.org/contentRating": [{"@id": rating_id}],
+            **({"https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [{"@value": True}]} if is_containerised else {}),
+            **({"https://schema.org/about": [{"@id": a} for a in about_ids]} if about_ids else {}),
         }
 
-        # remove nulls
-        doc = {k: v for k, v in doc.items() if v is not None}
         nodes.append(doc)
 
-    return {
-        "@context": jsonld_context(),
+    # IMPORTANT: return an ARRAY of graph objects so urdf.load() can do json.filter(...)
+    return [{
+        "@context": {},
         "@id": graph_id,
         "@graph": nodes,
-    }
+    }]
+
 
 def post_jsonld(doc: dict, out_path) -> None:
     if not NODERED_URDF:
@@ -357,7 +342,16 @@ def post_jsonld(doc: dict, out_path) -> None:
         return
 
     url = f"{NODERED_URDF}/urdf/loadFile"
-    payload = {"doc": doc}
+
+    # --- FIX: /urdf/loadFile expects a single JSON-LD object with top-level "@id"
+    # If we generated a dataset (list), upload the first graph object.
+    doc_to_upload = doc
+    if isinstance(doc, list):
+        if not doc:
+            raise ValueError("JSON-LD dataset is empty; cannot upload.")
+        doc_to_upload = doc[0]
+
+    payload = {"doc": doc_to_upload}
     data = json.dumps(payload).encode("utf-8")
 
     req = urllib.request.Request(
@@ -371,7 +365,6 @@ def post_jsonld(doc: dict, out_path) -> None:
         with urllib.request.urlopen(req, timeout=60) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             print(f"Uploaded {out_path} -> {url} (HTTP {resp.status})")
-            # optional: show server response
             if body:
                 print(body)
     except urllib.error.HTTPError as e:
@@ -381,6 +374,7 @@ def post_jsonld(doc: dict, out_path) -> None:
     except Exception as e:
         print(f"Upload failed for {out_path}: {e}")
         raise
+
 
 def main() -> int:
     if not INPUT_DIR.exists():
@@ -395,7 +389,7 @@ def main() -> int:
 
     for in_path in inputs:
         out_path = OUTPUT_DIR / f"{in_path.stem}.jsonld"
-        jsonld = transform_file(in_path)
+        jsonld = transform_file(in_path)  # now returns a LIST (dataset)
         out_path.write_text(json.dumps(jsonld, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Wrote {out_path}")
         post_jsonld(jsonld, out_path)

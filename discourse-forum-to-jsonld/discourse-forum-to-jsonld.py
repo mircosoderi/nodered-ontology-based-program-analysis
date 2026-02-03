@@ -47,7 +47,7 @@ NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")  # e.g. http://hos
 
 SCHEMA = "https://schema.org/"
 XSD = "http://www.w3.org/2001/XMLSchema#"
-NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#"  
+NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
 
 BASE_FORUM_URL = "https://discourse.nodered.org"
 TOPIC_URL_PREFIX = f"{BASE_FORUM_URL}/t/"
@@ -98,47 +98,31 @@ def clamp(v: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, v))
 
 
-def jsonld_context() -> Dict[str, Any]:
-    return {
-        "schema": SCHEMA,
-        "nrua": NRUA,
-        "xsd": XSD,
-        "title": "schema:title",
-        "date": {"@id": "schema:date", "@type": "xsd:dateTime"},
-        "url": {"@id": "schema:url", "@type": "@id"},
-        "about": {"@id": "schema:about", "@type": "@id"},
-        "category": {"@id": "schema:category", "@type": "@id"},
-        "contentRating": {"@id": "schema:contentRating", "@type": "@id"},
-        "ratingValue": "schema:ratingValue",
-        "bestRating": "schema:bestRating",
-        "worstRating": "schema:worstRating",
-        "name": "schema:name",
-        "version": "schema:version",
-        "inDefinedTermSet": {"@id": "schema:inDefinedTermSet", "@type": "@id"},
-        "isContainerised": "nrua:isContainerised",
-    }
-
-
+# IMPORTANT: per your requirement, no @context, no prefixes/abbreviations, full IRIs only.
 def build_defined_term_set(set_id: str, name: str) -> Dict[str, Any]:
-    return {"@id": set_id, "@type": "schema:DefinedTermSet", "schema:name": name}
+    return {
+        "@id": set_id,
+        "@type": ["https://schema.org/DefinedTermSet"],
+        "https://schema.org/name": [{"@value": name}],
+    }
 
 
 def build_defined_term(term_id: str, label: str, set_id: str) -> Dict[str, Any]:
     return {
         "@id": term_id,
-        "@type": "schema:DefinedTerm",
-        "schema:name": label,
-        "schema:inDefinedTermSet": {"@id": set_id},
+        "@type": ["https://schema.org/DefinedTerm"],
+        "https://schema.org/name": [{"@value": label}],
+        "https://schema.org/inDefinedTermSet": [{"@id": set_id}],
     }
 
 
 def build_rating(rating_id: str, value: int) -> Dict[str, Any]:
     return {
         "@id": rating_id,
-        "@type": "schema:Rating",
-        "schema:worstRating": -10,
-        "schema:bestRating": 10,
-        "schema:ratingValue": value,
+        "@type": ["https://schema.org/Rating"],
+        "https://schema.org/worstRating": [{"@value": -10}],
+        "https://schema.org/bestRating": [{"@value": 10}],
+        "https://schema.org/ratingValue": [{"@value": value}],
     }
 
 
@@ -191,14 +175,6 @@ def extract_nodered_versions_from_title(title: str) -> List[str]:
     """
     Node-RED version tokens are accepted only if the token containing the version
     is immediately preceded by one of: nr, nodered, node-red (case-insensitive).
-
-    Example accepted:
-      "node-red v4.1.3 ..."  (preceder 'node-red', version token 'v4.1.3')
-      "NR 3.1.0 ..."         (preceder 'nr', version token '3.1.0')
-
-    Example rejected:
-      "Dashboard 3.5.0 ..."  (no Node-RED preceder)
-      "UI Builder v1.2.3 ..." (no Node-RED preceder)
     """
     toks = tokenize(title)
     out: List[str] = []
@@ -209,7 +185,6 @@ def extract_nodered_versions_from_title(title: str) -> List[str]:
         if prev not in NODERED_PRECEDERS:
             continue
 
-        # Strip surrounding punctuation and validate version pattern
         cur_norm2 = re.sub(r"^[^\w(]+|[^\w)]+$", "", cur_norm)
         m = VERSION_TOKEN_RE.match(cur_norm2)
         if not m:
@@ -222,22 +197,13 @@ def extract_nodered_versions_from_title(title: str) -> List[str]:
 
 
 def rescale_likes_to_rating(like: int, min_like: int, max_like: int) -> int:
-    """
-    Linear rescaling:
-      min_like -> -10
-      max_like -> +10
-    If min_like == max_like: all ratings -> 0.
-    Returned value is rounded to nearest int and clamped to [-10, 10].
-    """
     if max_like == min_like:
         return 0
-    # scale to [-10, 10]
     scaled = -10 + (like - min_like) * 20.0 / (max_like - min_like)
-    # round to nearest integer
     return clamp(int(round(scaled)), -10, 10)
 
 
-def transform_file(path: Path) -> Dict[str, Any]:
+def transform_file(path: Path) -> List[Dict[str, Any]]:
     base = path.stem
     slug = safe_slug(base)
     graph_id = urn("graph", slug)
@@ -247,7 +213,7 @@ def transform_file(path: Path) -> Dict[str, Any]:
     if not isinstance(topics, list):
         raise ValueError(f"Input JSON must have topic_list/topics array: {path}")
 
-    # Collect all tags across all topics (full set; not relying on 'top_tags')
+    # Collect all tags across all topics
     all_tags: Set[str] = set()
     like_counts: List[int] = []
     for t in topics:
@@ -295,7 +261,7 @@ def transform_file(path: Path) -> Dict[str, Any]:
                 if isinstance(tag, str) and tag.strip() and tag.strip() in tag_term_id:
                     cats.append(tag_term_id[tag.strip()])
 
-        # Rating from like_count via rescaling across this file
+        # Rating from like_count
         like = int(t.get("like_count") or 0)
         rating_value = rescale_likes_to_rating(like, min_like, max_like)
         rating_id = urn("rating", slug, local_key)
@@ -309,8 +275,8 @@ def transform_file(path: Path) -> Dict[str, Any]:
             os_id = urn("os", slug, local_key, os_platform)
             nodes.append({
                 "@id": os_id,
-                "@type": "schema:OperatingSystem",
-                "schema:name": os_platform,
+                "@type": ["https://schema.org/OperatingSystem"],
+                "https://schema.org/name": [{"@value": os_platform}],
             })
             about_ids.append(os_id)
 
@@ -320,45 +286,48 @@ def transform_file(path: Path) -> Dict[str, Any]:
             nodejs_id = urn("runtime", slug, local_key, "nodejs", safe_slug(nodejs_ver))
             nodes.append({
                 "@id": nodejs_id,
-                "@type": "nrua:NodeJs",
-                "schema:version": nodejs_ver,
+                "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs"],
+                "https://schema.org/version": [{"@value": nodejs_ver}],
             })
             about_ids.append(nodejs_id)
 
-        # Node-RED version heuristic (title) with stricter “preceded by nr/nodered/node-red”
+        # Node-RED version heuristic (title)
         for ver in extract_nodered_versions_from_title(title):
             nodered_id = urn("runtime", slug, local_key, "nodered", safe_slug(ver))
             nodes.append({
                 "@id": nodered_id,
-                "@type": "nrua:NodeRed",
-                "schema:version": ver,
+                "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"],
+                "https://schema.org/version": [{"@value": ver}],
             })
             about_ids.append(nodered_id)
 
         # Container hint on the document
         is_containerised = title_has_container_hint(title)
 
-        # DigitalDocument (use forum topic URL as @id when possible)
+        # DigitalDocument
         doc_id = url if url else urn("doc", slug, local_key)
         doc: Dict[str, Any] = {
             "@id": doc_id,
-            "@type": "schema:DigitalDocument",
-            "schema:title": title,
-            "schema:date": last_posted_at if last_posted_at else None,
-            "schema:url": url if url else None,
-            "schema:category": [{"@id": c} for c in cats] if cats else None,
-            "schema:contentRating": {"@id": rating_id},
-            "nrua:isContainerised": True if is_containerised else None,
-            "schema:about": [{"@id": a} for a in about_ids] if about_ids else None,
+            "@type": ["https://schema.org/DigitalDocument"],
+            "https://schema.org/title": [{"@value": title}],
+            **({"https://schema.org/date": [{"@value": last_posted_at}]} if last_posted_at else {}),
+            **({"https://schema.org/url": [{"@value": url}]} if url else {}),
+            **({"https://schema.org/category": [{"@id": c} for c in cats]} if cats else {}),
+            "https://schema.org/contentRating": [{"@id": rating_id}],
+            **({"https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [{"@value": True}]} if is_containerised else {}),
+            **({"https://schema.org/about": [{"@id": a} for a in about_ids]} if about_ids else {}),
         }
-        doc = {k: v for k, v in doc.items() if v is not None}
         nodes.append(doc)
 
-    return {
-        "@context": jsonld_context(),
-        "@id": graph_id,
-        "@graph": nodes,
-    }
+    # IMPORTANT: return dataset array so server-side urdf.load can do json.filter(...)
+    return [
+        {
+            "@context": {},  # intentionally empty: you requested no context/abbreviations
+            "@id": graph_id,
+            "@graph": nodes,
+        }
+    ]
+
 
 def post_jsonld(doc: dict, out_path) -> None:
     if not NODERED_URDF:
@@ -380,7 +349,6 @@ def post_jsonld(doc: dict, out_path) -> None:
         with urllib.request.urlopen(req, timeout=60) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             print(f"Uploaded {out_path} -> {url} (HTTP {resp.status})")
-            # optional: show server response
             if body:
                 print(body)
     except urllib.error.HTTPError as e:
@@ -390,6 +358,7 @@ def post_jsonld(doc: dict, out_path) -> None:
     except Exception as e:
         print(f"Upload failed for {out_path}: {e}")
         raise
+
 
 def main() -> int:
     if not INPUT_DIR.exists():
@@ -404,7 +373,7 @@ def main() -> int:
 
     for in_path in inputs:
         out_path = OUTPUT_DIR / f"{in_path.stem}.jsonld"
-        jsonld = transform_file(in_path)
+        jsonld = transform_file(in_path)  # now returns a LIST (dataset)
         out_path.write_text(json.dumps(jsonld, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Wrote {out_path}")
         post_jsonld(jsonld, out_path)

@@ -248,6 +248,16 @@ components:
         Replaces a named graph with the uploaded JSON-LD.
         The uploaded JSON-LD must contain an `"@id"` which will be used as the target `gid`.
 
+    LoadFromRequest:
+      type: object
+      required: [uri]
+      properties:
+        uri:
+          type: string
+          format: uri
+          description: URL to fetch JSON/JSON-LD from.
+      additionalProperties: false
+
     QueryRequest:
       type: object
       required: [sparql]
@@ -291,6 +301,22 @@ components:
           type: integer
           description: Total store size after load.
       description: Returned by `/urdf/load` after a successful append.
+
+    LoadFromOk:
+      type: object
+      required: [ok, ts, uri, totalSize]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        ts:
+          $ref: "#/components/schemas/UnixMillis"
+        uri:
+          type: string
+          format: uri
+        totalSize:
+          type: integer
+      description: Returned by `/urdf/loadFrom` after fetch+load.
 
     LoadFileOk:
       type: object
@@ -590,6 +616,58 @@ paths:
                 $ref: "#/components/schemas/LoadOk"
         "400":
           description: Invalid body (must be a JSON object or array)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error (including uRDF not loaded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urdf/loadFrom:
+    post:
+      tags: [urdf]
+      operationId: urdfLoadFrom
+      summary: Fetch JSON/JSON-LD from a URL and load it into the store
+      description: |
+        Fetches a remote JSON or JSON-LD document from `uri` and loads it into uRDF.
+
+        Error modes:
+        - `502` if the upstream fetch returns a non-2xx status
+        - `415` if the fetched content cannot be parsed as JSON or has an unsupported JSON shape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoadFromRequest"
+            examples:
+              fromUrl:
+                value: { uri: "https://example.org/data.jsonld" }
+      responses:
+        "200":
+          description: Fetched and loaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoadFromOk"
+        "400":
+          description: Missing `uri`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Fetched content is not valid JSON or unsupported JSON shape
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream fetch failed (non-2xx HTTP)
           content:
             application/json:
               schema:

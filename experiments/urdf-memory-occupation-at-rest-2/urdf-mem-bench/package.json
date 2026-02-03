@@ -1,0 +1,10 @@
+{
+  "name": "urdf-mem-bench",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "urdf": "git+https://github.com/mircosoderi/uRDF.js.git#2039e21c323ca4797344668eb0bea7c8c6b66f1a"
+  }
+}
+

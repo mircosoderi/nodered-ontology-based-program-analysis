@@ -8,8 +8,9 @@ import urllib.error
 INPUT_DIR = Path("input")
 OUTPUT_DIR = Path("output")
 NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
-LIBFLOW_CLASS = "https://schema.org/SoftwareSourceCode"
+
 SCHEMA = "https://schema.org/"
+LIBFLOW_CLASS = f"{SCHEMA}SoftwareSourceCode"
 
 
 def load_json(path: Path):
@@ -32,10 +33,12 @@ def extract_nodes_list(doc):
             if isinstance(val, list):
                 return val
 
-    raise ValueError("Unsupported input JSON structure: expected a list of Node-RED nodes or an object containing one.")
+    raise ValueError(
+        "Unsupported input JSON structure: expected a list of Node-RED nodes or an object containing one."
+    )
 
 
-def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> dict:
+def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> list:
     # Identify flows: nodes with type == "tab"
     tabs = [n for n in nodes_list if isinstance(n, dict) and n.get("type") == "tab"]
 
@@ -67,26 +70,27 @@ def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> dict:
         libflows.append(
             {
                 "@id": f"urn:libflow:{flow_id}",
-                "@type": LIBFLOW_CLASS,
-                f"{SCHEMA}title": label,
-                f"{SCHEMA}url": flows_url,
-                f"{SCHEMA}identifier": flow_id,
-                f"{SCHEMA}keywords": ",".join(sorted(types))
+                "@type": [LIBFLOW_CLASS],
+                f"{SCHEMA}title": [{"@value": str(label)}],
+                f"{SCHEMA}url": [{"@value": str(flows_url)}],
+                f"{SCHEMA}identifier": [{"@value": str(flow_id)}],
+                f"{SCHEMA}keywords": [{"@value": ",".join(sorted(types))}],
             }
         )
 
-    return {
-        "@context": {
-            "schema": SCHEMA,
-        },
-        
-                "@id": graph_id,
-                "@graph": libflows
-            
-        
-    }
+    # IMPORTANT:
+    # - uRDF's store loader expects a DATASET (array) because it does json.filter(...)
+    # - all predicate values must be ARRAYS because rename() does n[p].forEach(...)
+    return [
+        {
+            "@context": {},  # you requested no context/abbreviations
+            "@id": graph_id,
+            "@graph": libflows,
+        }
+    ]
 
-def post_jsonld(doc: dict, out_path) -> None:
+
+def post_jsonld(doc, out_path) -> None:
     if not NODERED_URDF:
         print("No 'NODERED_URDF' env var set; skipping upload.")
         return
@@ -106,7 +110,6 @@ def post_jsonld(doc: dict, out_path) -> None:
         with urllib.request.urlopen(req, timeout=60) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             print(f"Uploaded {out_path} -> {url} (HTTP {resp.status})")
-            # optional: show server response
             if body:
                 print(body)
     except urllib.error.HTTPError as e:
@@ -117,10 +120,13 @@ def post_jsonld(doc: dict, out_path) -> None:
         print(f"Upload failed for {out_path}: {e}")
         raise
 
+
 def main():
     flows_url = os.environ.get("FLOWS_URL", "").strip()
     if not flows_url:
-        raise SystemExit("Missing environment variable FLOWS_URL (used only to set schema:url).")
+        raise SystemExit(
+            "Missing environment variable FLOWS_URL (used only to set https://schema.org/url)."
+        )
 
     INPUT_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -144,7 +150,8 @@ def main():
         output_path = OUTPUT_DIR / f"{input_path.stem}.jsonld"
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(jsonld, f, ensure_ascii=False, indent=2)
-            post_jsonld(jsonld, output_path)
+
+        post_jsonld(jsonld, output_path)
 
 
 if __name__ == "__main__":

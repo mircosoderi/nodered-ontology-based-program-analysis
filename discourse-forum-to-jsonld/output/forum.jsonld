@@ -1,720 +1,1687 @@
-{
-  "@context": {
-    "schema": "https://schema.org/",
-    "nrua": "https://w3id.org/nodered-static-program-analysis/user-application-ontology#",
-    "xsd": "http://www.w3.org/2001/XMLSchema#",
-    "title": "schema:title",
-    "date": {
-      "@id": "schema:date",
-      "@type": "xsd:dateTime"
-    },
-    "url": {
-      "@id": "schema:url",
-      "@type": "@id"
-    },
-    "about": {
-      "@id": "schema:about",
-      "@type": "@id"
-    },
-    "category": {
-      "@id": "schema:category",
-      "@type": "@id"
-    },
-    "contentRating": {
-      "@id": "schema:contentRating",
-      "@type": "@id"
-    },
-    "ratingValue": "schema:ratingValue",
-    "bestRating": "schema:bestRating",
-    "worstRating": "schema:worstRating",
-    "name": "schema:name",
-    "version": "schema:version",
-    "inDefinedTermSet": {
-      "@id": "schema:inDefinedTermSet",
-      "@type": "@id"
-    },
-    "isContainerised": "nrua:isContainerised"
-  },
-  "@id": "urn:graph:forum",
-  "@graph": [
-    {
-      "@id": "urn:termset:forum:tags",
-      "@type": "schema:DefinedTermSet",
-      "schema:name": "Node-RED Forum Tags"
-    },
-    {
-      "@id": "urn:term:forum:tag:css",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "css",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:dashboard-2",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "dashboard-2",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:docker",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "docker",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:function-node",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "function-node",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:home-assistant",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "home-assistant",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:javascript",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "javascript",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:mqtt",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "mqtt",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:node-red-contrib-lgtv",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "node-red-contrib-lgtv",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:node-red-contrib-remote",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "node-red-contrib-remote",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:ui-chart",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "ui-chart",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:term:forum:tag:uibuilder",
-      "@type": "schema:DefinedTerm",
-      "schema:name": "uibuilder",
-      "schema:inDefinedTermSet": {
-        "@id": "urn:termset:forum:tags"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:25294",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -6
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/how-to-add-update-nodes-to-the-flow-library/25294",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "How to add/update nodes to the Flow Library",
-      "schema:date": "2020-05-22T11:16:52.093Z",
-      "schema:url": "https://discourse.nodered.org/t/how-to-add-update-nodes-to-the-flow-library/25294",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:25294"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:506",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": 10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/how-to-share-code-or-flow-json/506",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "How to share code or flow json",
-      "schema:date": "2020-07-06T18:06:20.215Z",
-      "schema:url": "https://discourse.nodered.org/t/how-to-share-code-or-flow-json/506",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:506"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:8",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -4
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/welcome-to-the-node-red-forum/8",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Welcome to the Node-RED Forum!",
-      "schema:date": "2018-04-24T15:23:34.292Z",
-      "schema:url": "https://discourse.nodered.org/t/welcome-to-the-node-red-forum/8",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:8"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100227",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/using-home-assistants-input-number-in-a-change-node-to-send-data-to-hourglass-node/100227",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Using Home assistant's input_number in a \"change node\" to send data to \"hourglass node\"",
-      "schema:date": "2026-01-24T19:03:47.218Z",
-      "schema:url": "https://discourse.nodered.org/t/using-home-assistants-input-number-in-a-change-node-to-send-data-to-hourglass-node/100227",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:home-assistant"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100227"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100238",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -8
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/offline-mobile-web-apps/100238",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "🌐 Offline Mobile web apps",
-      "schema:date": "2026-01-24T18:06:53.446Z",
-      "schema:url": "https://discourse.nodered.org/t/offline-mobile-web-apps/100238",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:uibuilder"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100238"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100232",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -9
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/problem-with-remote-red/100232",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Problem with Remote Red",
-      "schema:date": "2026-01-24T16:34:14.949Z",
-      "schema:url": "https://discourse.nodered.org/t/problem-with-remote-red/100232",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:node-red-contrib-remote"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100232"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100234",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -9
-    },
-    {
-      "@id": "urn:os:forum:100234:android",
-      "@type": "schema:OperatingSystem",
-      "schema:name": "android"
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/how-difficult-is-it-to-install-nr-on-an-android-phone/100234",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "How \"difficult\" is it to install NR on an Android phone?",
-      "schema:date": "2026-01-24T15:24:05.964Z",
-      "schema:url": "https://discourse.nodered.org/t/how-difficult-is-it-to-install-nr-on-an-android-phone/100234",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100234"
+[
+  {
+    "@context": {},
+    "@id": "urn:graph:forum",
+    "@graph": [
+      {
+        "@id": "urn:termset:forum:tags",
+        "@type": [
+          "https://schema.org/DefinedTermSet"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "Node-RED Forum Tags"
+          }
+        ]
       },
-      "schema:about": [
-        {
-          "@id": "urn:os:forum:100234:android"
-        }
-      ]
-    },
-    {
-      "@id": "urn:rating:forum:100237",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/messages-blocked-till-next-deploy/100237",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Messages blocked till next deploy",
-      "schema:date": "2026-01-24T14:23:14.297Z",
-      "schema:url": "https://discourse.nodered.org/t/messages-blocked-till-next-deploy/100237",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:node-red-contrib-lgtv"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100237"
+      {
+        "@id": "urn:term:forum:tag:css",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "css"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:dashboard-2",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "dashboard-2"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:docker",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "docker"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:function-node",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "function-node"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:home-assistant",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "home-assistant"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:javascript",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "javascript"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:mqtt",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "mqtt"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:node-red-contrib-lgtv",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "node-red-contrib-lgtv"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:node-red-contrib-remote",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "node-red-contrib-remote"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:ui-chart",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "ui-chart"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:term:forum:tag:uibuilder",
+        "@type": [
+          "https://schema.org/DefinedTerm"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "uibuilder"
+          }
+        ],
+        "https://schema.org/inDefinedTermSet": [
+          {
+            "@id": "urn:termset:forum:tags"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:25294",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -6
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/how-to-add-update-nodes-to-the-flow-library/25294",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "How to add/update nodes to the Flow Library"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2020-05-22T11:16:52.093Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/how-to-add-update-nodes-to-the-flow-library/25294"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:25294"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:506",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": 10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/how-to-share-code-or-flow-json/506",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "How to share code or flow json"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2020-07-06T18:06:20.215Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/how-to-share-code-or-flow-json/506"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:506"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:8",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -4
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/welcome-to-the-node-red-forum/8",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Welcome to the Node-RED Forum!"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2018-04-24T15:23:34.292Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/welcome-to-the-node-red-forum/8"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:8"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100227",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/using-home-assistants-input-number-in-a-change-node-to-send-data-to-hourglass-node/100227",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Using Home assistant's input_number in a \"change node\" to send data to \"hourglass node\""
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T19:03:47.218Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/using-home-assistants-input-number-in-a-change-node-to-send-data-to-hourglass-node/100227"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:home-assistant"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100227"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100238",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -8
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/offline-mobile-web-apps/100238",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "🌐 Offline Mobile web apps"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T18:06:53.446Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/offline-mobile-web-apps/100238"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:uibuilder"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100238"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100232",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -9
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/problem-with-remote-red/100232",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Problem with Remote Red"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T16:34:14.949Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/problem-with-remote-red/100232"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:node-red-contrib-remote"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100232"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100234",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -9
+          }
+        ]
+      },
+      {
+        "@id": "urn:os:forum:100234:android",
+        "@type": [
+          "https://schema.org/OperatingSystem"
+        ],
+        "https://schema.org/name": [
+          {
+            "@value": "android"
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/how-difficult-is-it-to-install-nr-on-an-android-phone/100234",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "How \"difficult\" is it to install NR on an Android phone?"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T15:24:05.964Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/how-difficult-is-it-to-install-nr-on-an-android-phone/100234"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100234"
+          }
+        ],
+        "https://schema.org/about": [
+          {
+            "@id": "urn:os:forum:100234:android"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100237",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/messages-blocked-till-next-deploy/100237",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Messages blocked till next deploy"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T14:23:14.297Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/messages-blocked-till-next-deploy/100237"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:node-red-contrib-lgtv"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100237"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100235",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -9
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/marstek-venus-ui/100235",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Marstek Venus Ui"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T11:39:21.596Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/marstek-venus-ui/100235"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100235"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100221",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -8
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/check-this-out-esp-now-communication-protocol/100221",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Check this out... ESP-NOW (communication protocol)"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T10:54:20.875Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/check-this-out-esp-now-communication-protocol/100221"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100221"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100233",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/issue-facing-connection-with-node-red-contrib-s7-node-while-connecting-siemens-s7-200-plc/100233",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Issue facing connection with node-red-contrib-s7 node while connecting siemens s7 200 plc"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T09:03:44.788Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/issue-facing-connection-with-node-red-contrib-s7-node-while-connecting-siemens-s7-200-plc/100233"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100233"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:99856",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -8
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/suggestions-for-node-red-5-0/99856",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Suggestions for Node Red 5.0"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T06:42:57.800Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/suggestions-for-node-red-5-0/99856"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:99856"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100230",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -9
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/door-logic-problem-i-cant-quite-wrap-my-head-around/100230",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Door logic problem I can't quite wrap my head around"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T04:47:02.945Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/door-logic-problem-i-cant-quite-wrap-my-head-around/100230"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100230"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100202",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": 5
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/function-nodes-how-to-reuse-js-functions-in-my-functions/100202",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Function nodes - How to reuse JS functions in my functions?"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-24T00:25:16.947Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/function-nodes-how-to-reuse-js-functions-in-my-functions/100202"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:function-node"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100202"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100224",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -8
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/searching-for-used-subflows-help/100224",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Searching for used subflows - help!"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-23T21:04:02.302Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/searching-for-used-subflows-help/100224"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100224"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100226",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/link-call-without-timeout/100226",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Link Call without timeout"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-23T16:22:11.867Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/link-call-without-timeout/100226"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100226"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100201",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/trouble-filtering-key-value-from-mqtt-message/100201",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Trouble filtering key/value from MQTT message"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-23T09:22:13.563Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/trouble-filtering-key-value-from-mqtt-message/100201"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100201"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100222",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -7
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/understanding-css-layout-principles/100222",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Understanding CSS Layout Principles"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T22:38:53.691Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/understanding-css-layout-principles/100222"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:css"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100222"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100148",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -1
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/rgb-cube-using-ws2812-5050-leds/100148",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "RGB Cube using WS2812 5050 LEDs"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T18:43:37.641Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/rgb-cube-using-ws2812-5050-leds/100148"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100148"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100210",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/uibuilder-runtimesetup-master-config-folder-copy-error/100210",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "[uibuilder:runtimeSetup] Master .config folder copy ERROR,"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T11:24:50.573Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/uibuilder-runtimesetup-master-config-folder-copy-error/100210"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:uibuilder"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100210"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100212",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/how-to-do-black-box-ui-testing-of-nodes/100212",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "How to do Black Box UI Testing of Nodes?"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T11:20:18.779Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/how-to-do-black-box-ui-testing-of-nodes/100212"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100212"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100208",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -1
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/node-red-5-beta-2-now-available/100208",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": ":tada: Node-RED 5 beta 2 now available"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T10:59:25.580Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/node-red-5-beta-2-now-available/100208"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:docker"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100208"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100189",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": 6
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/backup-script-not-working/100189",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Backup Script Not Working"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T10:53:57.197Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/backup-script-not-working/100189"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100189"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100215",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/html-in-ui-template-via-message/100215",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "HTML in ui-template via message?"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T10:00:15.835Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/html-in-ui-template-via-message/100215"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100215"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100214",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/dashboard-2-0-ui-chart-prevent-line-color-changes-for-certain-data/100214",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Dashboard 2.0 ui-chart, prevent line color changes for certain data"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T08:14:56.867Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/dashboard-2-0-ui-chart-prevent-line-color-changes-for-certain-data/100214"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:dashboard-2"
+          },
+          {
+            "@id": "urn:term:forum:tag:ui-chart"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100214"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100052",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/anyone-have-an-example-of-a-scrolling-text-box-using-the-new-dashboard-2-0/100052",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Anyone have an example of a scrolling text box using the new dashboard 2.0?"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T06:34:22.340Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/anyone-have-an-example-of-a-scrolling-text-box-using-the-new-dashboard-2-0/100052"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100052"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100198",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/dashboard-2-0-displaying-multiple-line-text-oddly/100198",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Dashboard 2.0... Displaying multiple line text oddly?"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-22T00:49:47.214Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/dashboard-2-0-displaying-multiple-line-text-oddly/100198"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100198"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100196",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -4
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/my-latest-uibuilder-creation/100196",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "My latest uibuilder creation"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-21T20:25:40.279Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/my-latest-uibuilder-creation/100196"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:uibuilder"
+          },
+          {
+            "@id": "urn:term:forum:tag:mqtt"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100196"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100206",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -5
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/javascript-concepts/100206",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "JavaScript Concepts"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-21T13:51:05.745Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/javascript-concepts/100206"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:javascript"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100206"
+          }
+        ]
+      },
+      {
+        "@id": "urn:rating:forum:100203",
+        "@type": [
+          "https://schema.org/Rating"
+        ],
+        "https://schema.org/worstRating": [
+          {
+            "@value": -10
+          }
+        ],
+        "https://schema.org/bestRating": [
+          {
+            "@value": 10
+          }
+        ],
+        "https://schema.org/ratingValue": [
+          {
+            "@value": -10
+          }
+        ]
+      },
+      {
+        "@id": "https://discourse.nodered.org/t/configuring-sso-for-the-node-red-dashboard/100203",
+        "@type": [
+          "https://schema.org/DigitalDocument"
+        ],
+        "https://schema.org/title": [
+          {
+            "@value": "Configuring SSO for the Node-RED Dashboard"
+          }
+        ],
+        "https://schema.org/date": [
+          {
+            "@value": "2026-01-21T12:34:17.684Z"
+          }
+        ],
+        "https://schema.org/url": [
+          {
+            "@value": "https://discourse.nodered.org/t/configuring-sso-for-the-node-red-dashboard/100203"
+          }
+        ],
+        "https://schema.org/category": [
+          {
+            "@id": "urn:term:forum:tag:docker"
+          }
+        ],
+        "https://schema.org/contentRating": [
+          {
+            "@id": "urn:rating:forum:100203"
+          }
+        ]
       }
-    },
-    {
-      "@id": "urn:rating:forum:100235",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -9
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/marstek-venus-ui/100235",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Marstek Venus Ui",
-      "schema:date": "2026-01-24T11:39:21.596Z",
-      "schema:url": "https://discourse.nodered.org/t/marstek-venus-ui/100235",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100235"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100221",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -8
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/check-this-out-esp-now-communication-protocol/100221",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Check this out... ESP-NOW (communication protocol)",
-      "schema:date": "2026-01-24T10:54:20.875Z",
-      "schema:url": "https://discourse.nodered.org/t/check-this-out-esp-now-communication-protocol/100221",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100221"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100233",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/issue-facing-connection-with-node-red-contrib-s7-node-while-connecting-siemens-s7-200-plc/100233",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Issue facing connection with node-red-contrib-s7 node while connecting siemens s7 200 plc",
-      "schema:date": "2026-01-24T09:03:44.788Z",
-      "schema:url": "https://discourse.nodered.org/t/issue-facing-connection-with-node-red-contrib-s7-node-while-connecting-siemens-s7-200-plc/100233",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100233"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:99856",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -8
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/suggestions-for-node-red-5-0/99856",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Suggestions for Node Red 5.0",
-      "schema:date": "2026-01-24T06:42:57.800Z",
-      "schema:url": "https://discourse.nodered.org/t/suggestions-for-node-red-5-0/99856",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:99856"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100230",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -9
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/door-logic-problem-i-cant-quite-wrap-my-head-around/100230",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Door logic problem I can't quite wrap my head around",
-      "schema:date": "2026-01-24T04:47:02.945Z",
-      "schema:url": "https://discourse.nodered.org/t/door-logic-problem-i-cant-quite-wrap-my-head-around/100230",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100230"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100202",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": 5
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/function-nodes-how-to-reuse-js-functions-in-my-functions/100202",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Function nodes - How to reuse JS functions in my functions?",
-      "schema:date": "2026-01-24T00:25:16.947Z",
-      "schema:url": "https://discourse.nodered.org/t/function-nodes-how-to-reuse-js-functions-in-my-functions/100202",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:function-node"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100202"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100224",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -8
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/searching-for-used-subflows-help/100224",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Searching for used subflows - help!",
-      "schema:date": "2026-01-23T21:04:02.302Z",
-      "schema:url": "https://discourse.nodered.org/t/searching-for-used-subflows-help/100224",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100224"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100226",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/link-call-without-timeout/100226",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Link Call without timeout",
-      "schema:date": "2026-01-23T16:22:11.867Z",
-      "schema:url": "https://discourse.nodered.org/t/link-call-without-timeout/100226",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100226"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100201",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/trouble-filtering-key-value-from-mqtt-message/100201",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Trouble filtering key/value from MQTT message",
-      "schema:date": "2026-01-23T09:22:13.563Z",
-      "schema:url": "https://discourse.nodered.org/t/trouble-filtering-key-value-from-mqtt-message/100201",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100201"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100222",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -7
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/understanding-css-layout-principles/100222",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Understanding CSS Layout Principles",
-      "schema:date": "2026-01-22T22:38:53.691Z",
-      "schema:url": "https://discourse.nodered.org/t/understanding-css-layout-principles/100222",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:css"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100222"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100148",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -1
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/rgb-cube-using-ws2812-5050-leds/100148",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "RGB Cube using WS2812 5050 LEDs",
-      "schema:date": "2026-01-22T18:43:37.641Z",
-      "schema:url": "https://discourse.nodered.org/t/rgb-cube-using-ws2812-5050-leds/100148",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100148"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100210",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/uibuilder-runtimesetup-master-config-folder-copy-error/100210",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "[uibuilder:runtimeSetup] Master .config folder copy ERROR,",
-      "schema:date": "2026-01-22T11:24:50.573Z",
-      "schema:url": "https://discourse.nodered.org/t/uibuilder-runtimesetup-master-config-folder-copy-error/100210",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:uibuilder"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100210"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100212",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/how-to-do-black-box-ui-testing-of-nodes/100212",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "How to do Black Box UI Testing of Nodes?",
-      "schema:date": "2026-01-22T11:20:18.779Z",
-      "schema:url": "https://discourse.nodered.org/t/how-to-do-black-box-ui-testing-of-nodes/100212",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100212"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100208",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -1
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/node-red-5-beta-2-now-available/100208",
-      "@type": "schema:DigitalDocument",
-      "schema:title": ":tada: Node-RED 5 beta 2 now available",
-      "schema:date": "2026-01-22T10:59:25.580Z",
-      "schema:url": "https://discourse.nodered.org/t/node-red-5-beta-2-now-available/100208",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:docker"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100208"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100189",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": 6
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/backup-script-not-working/100189",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Backup Script Not Working",
-      "schema:date": "2026-01-22T10:53:57.197Z",
-      "schema:url": "https://discourse.nodered.org/t/backup-script-not-working/100189",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100189"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100215",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/html-in-ui-template-via-message/100215",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "HTML in ui-template via message?",
-      "schema:date": "2026-01-22T10:00:15.835Z",
-      "schema:url": "https://discourse.nodered.org/t/html-in-ui-template-via-message/100215",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100215"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100214",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/dashboard-2-0-ui-chart-prevent-line-color-changes-for-certain-data/100214",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Dashboard 2.0 ui-chart, prevent line color changes for certain data",
-      "schema:date": "2026-01-22T08:14:56.867Z",
-      "schema:url": "https://discourse.nodered.org/t/dashboard-2-0-ui-chart-prevent-line-color-changes-for-certain-data/100214",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:dashboard-2"
-        },
-        {
-          "@id": "urn:term:forum:tag:ui-chart"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100214"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100052",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/anyone-have-an-example-of-a-scrolling-text-box-using-the-new-dashboard-2-0/100052",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Anyone have an example of a scrolling text box using the new dashboard 2.0?",
-      "schema:date": "2026-01-22T06:34:22.340Z",
-      "schema:url": "https://discourse.nodered.org/t/anyone-have-an-example-of-a-scrolling-text-box-using-the-new-dashboard-2-0/100052",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100052"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100198",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/dashboard-2-0-displaying-multiple-line-text-oddly/100198",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Dashboard 2.0... Displaying multiple line text oddly?",
-      "schema:date": "2026-01-22T00:49:47.214Z",
-      "schema:url": "https://discourse.nodered.org/t/dashboard-2-0-displaying-multiple-line-text-oddly/100198",
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100198"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100196",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -4
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/my-latest-uibuilder-creation/100196",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "My latest uibuilder creation",
-      "schema:date": "2026-01-21T20:25:40.279Z",
-      "schema:url": "https://discourse.nodered.org/t/my-latest-uibuilder-creation/100196",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:uibuilder"
-        },
-        {
-          "@id": "urn:term:forum:tag:mqtt"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100196"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100206",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -5
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/javascript-concepts/100206",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "JavaScript Concepts",
-      "schema:date": "2026-01-21T13:51:05.745Z",
-      "schema:url": "https://discourse.nodered.org/t/javascript-concepts/100206",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:javascript"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100206"
-      }
-    },
-    {
-      "@id": "urn:rating:forum:100203",
-      "@type": "schema:Rating",
-      "schema:worstRating": -10,
-      "schema:bestRating": 10,
-      "schema:ratingValue": -10
-    },
-    {
-      "@id": "https://discourse.nodered.org/t/configuring-sso-for-the-node-red-dashboard/100203",
-      "@type": "schema:DigitalDocument",
-      "schema:title": "Configuring SSO for the Node-RED Dashboard",
-      "schema:date": "2026-01-21T12:34:17.684Z",
-      "schema:url": "https://discourse.nodered.org/t/configuring-sso-for-the-node-red-dashboard/100203",
-      "schema:category": [
-        {
-          "@id": "urn:term:forum:tag:docker"
-        }
-      ],
-      "schema:contentRating": {
-        "@id": "urn:rating:forum:100203"
-      }
-    }
-  ]
-}
+    ]
+  }
+]
