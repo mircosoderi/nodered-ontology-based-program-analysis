@@ -5,7 +5,7 @@
 This repository ships:
 
  - A [lightweight ontology](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/blob/main/app-ontology.rdf) to model Node-RED user applications
- - A folder to build a Docker image based on Node-RED, which includes a runtime and editor plugin, which are based on the [uRDF.js store](https://github.com/vcharpenay/uRDF.js) and the [eyeling N3 reasoner](https://github.com/eyereasoner/eyeling).
+ - A [folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/nodered-urdf) to build a Docker image based on Node-RED, which includes a runtime and editor plugin, which are based on the [uRDF.js store](https://github.com/vcharpenay/uRDF.js) and the [eyeling N3 reasoner](https://github.com/eyereasoner/eyeling).
  - A few initial [experiments](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments) to have a first intuition of the cost of the bundle in terms of CPU/RAM.
  - A few folders to build Docker images that can be used to generate JSON-LD representations of [GitHub issues](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/github-issues-to-jsonld), [Discourse forum posts](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/discourse-forum-to-jsonld), and [Node-RED flows](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/flows-json-to-jsonld).
 
