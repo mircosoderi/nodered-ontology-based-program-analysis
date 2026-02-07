@@ -20,7 +20,7 @@ module.exports = function (RED) {
   const TOPIC = "urdf/events";
 
   const express = require("express");
-  const jsonParser = express.json();
+  const jsonParser = express.json({limit:"1m"});
   const fs = require("fs");
 
   // ----------------------------------------------------------------------------

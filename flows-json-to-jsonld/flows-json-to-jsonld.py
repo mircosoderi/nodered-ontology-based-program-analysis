@@ -12,6 +12,66 @@ NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
 SCHEMA = "https://schema.org/"
 LIBFLOW_CLASS = f"{SCHEMA}SoftwareSourceCode"
 
+# -----------------------
+# ZURL support (same approach as earlier scripts)
+# -----------------------
+
+def get_zurl(nodered_urdf: str, timeout: int = 30) -> list[str]:
+    """
+    Fetches the ZURL JSON array from the Node-RED runtime admin endpoint:
+      GET {NODERED_URDF}/urdf/zurl
+
+    Returns:
+      A Python list of strings (IRIs). Raises on HTTP / JSON errors.
+    """
+    if not nodered_urdf:
+        raise ValueError("Missing nodered_urdf base URL (e.g., http://host:1880).")
+
+    base = nodered_urdf.rstrip("/")
+    url = f"{base}/urdf/zurl"
+
+    req = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json"},
+        method="GET",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GET {url} failed (HTTP {e.code}): {err_body}") from e
+    except Exception as e:
+        raise RuntimeError(f"GET {url} failed: {e}") from e
+
+    try:
+        data = json.loads(body)
+    except Exception as e:
+        raise ValueError(f"Invalid JSON returned by {url}: {e}\nBody: {body[:500]}") from e
+
+    if not isinstance(data, list) or not all(isinstance(x, str) for x in data):
+        raise ValueError(
+            f"{url} did not return a JSON array of strings. Got: {type(data).__name__}"
+        )
+
+    return data
+
+
+def z(iri: str, ZURL: list[str]) -> str:
+    try:
+        idx = ZURL.index(iri)
+        return f"z:{idx}"
+    except ValueError:
+        return iri
+
+
+ZURL = get_zurl(NODERED_URDF)
+
+# -----------------------
+# End ZURL support
+# -----------------------
+
 
 def load_json(path: Path):
     with path.open("r", encoding="utf-8") as f:
@@ -47,9 +107,9 @@ def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> list:
     for n in nodes_list:
         if not isinstance(n, dict):
             continue
-        z = n.get("z")
-        if isinstance(z, str) and z:
-            by_tab.setdefault(z, []).append(n)
+        ztab = n.get("z")
+        if isinstance(ztab, str) and ztab:
+            by_tab.setdefault(ztab, []).append(n)
 
     libflows = []
     for tab in tabs:
@@ -69,12 +129,12 @@ def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> list:
 
         libflows.append(
             {
-                "@id": f"urn:libflow:{flow_id}",
-                "@type": [LIBFLOW_CLASS],
-                f"{SCHEMA}title": [{"@value": str(label)}],
-                f"{SCHEMA}url": [{"@value": str(flows_url)}],
-                f"{SCHEMA}identifier": [{"@value": str(flow_id)}],
-                f"{SCHEMA}keywords": [{"@value": ",".join(sorted(types))}],
+                "@id": f"urn:libflow:{flow_id}",  # resource IRI untouched
+                "@type": [z(LIBFLOW_CLASS, ZURL)],  # type IRI wrapped
+                z(f"{SCHEMA}title", ZURL): [{"@value": str(label)}],  # predicate IRI wrapped
+                z(f"{SCHEMA}url", ZURL): [{"@value": str(flows_url)}],
+                z(f"{SCHEMA}identifier", ZURL): [{"@value": str(flow_id)}],
+                z(f"{SCHEMA}keywords", ZURL): [{"@value": ",".join(sorted(types))}],
             }
         )
 
@@ -84,7 +144,7 @@ def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> list:
     return [
         {
             "@context": {},  # you requested no context/abbreviations
-            "@id": graph_id,
+            "@id": graph_id,  # resource IRI untouched
             "@graph": libflows,
         }
     ]

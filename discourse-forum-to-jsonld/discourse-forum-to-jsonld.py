@@ -80,6 +80,71 @@ TOKEN_SPLIT_RE = re.compile(r"\s+")
 
 NODERED_PRECEDERS = {"nr", "nodered", "node-red"}
 
+# -----------------------
+# ZURL support (same as earlier script)
+# -----------------------
+
+def get_zurl(nodered_urdf: str, timeout: int = 30) -> List[str]:
+    """
+    Fetches the ZURL JSON array from the Node-RED runtime admin endpoint:
+      GET {NODERED_URDF}/urdf/zurl
+
+    Returns:
+      A Python list of strings (IRIs). Raises on HTTP / JSON errors.
+
+    Notes:
+      - Assumes the endpoint returns a JSON array (e.g., ["iri1", "iri2", ...]).
+      - If your Node-RED admin endpoint requires authentication, add headers
+        (e.g. Authorization) in the Request below.
+    """
+    if not nodered_urdf:
+        raise ValueError("Missing nodered_urdf base URL (e.g., http://host:1880).")
+
+    base = nodered_urdf.rstrip("/")
+    url = f"{base}/urdf/zurl"
+
+    req = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json"},
+        method="GET",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GET {url} failed (HTTP {e.code}): {err_body}") from e
+    except Exception as e:
+        raise RuntimeError(f"GET {url} failed: {e}") from e
+
+    try:
+        data: Any = json.loads(body)
+    except Exception as e:
+        raise ValueError(f"Invalid JSON returned by {url}: {e}\nBody: {body[:500]}") from e
+
+    if not isinstance(data, list) or not all(isinstance(x, str) for x in data):
+        raise ValueError(
+            f"{url} did not return a JSON array of strings. Got: {type(data).__name__}"
+        )
+
+    return data
+
+
+def z(iri: str, ZURL: list[str]) -> str:
+    try:
+        idx = ZURL.index(iri)
+        return f"z:{idx}"
+    except ValueError:
+        return iri
+
+
+ZURL = get_zurl(NODERED_URDF)
+
+# -----------------------
+# End ZURL support
+# -----------------------
+
 
 def safe_slug(name: str) -> str:
     s = name.strip()
@@ -102,27 +167,27 @@ def clamp(v: int, lo: int, hi: int) -> int:
 def build_defined_term_set(set_id: str, name: str) -> Dict[str, Any]:
     return {
         "@id": set_id,
-        "@type": ["https://schema.org/DefinedTermSet"],
-        "https://schema.org/name": [{"@value": name}],
+        "@type": [z("https://schema.org/DefinedTermSet", ZURL)],
+        z("https://schema.org/name", ZURL): [{"@value": name}],
     }
 
 
 def build_defined_term(term_id: str, label: str, set_id: str) -> Dict[str, Any]:
     return {
         "@id": term_id,
-        "@type": ["https://schema.org/DefinedTerm"],
-        "https://schema.org/name": [{"@value": label}],
-        "https://schema.org/inDefinedTermSet": [{"@id": set_id}],
+        "@type": [z("https://schema.org/DefinedTerm", ZURL)],
+        z("https://schema.org/name", ZURL): [{"@value": label}],
+        z("https://schema.org/inDefinedTermSet", ZURL): [{"@id": set_id}],
     }
 
 
 def build_rating(rating_id: str, value: int) -> Dict[str, Any]:
     return {
         "@id": rating_id,
-        "@type": ["https://schema.org/Rating"],
-        "https://schema.org/worstRating": [{"@value": -10}],
-        "https://schema.org/bestRating": [{"@value": 10}],
-        "https://schema.org/ratingValue": [{"@value": value}],
+        "@type": [z("https://schema.org/Rating", ZURL)],
+        z("https://schema.org/worstRating", ZURL): [{"@value": -10}],
+        z("https://schema.org/bestRating", ZURL): [{"@value": 10}],
+        z("https://schema.org/ratingValue", ZURL): [{"@value": value}],
     }
 
 
@@ -275,8 +340,8 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
             os_id = urn("os", slug, local_key, os_platform)
             nodes.append({
                 "@id": os_id,
-                "@type": ["https://schema.org/OperatingSystem"],
-                "https://schema.org/name": [{"@value": os_platform}],
+                "@type": [z("https://schema.org/OperatingSystem", ZURL)],
+                z("https://schema.org/name", ZURL): [{"@value": os_platform}],
             })
             about_ids.append(os_id)
 
@@ -286,8 +351,8 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
             nodejs_id = urn("runtime", slug, local_key, "nodejs", safe_slug(nodejs_ver))
             nodes.append({
                 "@id": nodejs_id,
-                "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs"],
-                "https://schema.org/version": [{"@value": nodejs_ver}],
+                "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs", ZURL)],
+                z("https://schema.org/version", ZURL): [{"@value": nodejs_ver}],
             })
             about_ids.append(nodejs_id)
 
@@ -296,8 +361,8 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
             nodered_id = urn("runtime", slug, local_key, "nodered", safe_slug(ver))
             nodes.append({
                 "@id": nodered_id,
-                "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"],
-                "https://schema.org/version": [{"@value": ver}],
+                "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed", ZURL)],
+                z("https://schema.org/version", ZURL): [{"@value": ver}],
             })
             about_ids.append(nodered_id)
 
@@ -308,14 +373,14 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
         doc_id = url if url else urn("doc", slug, local_key)
         doc: Dict[str, Any] = {
             "@id": doc_id,
-            "@type": ["https://schema.org/DigitalDocument"],
-            "https://schema.org/title": [{"@value": title}],
-            **({"https://schema.org/date": [{"@value": last_posted_at}]} if last_posted_at else {}),
-            **({"https://schema.org/url": [{"@value": url}]} if url else {}),
-            **({"https://schema.org/category": [{"@id": c} for c in cats]} if cats else {}),
-            "https://schema.org/contentRating": [{"@id": rating_id}],
-            **({"https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [{"@value": True}]} if is_containerised else {}),
-            **({"https://schema.org/about": [{"@id": a} for a in about_ids]} if about_ids else {}),
+            "@type": [z("https://schema.org/DigitalDocument", ZURL)],
+            z("https://schema.org/title", ZURL): [{"@value": title}],
+            **({z("https://schema.org/date", ZURL): [{"@value": last_posted_at}]} if last_posted_at else {}),
+            **({z("https://schema.org/url", ZURL): [{"@value": url}]} if url else {}),
+            **({z("https://schema.org/category", ZURL): [{"@id": c} for c in cats]} if cats else {}),
+            z("https://schema.org/contentRating", ZURL): [{"@id": rating_id}],
+            **({z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised", ZURL): [{"@value": True}]} if is_containerised else {}),
+            **({z("https://schema.org/about", ZURL): [{"@id": a} for a in about_ids]} if about_ids else {}),
         }
         nodes.append(doc)
 
@@ -373,7 +438,7 @@ def main() -> int:
 
     for in_path in inputs:
         out_path = OUTPUT_DIR / f"{in_path.stem}.jsonld"
-        jsonld = transform_file(in_path)  # now returns a LIST (dataset)
+        jsonld = transform_file(in_path)  # returns a LIST (dataset)
         out_path.write_text(json.dumps(jsonld, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Wrote {out_path}")
         post_jsonld(jsonld, out_path)

@@ -6,24 +6,24 @@
       {
         "@id": "urn:libflow:535331d8.55c1f",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "Basics - Messages"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "535331d8.55c1f"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "change,comment,debug,inject,range"
           }
@@ -32,24 +32,24 @@
       {
         "@id": "urn:libflow:ac14500e.2c57d",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "Basics - Flow control"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "ac14500e.2c57d"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "change,comment,debug,delay,inject,join,range,rbe,split,switch,trigger"
           }
@@ -58,24 +58,24 @@
       {
         "@id": "urn:libflow:fc046f99.4be08",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "Basics - Error handling"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "fc046f99.4be08"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "catch,comment,debug,delay,function,inject"
           }
@@ -84,24 +84,24 @@
       {
         "@id": "urn:libflow:64133d39.bb0394",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "Basic - Working with data formats"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "64133d39.bb0394"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "change,comment,csv,debug,inject,join,json,split,template,xml,yaml"
           }
@@ -110,24 +110,24 @@
       {
         "@id": "urn:libflow:3045204d.cfbae",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "HTTP endpoints"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "3045204d.cfbae"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "change,comment,file in,function,http in,http response,inject,template"
           }
@@ -136,24 +136,24 @@
       {
         "@id": "urn:libflow:55635136.aa9cb",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "HTTP requests"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "55635136.aa9cb"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "change,comment,debug,function,http in,http request,http response,inject"
           }
@@ -162,24 +162,24 @@
       {
         "@id": "urn:libflow:b571704d.6c591",
         "@type": [
-          "https://schema.org/SoftwareSourceCode"
+          "z:25"
         ],
-        "https://schema.org/title": [
+        "z:52": [
           {
             "@value": "MQTT"
           }
         ],
-        "https://schema.org/url": [
+        "z:53": [
           {
             "@value": "https://github.com/node-red/cookbook-flows"
           }
         ],
-        "https://schema.org/identifier": [
+        "z:37": [
           {
             "@value": "b571704d.6c591"
           }
         ],
-        "https://schema.org/keywords": [
+        "z:42": [
           {
             "@value": "comment,debug,inject,json,mqtt in,mqtt out"
           }

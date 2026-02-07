@@ -6,9 +6,9 @@
       {
         "@id": "urn:termset:forum:tags",
         "@type": [
-          "https://schema.org/DefinedTermSet"
+          "z:18"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "Node-RED Forum Tags"
           }
@@ -17,14 +17,14 @@
       {
         "@id": "urn:term:forum:tag:css",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "css"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -33,14 +33,14 @@
       {
         "@id": "urn:term:forum:tag:dashboard-2",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "dashboard-2"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -49,14 +49,14 @@
       {
         "@id": "urn:term:forum:tag:docker",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "docker"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -65,14 +65,14 @@
       {
         "@id": "urn:term:forum:tag:function-node",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "function-node"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -81,14 +81,14 @@
       {
         "@id": "urn:term:forum:tag:home-assistant",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "home-assistant"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -97,14 +97,14 @@
       {
         "@id": "urn:term:forum:tag:javascript",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "javascript"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -113,14 +113,14 @@
       {
         "@id": "urn:term:forum:tag:mqtt",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "mqtt"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -129,14 +129,14 @@
       {
         "@id": "urn:term:forum:tag:node-red-contrib-lgtv",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "node-red-contrib-lgtv"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -145,14 +145,14 @@
       {
         "@id": "urn:term:forum:tag:node-red-contrib-remote",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "node-red-contrib-remote"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -161,14 +161,14 @@
       {
         "@id": "urn:term:forum:tag:ui-chart",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "ui-chart"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -177,14 +177,14 @@
       {
         "@id": "urn:term:forum:tag:uibuilder",
         "@type": [
-          "https://schema.org/DefinedTerm"
+          "z:17"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "uibuilder"
           }
         ],
-        "https://schema.org/inDefinedTermSet": [
+        "z:38": [
           {
             "@id": "urn:termset:forum:tags"
           }
@@ -193,19 +193,19 @@
       {
         "@id": "urn:rating:forum:25294",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -6
           }
@@ -214,24 +214,24 @@
       {
         "@id": "https://discourse.nodered.org/t/how-to-add-update-nodes-to-the-flow-library/25294",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "How to add/update nodes to the Flow Library"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2020-05-22T11:16:52.093Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/how-to-add-update-nodes-to-the-flow-library/25294"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:25294"
           }
@@ -240,19 +240,19 @@
       {
         "@id": "urn:rating:forum:506",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": 10
           }
@@ -261,24 +261,24 @@
       {
         "@id": "https://discourse.nodered.org/t/how-to-share-code-or-flow-json/506",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "How to share code or flow json"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2020-07-06T18:06:20.215Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/how-to-share-code-or-flow-json/506"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:506"
           }
@@ -287,19 +287,19 @@
       {
         "@id": "urn:rating:forum:8",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -4
           }
@@ -308,24 +308,24 @@
       {
         "@id": "https://discourse.nodered.org/t/welcome-to-the-node-red-forum/8",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Welcome to the Node-RED Forum!"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2018-04-24T15:23:34.292Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/welcome-to-the-node-red-forum/8"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:8"
           }
@@ -334,19 +334,19 @@
       {
         "@id": "urn:rating:forum:100227",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -355,29 +355,29 @@
       {
         "@id": "https://discourse.nodered.org/t/using-home-assistants-input-number-in-a-change-node-to-send-data-to-hourglass-node/100227",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Using Home assistant's input_number in a \"change node\" to send data to \"hourglass node\""
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T19:03:47.218Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/using-home-assistants-input-number-in-a-change-node-to-send-data-to-hourglass-node/100227"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:home-assistant"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100227"
           }
@@ -386,19 +386,19 @@
       {
         "@id": "urn:rating:forum:100238",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -8
           }
@@ -407,29 +407,29 @@
       {
         "@id": "https://discourse.nodered.org/t/offline-mobile-web-apps/100238",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "🌐 Offline Mobile web apps"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T18:06:53.446Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/offline-mobile-web-apps/100238"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:uibuilder"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100238"
           }
@@ -438,19 +438,19 @@
       {
         "@id": "urn:rating:forum:100232",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -9
           }
@@ -459,29 +459,29 @@
       {
         "@id": "https://discourse.nodered.org/t/problem-with-remote-red/100232",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Problem with Remote Red"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T16:34:14.949Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/problem-with-remote-red/100232"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:node-red-contrib-remote"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100232"
           }
@@ -490,19 +490,19 @@
       {
         "@id": "urn:rating:forum:100234",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -9
           }
@@ -511,9 +511,9 @@
       {
         "@id": "urn:os:forum:100234:android",
         "@type": [
-          "https://schema.org/OperatingSystem"
+          "z:21"
         ],
-        "https://schema.org/name": [
+        "z:43": [
           {
             "@value": "android"
           }
@@ -522,29 +522,29 @@
       {
         "@id": "https://discourse.nodered.org/t/how-difficult-is-it-to-install-nr-on-an-android-phone/100234",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "How \"difficult\" is it to install NR on an Android phone?"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T15:24:05.964Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/how-difficult-is-it-to-install-nr-on-an-android-phone/100234"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100234"
           }
         ],
-        "https://schema.org/about": [
+        "z:27": [
           {
             "@id": "urn:os:forum:100234:android"
           }
@@ -553,19 +553,19 @@
       {
         "@id": "urn:rating:forum:100237",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -574,29 +574,29 @@
       {
         "@id": "https://discourse.nodered.org/t/messages-blocked-till-next-deploy/100237",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Messages blocked till next deploy"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T14:23:14.297Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/messages-blocked-till-next-deploy/100237"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:node-red-contrib-lgtv"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100237"
           }
@@ -605,19 +605,19 @@
       {
         "@id": "urn:rating:forum:100235",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -9
           }
@@ -626,24 +626,24 @@
       {
         "@id": "https://discourse.nodered.org/t/marstek-venus-ui/100235",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Marstek Venus Ui"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T11:39:21.596Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/marstek-venus-ui/100235"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100235"
           }
@@ -652,19 +652,19 @@
       {
         "@id": "urn:rating:forum:100221",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -8
           }
@@ -673,24 +673,24 @@
       {
         "@id": "https://discourse.nodered.org/t/check-this-out-esp-now-communication-protocol/100221",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Check this out... ESP-NOW (communication protocol)"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T10:54:20.875Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/check-this-out-esp-now-communication-protocol/100221"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100221"
           }
@@ -699,19 +699,19 @@
       {
         "@id": "urn:rating:forum:100233",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -720,24 +720,24 @@
       {
         "@id": "https://discourse.nodered.org/t/issue-facing-connection-with-node-red-contrib-s7-node-while-connecting-siemens-s7-200-plc/100233",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Issue facing connection with node-red-contrib-s7 node while connecting siemens s7 200 plc"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T09:03:44.788Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/issue-facing-connection-with-node-red-contrib-s7-node-while-connecting-siemens-s7-200-plc/100233"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100233"
           }
@@ -746,19 +746,19 @@
       {
         "@id": "urn:rating:forum:99856",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -8
           }
@@ -767,24 +767,24 @@
       {
         "@id": "https://discourse.nodered.org/t/suggestions-for-node-red-5-0/99856",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Suggestions for Node Red 5.0"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T06:42:57.800Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/suggestions-for-node-red-5-0/99856"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:99856"
           }
@@ -793,19 +793,19 @@
       {
         "@id": "urn:rating:forum:100230",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -9
           }
@@ -814,24 +814,24 @@
       {
         "@id": "https://discourse.nodered.org/t/door-logic-problem-i-cant-quite-wrap-my-head-around/100230",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Door logic problem I can't quite wrap my head around"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T04:47:02.945Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/door-logic-problem-i-cant-quite-wrap-my-head-around/100230"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100230"
           }
@@ -840,19 +840,19 @@
       {
         "@id": "urn:rating:forum:100202",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": 5
           }
@@ -861,29 +861,29 @@
       {
         "@id": "https://discourse.nodered.org/t/function-nodes-how-to-reuse-js-functions-in-my-functions/100202",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Function nodes - How to reuse JS functions in my functions?"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-24T00:25:16.947Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/function-nodes-how-to-reuse-js-functions-in-my-functions/100202"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:function-node"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100202"
           }
@@ -892,19 +892,19 @@
       {
         "@id": "urn:rating:forum:100224",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -8
           }
@@ -913,24 +913,24 @@
       {
         "@id": "https://discourse.nodered.org/t/searching-for-used-subflows-help/100224",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Searching for used subflows - help!"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-23T21:04:02.302Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/searching-for-used-subflows-help/100224"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100224"
           }
@@ -939,19 +939,19 @@
       {
         "@id": "urn:rating:forum:100226",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -960,24 +960,24 @@
       {
         "@id": "https://discourse.nodered.org/t/link-call-without-timeout/100226",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Link Call without timeout"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-23T16:22:11.867Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/link-call-without-timeout/100226"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100226"
           }
@@ -986,19 +986,19 @@
       {
         "@id": "urn:rating:forum:100201",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1007,24 +1007,24 @@
       {
         "@id": "https://discourse.nodered.org/t/trouble-filtering-key-value-from-mqtt-message/100201",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Trouble filtering key/value from MQTT message"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-23T09:22:13.563Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/trouble-filtering-key-value-from-mqtt-message/100201"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100201"
           }
@@ -1033,19 +1033,19 @@
       {
         "@id": "urn:rating:forum:100222",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -7
           }
@@ -1054,29 +1054,29 @@
       {
         "@id": "https://discourse.nodered.org/t/understanding-css-layout-principles/100222",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Understanding CSS Layout Principles"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T22:38:53.691Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/understanding-css-layout-principles/100222"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:css"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100222"
           }
@@ -1085,19 +1085,19 @@
       {
         "@id": "urn:rating:forum:100148",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -1
           }
@@ -1106,24 +1106,24 @@
       {
         "@id": "https://discourse.nodered.org/t/rgb-cube-using-ws2812-5050-leds/100148",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "RGB Cube using WS2812 5050 LEDs"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T18:43:37.641Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/rgb-cube-using-ws2812-5050-leds/100148"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100148"
           }
@@ -1132,19 +1132,19 @@
       {
         "@id": "urn:rating:forum:100210",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1153,29 +1153,29 @@
       {
         "@id": "https://discourse.nodered.org/t/uibuilder-runtimesetup-master-config-folder-copy-error/100210",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "[uibuilder:runtimeSetup] Master .config folder copy ERROR,"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T11:24:50.573Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/uibuilder-runtimesetup-master-config-folder-copy-error/100210"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:uibuilder"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100210"
           }
@@ -1184,19 +1184,19 @@
       {
         "@id": "urn:rating:forum:100212",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1205,24 +1205,24 @@
       {
         "@id": "https://discourse.nodered.org/t/how-to-do-black-box-ui-testing-of-nodes/100212",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "How to do Black Box UI Testing of Nodes?"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T11:20:18.779Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/how-to-do-black-box-ui-testing-of-nodes/100212"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100212"
           }
@@ -1231,19 +1231,19 @@
       {
         "@id": "urn:rating:forum:100208",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -1
           }
@@ -1252,29 +1252,29 @@
       {
         "@id": "https://discourse.nodered.org/t/node-red-5-beta-2-now-available/100208",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": ":tada: Node-RED 5 beta 2 now available"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T10:59:25.580Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/node-red-5-beta-2-now-available/100208"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:docker"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100208"
           }
@@ -1283,19 +1283,19 @@
       {
         "@id": "urn:rating:forum:100189",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": 6
           }
@@ -1304,24 +1304,24 @@
       {
         "@id": "https://discourse.nodered.org/t/backup-script-not-working/100189",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Backup Script Not Working"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T10:53:57.197Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/backup-script-not-working/100189"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100189"
           }
@@ -1330,19 +1330,19 @@
       {
         "@id": "urn:rating:forum:100215",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1351,24 +1351,24 @@
       {
         "@id": "https://discourse.nodered.org/t/html-in-ui-template-via-message/100215",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "HTML in ui-template via message?"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T10:00:15.835Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/html-in-ui-template-via-message/100215"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100215"
           }
@@ -1377,19 +1377,19 @@
       {
         "@id": "urn:rating:forum:100214",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1398,24 +1398,24 @@
       {
         "@id": "https://discourse.nodered.org/t/dashboard-2-0-ui-chart-prevent-line-color-changes-for-certain-data/100214",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Dashboard 2.0 ui-chart, prevent line color changes for certain data"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T08:14:56.867Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/dashboard-2-0-ui-chart-prevent-line-color-changes-for-certain-data/100214"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:dashboard-2"
           },
@@ -1423,7 +1423,7 @@
             "@id": "urn:term:forum:tag:ui-chart"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100214"
           }
@@ -1432,19 +1432,19 @@
       {
         "@id": "urn:rating:forum:100052",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1453,24 +1453,24 @@
       {
         "@id": "https://discourse.nodered.org/t/anyone-have-an-example-of-a-scrolling-text-box-using-the-new-dashboard-2-0/100052",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Anyone have an example of a scrolling text box using the new dashboard 2.0?"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T06:34:22.340Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/anyone-have-an-example-of-a-scrolling-text-box-using-the-new-dashboard-2-0/100052"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100052"
           }
@@ -1479,19 +1479,19 @@
       {
         "@id": "urn:rating:forum:100198",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1500,24 +1500,24 @@
       {
         "@id": "https://discourse.nodered.org/t/dashboard-2-0-displaying-multiple-line-text-oddly/100198",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Dashboard 2.0... Displaying multiple line text oddly?"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-22T00:49:47.214Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/dashboard-2-0-displaying-multiple-line-text-oddly/100198"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100198"
           }
@@ -1526,19 +1526,19 @@
       {
         "@id": "urn:rating:forum:100196",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -4
           }
@@ -1547,24 +1547,24 @@
       {
         "@id": "https://discourse.nodered.org/t/my-latest-uibuilder-creation/100196",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "My latest uibuilder creation"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-21T20:25:40.279Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/my-latest-uibuilder-creation/100196"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:uibuilder"
           },
@@ -1572,7 +1572,7 @@
             "@id": "urn:term:forum:tag:mqtt"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100196"
           }
@@ -1581,19 +1581,19 @@
       {
         "@id": "urn:rating:forum:100206",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -5
           }
@@ -1602,29 +1602,29 @@
       {
         "@id": "https://discourse.nodered.org/t/javascript-concepts/100206",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "JavaScript Concepts"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-21T13:51:05.745Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/javascript-concepts/100206"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:javascript"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100206"
           }
@@ -1633,19 +1633,19 @@
       {
         "@id": "urn:rating:forum:100203",
         "@type": [
-          "https://schema.org/Rating"
+          "z:23"
         ],
-        "https://schema.org/worstRating": [
+        "z:58": [
           {
             "@value": -10
           }
         ],
-        "https://schema.org/bestRating": [
+        "z:29": [
           {
             "@value": 10
           }
         ],
-        "https://schema.org/ratingValue": [
+        "z:47": [
           {
             "@value": -10
           }
@@ -1654,29 +1654,29 @@
       {
         "@id": "https://discourse.nodered.org/t/configuring-sso-for-the-node-red-dashboard/100203",
         "@type": [
-          "https://schema.org/DigitalDocument"
+          "z:16"
         ],
-        "https://schema.org/title": [
+        "z:53": [
           {
             "@value": "Configuring SSO for the Node-RED Dashboard"
           }
         ],
-        "https://schema.org/date": [
+        "z:33": [
           {
             "@value": "2026-01-21T12:34:17.684Z"
           }
         ],
-        "https://schema.org/url": [
+        "z:54": [
           {
             "@value": "https://discourse.nodered.org/t/configuring-sso-for-the-node-red-dashboard/100203"
           }
         ],
-        "https://schema.org/category": [
+        "z:30": [
           {
             "@id": "urn:term:forum:tag:docker"
           }
         ],
-        "https://schema.org/contentRating": [
+        "z:32": [
           {
             "@id": "urn:rating:forum:100203"
           }
