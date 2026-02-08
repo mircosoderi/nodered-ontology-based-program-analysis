@@ -521,7 +521,7 @@ async function urdfQueryViaPluginApiContract(sparql) {
   async function loadOntologyJsonLdOnStartup() {
     if (!urdf) return;
 
-    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/app-ontology.flattened.compressed.jsonld";
+    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/nodered-user-application-ontology.flattened.compressed.jsonld";
     const gid = z(process.env.URDF_ONTOLOGY_GID || "urn:nrua:ontology");
 
     if (!fs.existsSync(filePath)) {

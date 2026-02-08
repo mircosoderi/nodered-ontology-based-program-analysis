@@ -110,7 +110,7 @@ COPY --from=deps --chown=node-red:node-red \
 #   - Settings, ontology, and rules are installed as defaults inside the image.
 #   - Ownership is set at copy-time for predictable non-root runtime behavior.
 COPY --chown=node-red:node-red nodered-default-settings.js /opt/nodered-default-settings.js
-COPY --chown=node-red:node-red app-ontology.flattened.compressed.jsonld /opt/urdf/app-ontology.flattened.compressed.jsonld
+COPY --chown=node-red:node-red nodered-user-application-ontology.flattened.compressed.jsonld /opt/urdf/nodered-user-application-ontology.flattened.compressed.jsonld
 COPY --chown=node-red:node-red rules.flattened.compressed.jsonld /opt/urdf/rules.flattened.compressed.jsonld
 COPY --chown=node-red:node-red nodered-default-flows.json /opt/nodered-default-flows.json
 COPY --chown=node-red:node-red zurl.json /opt/urdf/zurl.json
