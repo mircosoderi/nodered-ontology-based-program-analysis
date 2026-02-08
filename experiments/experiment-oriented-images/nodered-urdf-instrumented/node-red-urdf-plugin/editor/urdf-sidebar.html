@@ -98,10 +98,10 @@ function isRule(node) {
 }
 
 function isNodeUrn(subjectIri) {
-  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:n");
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:node:");
 }
 function nodeIdFromUrn(subjectIri) {
-  return subjectIri.slice("urn:nrua:n".length);
+  return subjectIri.slice("urn:node:".length);
 }
 
 function revealNodeInEditor(nodeId) {
@@ -131,10 +131,10 @@ function dateToMs(d) {
 }
 
 function isFlowUrn(subjectIri) {
-  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:f");
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:flow:");
 }
 function flowIdFromUrn(subjectIri) {
-  return subjectIri.slice("urn:nrua:f".length);
+  return subjectIri.slice("urn:flow:".length);
 }
 
 function revealFlowInEditor(flowId) {
@@ -181,7 +181,8 @@ const MODES = [
       { id: "export", label: "Export" },
       { id: "clear", label: "Clear" },
       { id: "configure", label: "Configure" },
-      { id: "reason", label: "Reason" }
+      { id: "reason", label: "Reason" },
+      { id: "monitor", label: "Monitor" }
     ];
 
     MODES.forEach(m => $mode.append($("<option>").attr("value", m.id).text(m.label)));
@@ -197,6 +198,7 @@ const MODES = [
     const $sectionClear  = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
     const $sectionConfigure = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
     const $sectionReason = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
+    const $sectionMonitor = $("<div>").css({ display: "flex", flexDirection: "column", gap: "8px" });
 
 
 
@@ -539,6 +541,211 @@ if (lang === "N3") {
 
 const $reasonList = $("<div>").css({ display: "flex", flexDirection: "column", gap: "10px" });
 $sectionReason.append($reasonList);
+
+// -----------------------------
+// Monitor (metrics) UI
+// -----------------------------
+const $monHeader = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center", justifyContent: "space-between" });
+const $monTitle = mkTitle("Monitor (metrics)");
+const $monActions = $("<div>").css({ display: "flex", gap: "8px", alignItems: "center" });
+
+const $btnMonClear = $("<button>").addClass("red-ui-button red-ui-button-small").text("Clear");
+const $btnMonExport = $("<button>").addClass("red-ui-button red-ui-button-small").text("Export JSON");
+const $chkMonPause = $("<label>").css({ display: "flex", gap: "6px", alignItems: "center", fontSize: "12px", opacity: 0.9 })
+  .append($("<input>").attr("type", "checkbox"), $("<span>").text("Pause"));
+
+$monActions.append($btnMonClear, $btnMonExport, $chkMonPause);
+$monHeader.append($monTitle, $monActions);
+
+const $monSummary = $("<div>").css({
+  border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+  borderRadius: "4px",
+  padding: "8px",
+  fontFamily: "monospace",
+  fontSize: "12px",
+  whiteSpace: "pre-wrap"
+}).text("No metrics yet.");
+
+const $monCycles = $("<div>").css({ display: "flex", flexDirection: "column", gap: "6px" });
+const $monDetails = $("<div>").css({
+  border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+  borderRadius: "4px",
+  padding: "8px",
+  fontFamily: "monospace",
+  fontSize: "12px",
+  whiteSpace: "pre-wrap"
+}).text("Select a cycle to see details.");
+
+$sectionMonitor.append($monHeader, $monSummary, mkTitle("Cycles"), $monCycles, mkTitle("Selected cycle"), $monDetails);
+
+// In-memory metrics store (simple, bounded)
+const METRICS_MAX_CYCLES = 200;
+const metricsState = {
+  paused: false,
+  cycles: [],                 // newest first: {cycleId, triggerReason, ts, cycle, rules:[]}
+  byId: new Map()
+};
+
+function fmtMs(x) {
+  if (x === undefined || x === null || !Number.isFinite(Number(x))) return "—";
+  const v = Number(x);
+  return (v < 1000) ? v.toFixed(2) + " ms" : (v/1000).toFixed(2) + " s";
+}
+function fmtInt(x) {
+  if (x === undefined || x === null || !Number.isFinite(Number(x))) return "—";
+  return String(Math.trunc(Number(x)));
+}
+
+function upsertCycleEvent(ev) {
+  const id = ev.cycleId;
+  if (!id) return;
+
+  let rec = metricsState.byId.get(id);
+  if (!rec) {
+    rec = { cycleId: id, ts: ev.ts || Date.now(), triggerReason: ev.triggerReason || "", cycle: null, rules: [] };
+    metricsState.byId.set(id, rec);
+    metricsState.cycles.unshift(rec);
+
+    // bound size
+    while (metricsState.cycles.length > METRICS_MAX_CYCLES) {
+      const last = metricsState.cycles.pop();
+      if (last) metricsState.byId.delete(last.cycleId);
+    }
+  }
+  // update ts/triggerReason if newer
+  if (ev.ts && ev.ts > rec.ts) rec.ts = ev.ts;
+  if (ev.triggerReason) rec.triggerReason = ev.triggerReason;
+
+  if (ev.kind === "cycle") rec.cycle = ev;
+  if (ev.kind === "rule") rec.rules.push(ev);
+}
+
+function recomputeSummary() {
+  const n = metricsState.cycles.length;
+  if (n === 0) return "No metrics yet.";
+
+  // Use only cycles that have a cycle record
+  const cyclesWith = metricsState.cycles.filter(c => c.cycle && Number.isFinite(Number(c.cycle.t_reload_ms)));
+  const m = cyclesWith.length;
+  if (m === 0) return `Captured ${n} cycle(s), waiting for cycle summaries...`;
+
+  const reloads = cyclesWith.map(c => Number(c.cycle.t_reload_ms)).sort((a,b)=>a-b);
+  const p50 = reloads[Math.floor(0.50*(m-1))];
+  const p95 = reloads[Math.floor(0.95*(m-1))];
+  const max = reloads[m-1];
+
+  const last = cyclesWith[0].cycle;
+
+  return [
+    `cycles: ${m} (stored: ${n})`,
+    `t_reload_ms: p50=${fmtMs(p50)}  p95=${fmtMs(p95)}  max=${fmtMs(max)}`,
+    `last: reason=${last.triggerReason || ""}  inferred=${fmtInt(last.size_inferred)}  total=${fmtInt(last.total_size)}`
+  ].join("\n");
+}
+
+function renderCyclesList() {
+  $monSummary.text(recomputeSummary());
+  $monCycles.empty();
+
+  const list = metricsState.cycles.slice(0, 50); // show last 50
+  if (list.length === 0) {
+    $monCycles.append($("<div>").text("No cycles."));
+    return;
+  }
+
+  list.forEach(rec => {
+    const c = rec.cycle;
+    const title = `${new Date(rec.ts).toISOString()}  ${rec.triggerReason || ""}  ${rec.cycleId}`;
+    const line2 = c
+      ? `t_reload=${fmtMs(c.t_reload_ms)}  clear=${fmtMs(c.t_clear_inferred_ms)}  load=${fmtMs(c.t_load_inferred_ms)}  inferred=${fmtInt(c.size_inferred)}`
+      : `t_reload=— (waiting)  rules=${rec.rules.length}`;
+
+    const $card = $("<div>").css({
+      border: "1px solid var(--red-ui-primary-border-color, #ddd)",
+      borderRadius: "4px",
+      padding: "6px 8px",
+      cursor: "pointer"
+    });
+
+    $card.append(
+      $("<div>").css({ fontWeight: 600, fontFamily: "monospace", fontSize: "12px" }).text(title),
+      $("<div>").css({ fontFamily: "monospace", fontSize: "12px", opacity: 0.85 }).text(line2)
+    );
+
+    $card.on("click", () => renderCycleDetails(rec.cycleId));
+    $monCycles.append($card);
+  });
+}
+
+function renderCycleDetails(cycleId) {
+  const rec = metricsState.byId.get(cycleId);
+  if (!rec) {
+    $monDetails.text("Cycle not found.");
+    return;
+  }
+
+  const c = rec.cycle || {};
+  const rules = rec.rules || [];
+  // compute totals
+  const totalRuleMs = rules.reduce((acc,r)=>acc + (Number(r.t_rule_ms)||0), 0);
+
+  // simple per-rule lines
+  const ruleLines = rules.map(r => {
+    if (r.ruleKind === "sparql+n3") {
+      return [
+        `- [${r.ruleId || "?"}] ${r.ruleKind}`,
+        `  t_rule=${fmtMs(r.t_rule_ms)}  proj=${fmtMs(r.t_proj_sparql_ms)}  eye=${fmtMs(r.t_eye_ms)}  facts_in=${fmtInt(r.n_facts_in)}  derived_out=${fmtInt(r.n_derived_out)}`
+      ].join("\n");
+    }
+    return `- [${r.ruleId || "?"}] ${r.ruleKind}  t_rule=${fmtMs(r.t_rule_ms)}  n_bindings_spo=${fmtInt(r.n_bindings_spo)}`;
+  });
+
+  const header = [
+    `cycleId: ${rec.cycleId}`,
+    `ts: ${new Date(rec.ts).toISOString()}`,
+    `reason: ${rec.triggerReason || ""}`,
+    c.t_reload_ms !== undefined ? `t_reload: ${fmtMs(c.t_reload_ms)} (rules total: ${fmtMs(totalRuleMs)})` : `t_reload: —`,
+    c.t_clear_inferred_ms !== undefined ? `clear: ${fmtMs(c.t_clear_inferred_ms)}  load: ${fmtMs(c.t_load_inferred_ms)}` : `clear/load: —`,
+    c.size_inferred !== undefined ? `size_inferred: ${fmtInt(c.size_inferred)}  total_size: ${fmtInt(c.total_size)}` : `sizes: —`,
+    `rules: ${rules.length}`
+  ].join("\n");
+
+  $monDetails.text(header + "\n\n" + (ruleLines.join("\n") || "(no rule metrics)"));
+}
+
+// Monitor actions
+$chkMonPause.find("input").on("change", function () {
+  metricsState.paused = !!this.checked;
+  renderCyclesList();
+});
+
+$btnMonClear.on("click", function (e) {
+  e.preventDefault();
+  metricsState.byId.clear();
+  metricsState.cycles = [];
+  $monDetails.text("Select a cycle to see details.");
+  renderCyclesList();
+});
+
+$btnMonExport.on("click", function (e) {
+  e.preventDefault();
+  const data = metricsState.cycles.map(c => ({
+    cycleId: c.cycleId,
+    ts: c.ts,
+    triggerReason: c.triggerReason,
+    cycle: c.cycle,
+    rules: c.rules
+  }));
+  const blob = new Blob([JSON.stringify({ exportedAt: Date.now(), data }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "urdf-metrics.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
 
 async function loadReasoningResults() {
 const sparql = `
@@ -989,6 +1196,7 @@ $responseHeader.append($responseTitle, $responseActions);
       $sectionClear,
       $sectionConfigure,
       $sectionReason,
+      $sectionMonitor,
 
       $responseHeader,
       $response,
@@ -1074,7 +1282,8 @@ function legacyCopy(text) {
       export: $sectionExport,
       clear: $sectionClear,
       configure: $sectionConfigure,
-      reason: $sectionReason
+      reason: $sectionReason,
+      monitor: $sectionMonitor
     };
 
     const modeToTitle = {
@@ -1085,7 +1294,8 @@ function legacyCopy(text) {
       export: "Export",
       clear: "Clear",
       configure: "Configure",
-      reason: "Reason"
+      reason: "Reason",
+      monitor: "Monitor"
     };
 
     function applyMode(modeId) {
@@ -1354,7 +1564,22 @@ $btnExport.on("click", async function () {
   }
 });
 
-    return { appendLog, setResponse, scheduleReasonRefresh };
+    
+    function handlePush(msg) {
+      if (!msg) return;
+
+      if (msg.type === "metrics" && msg.cycleId && msg.kind && !metricsState.paused) {
+        upsertCycleEvent(msg);
+        renderCyclesList();
+        return;
+      }
+
+      if (msg.type && msg.type == "appUpdate") {
+        scheduleReasonRefresh(msg);
+      }
+    }
+
+return { appendLog, setResponse, scheduleReasonRefresh, handlePush };
   }
 
   
@@ -1375,25 +1600,20 @@ RED.plugins.registerPlugin("urdf-editor", {
       }
 
       RED.comms.subscribe(TOPIC, function (a, b) {
-      const msg =
-    (b !== undefined) ? b :
-    (a && typeof a === "object") ? a :
-    null;
+        const msg =
+          (b !== undefined) ? b :
+          (a && typeof a === "object") ? a :
+          null;
 
         if (!msg) return;
 
-        const summary = (msg.request && msg.request.summary) ? (" — " + msg.request.summary) : "";
-        const req = msg.request ? (msg.request.method + " " + msg.request.path) : "event";
         ui.appendLog(JSON.stringify(msg));
 
         if (msg.response) {
           ui.setResponse(msg.response);
         }
 
-	if (msg.type && msg.type == "appUpdate") {
-	  ui.scheduleReasonRefresh(msg);
-	}
-
+        ui.handlePush(msg);
       });
     }
   });

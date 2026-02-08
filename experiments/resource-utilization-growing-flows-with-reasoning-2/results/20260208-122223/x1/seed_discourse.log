@@ -1,0 +1,3 @@
+Wrote output/forum.jsonld
+Uploaded output/forum.jsonld -> http://nodered_20260208-122223_x1:1880/urdf/loadFile (HTTP 200)
+{"ok":true,"ts":1770549748940,"gid":"urn:graph:forum","size":322,"totalSize":null}

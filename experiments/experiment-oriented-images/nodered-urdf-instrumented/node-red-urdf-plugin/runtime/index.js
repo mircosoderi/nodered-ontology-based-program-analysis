@@ -71,6 +71,36 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
       // Intentionally ignored: observability must not impact availability.
     }
   }
+// ----------------------------------------------------------------------------
+// Metrics (minimal, opt-in)
+// Enable by setting env URDF_METRICS=1 (or "true").
+// Events are published on the same TOPIC as other plugin events.
+// ----------------------------------------------------------------------------
+const METRICS_ENABLED = String(process.env.URDF_METRICS || "").toLowerCase() === "1" ||
+                        String(process.env.URDF_METRICS || "").toLowerCase() === "true";
+
+function nowNs() {
+  return process.hrtime.bigint();
+}
+function nsToMs(ns) {
+  return Number(ns) / 1e6;
+}
+function newCycleId(ts) {
+  return `${ts}-${Math.random().toString(16).slice(2, 10)}`;
+}
+function publishMetric(event) {
+  if (!METRICS_ENABLED) return;
+  // Push to editor (RED.comms) as before
+  publish(event);
+  // Also emit to stdout as NDJSON for headless benchmarking harnesses
+  try {
+    console.log("URDF_METRIC " + JSON.stringify(event));
+  } catch (_) {
+    // ignore
+  }
+}
+
+
 
   // ----------------------------------------------------------------------------
   // Local Admin API fetch helper
@@ -1185,18 +1215,39 @@ async function recomputeInferencesFromRules(triggerReason) {
 
   const ts = Date.now();
 
+  const cycleId = newCycleId(ts);
+  const tCycleStart = nowNs();
+  let t_clear_inferred_ms = null;
+  let t_load_inferred_ms = null;
+
   try {
     // ------------------------------------------------------------------------
     // Step 1: read the rules graph
     // ------------------------------------------------------------------------
      const compressedRulesGraph = urdf.findGraph(GID_RULES);
     if (!Array.isArray(compressedRulesGraph) || compressedRulesGraph.length === 0) {
-      await urdf.clear(GID_INFERRED);
+      const tClearStart = nowNs();
+await urdf.clear(GID_INFERRED);
+t_clear_inferred_ms = nsToMs(nowNs() - tClearStart);
       publish({
         ts,
         type: "inference",
         request: { method: "AUTO", path: "rules", summary: `no rules (${triggerReason || ""})` },
         response: { ok: true, ts, rules: 0, triples: 0, gid: GID_INFERRED }
+      });
+      publishMetric({
+        ts: Date.now(),
+        type: "metrics",
+        kind: "cycle",
+        cycleId,
+        triggerReason: triggerReason || "manual",
+        t_reload_ms: nsToMs(nowNs() - tCycleStart),
+        t_clear_inferred_ms,
+        t_load_inferred_ms: 0,
+        n_nodes_inferred: 0,
+        triples_fired: 0,
+        size_inferred: 0,
+      size_app: urdf.size(GID_APP)
       });
       return;
     }
@@ -1227,6 +1278,10 @@ for (const rule of rules) {
   const programText = getPropFirstValue(rule, expandZToken(SCHEMA_TEXT));
   if (!programText || typeof programText !== "string" || !programText.trim()) continue;
 
+  const ruleId = (rule && rule["@id"]) ? rule["@id"] : "(no @id)";
+  const ruleKind = isN3Rule(rule) ? "sparql+n3" : "sparql";
+  const tRuleStart = nowNs();
+
   // ----------------------------------------------------------------------
   // N3 rule path (Eyeling)
   // ----------------------------------------------------------------------
@@ -1239,11 +1294,14 @@ if (isN3Rule(rule)) {
 
   // Execute the projection query to produce bindings of {s,p,o} facts.
   let projRes;
+  let tProjMs = null;
+  const tProjStart = nowNs();
   try {
     // projRes = await urdf.query(projection);
     // projRes = await urdfQueryViaPluginApiContract(projection);
     const projResCompressed = await urdf.query(rewriteQuery(projection));
     projRes = expandCompressedQueryDeep(projResCompressed);
+    tProjMs = nsToMs(nowNs() - tProjStart);
   } catch (e) {
     RED.log.warn("[uRDF] N3 projection query failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
     continue;
@@ -1285,6 +1343,7 @@ const previewCount = Math.min(10, factsLines.length);
   }
 
   let derivedCount = 0;
+  let tEyeMs = null;
   const maxPreview = 10;
 
   const derivedDF = [];
@@ -1310,6 +1369,7 @@ const previewCount = Math.min(10, factsLines.length);
   }
 
   try {
+    const tEyeStart = nowNs();
     const out = eyeling.reasonStream(n3Input, { onDerived });
 
 for (const df of derivedDF) {
@@ -1331,9 +1391,28 @@ if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
   addToBySubject(bySubject, sId, pIri, oJson);
 }
 
+    tEyeMs = nsToMs(nowNs() - tEyeStart);
   } catch (e) {
     RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
   }
+
+
+// Publish per-rule metrics (N3 path)
+const tRuleMs = nsToMs(nowNs() - tRuleStart);
+publishMetric({
+  ts: Date.now(),
+  type: "metrics",
+  kind: "rule",
+  cycleId,
+  triggerReason: triggerReason || "manual",
+  ruleId,
+  ruleKind,
+  t_rule_ms: tRuleMs,
+  t_proj_sparql_ms: tProjMs,
+  t_eye_ms: tEyeMs,
+  n_facts_in: ok.length,
+  n_derived_out: derivedCount
+});
 
   // N3 path ends here; results are already merged into bySubject.
   continue;
@@ -1369,6 +1448,21 @@ if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
 
         firedTriples++;
   }
+
+  // Publish per-rule metrics (SPARQL path)
+  const tRuleMs = nsToMs(nowNs() - tRuleStart);
+  const nBindingsSpo = Array.isArray(bindings) ? bindings.length : 0;
+  publishMetric({
+    ts: Date.now(),
+    type: "metrics",
+    kind: "rule",
+    cycleId,
+    triggerReason: triggerReason || "manual",
+    ruleId,
+    ruleKind,
+    t_rule_ms: tRuleMs,
+    n_bindings_spo: nBindingsSpo
+  });
 }
 
     // ------------------------------------------------------------------------
@@ -1383,11 +1477,16 @@ for (const n of inferredGraphToLoad) {
 }
 
 
+const tClearStart2 = nowNs();
 await urdf.clear(GID_INFERRED);
+t_clear_inferred_ms = nsToMs(nowNs() - tClearStart2);
+const tLoadStart = nowNs();
 await urdf.load([{
   "@id": GID_INFERRED,
   "@graph": compressGraph(inferredGraphToLoad)
 }]);
+t_load_inferred_ms = nsToMs(nowNs() - tLoadStart);
+
 
     const payload = {
       ok: true,
@@ -1406,6 +1505,23 @@ await urdf.load([{
       request: { method: "AUTO", path: "rules", summary: `applied ${rules.length} rule(s)` },
       response: payload
     });
+
+// Publish per-cycle metrics
+const t_reload_ms = nsToMs(nowNs() - tCycleStart);
+publishMetric({
+  ts: Date.now(),
+  type: "metrics",
+  kind: "cycle",
+  cycleId,
+  triggerReason: triggerReason || "manual",
+  t_reload_ms,
+  t_clear_inferred_ms,
+  t_load_inferred_ms,
+  n_nodes_inferred: inferredGraphToLoad.length,
+  triples_fired: firedTriples,
+  size_inferred: urdf.size(GID_INFERRED),
+size_app: urdf.size(GID_APP)
+});
 
   } catch (e) {
     const payload = { ok: false, ts, gid: GID_INFERRED, error: e?.message || String(e) };
@@ -1563,16 +1679,16 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
   // These helpers produce stable IDs derived from Node-RED ids so that repeated
   // loads replace the same resources rather than creating new ones.
   function appId() {
-    return `urn:nrua:a${process.env.NODE_RED_INSTANCE_ID}`;
+    return "urn:app";
   }
   function flowId(tabId) {
-    return `urn:nrua:f${tabId}`;
+    return `urn:flow:${tabId}`;
   }
   function nodeId(id) {
-    return `urn:nrua:n${id}`;
+    return `urn:node:${id}`;
   }
   function outId(id, gate) {
-    return `urn:nrua:o${id}${gate}`;
+    return `urn:out:${id}:${gate}`;
   }
 
   // ----------------------------------------------------------------------------
@@ -2098,7 +2214,7 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
     const gid = req.query && req.query.gid ? String(req.query.gid) : undefined;
 
     try {
-      const graph = expandCompressedGraphDeep( gid ? urdf.findGraph(gid) : urdf.findGraph() );
+      const graph = gid ? urdf.findGraph(gid) : urdf.findGraph();
 
       if (gid && graph == null) {
         const payload = { ok: false, ts, gid, error: "Graph not found" };

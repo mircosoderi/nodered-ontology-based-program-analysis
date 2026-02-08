@@ -29,19 +29,9 @@ module.exports = function (RED) {
   // Eyeling is treated as an optional dependency: the runtime remains usable
   // without it (e.g., SPARQL-only operation). If Eyeling is missing or does not
   // expose the expected API, N3 execution is skipped and a warning is logged.
-  let eyeling;
-try {
-  eyeling = require("eyeling/eyeling.js");
-} catch (e) {
-  eyeling = null;
-}
 
-if (eyeling && typeof eyeling.reasonStream === "function") {
-  RED.log.info("[uRDF] Eyeling reasonStream loaded");
-} else {
-  RED.log.warn("[uRDF] Eyeling not available (reasonStream missing)");
-}
-
+	// No eyeling in this experimental image. 
+	
   // ----------------------------------------------------------------------------
   // RDF store (uRDF)
   // ----------------------------------------------------------------------------
@@ -96,415 +86,6 @@ if (eyeling && typeof eyeling.reasonStream === "function") {
     return await r.json();
   }
 
-    // ------------------------------------------------------------------------
-    // IRI compress/decompress helpers.
-    // ------------------------------------------------------------------------
-    function expandCompressedInString(s) {
-      if (typeof s !== "string") return s;
-
-      s = s.replace(/<z:(\d+)>/g, (_, n) => {
-        const idx = Number(n);
-        const iri = ZURL[idx];
-        return iri ? `<${iri}>` : `<z:${n}>`;
-      });
-
-      s = s.replace(/\bz:(\d+)\b/g, (_, n) => {
-        const idx = Number(n);
-        const iri = ZURL[idx];
-        return iri ? iri : `z:${n}`;
-      });
-
-      return s;
-    }
-
-    function expandZToken(s) {
-      if (typeof s !== "string") return s;
-      const m = /^z:(\d+)$/.exec(s);
-      if (!m) return s;
-      const idx = Number(m[1]);
-      const iri = ZURL[idx];
-      return iri ? iri : s;
-    }
-
-    function expandCompressedQueryDeep(x) {
-      if (x == null) return x;
-
-      if (typeof x === "string") return expandCompressedInString(x);
-
-      if (typeof x === "object" && x.termType === "NamedNode" && typeof x.value === "string") {
-        const m = /^z:(\d+)$/.exec(x.value);
-        if (m) {
-          const idx = Number(m[1]);
-          const iri = ZURL[idx];
-          if (iri) return { termType: "NamedNode", value: iri };
-        }
-        return { ...x, value: expandCompressedInString(x.value) };
-      }
-
-      if (Array.isArray(x)) return x.map(expandCompressedQueryDeep);
-
-      if (typeof x === "object") {
-        const out = {};
-        for (const k of Object.keys(x)) out[k] = expandCompressedQueryDeep(x[k]);
-        return out;
-      }
-
-      return x;
-    }
-
-function expandCompressedGraphDeep(x) {
-  if (x == null) return x;
-
-  if (typeof x === "string") {
-    // Expand exact z:N tokens (JSON-LD uses these for @type and predicate keys/ids).
-    return expandZToken(x);
-  }
-
-  // Expand RDFJS NamedNode terms when present.
-  if (typeof x === "object" && x.termType === "NamedNode" && typeof x.value === "string") {
-    const expanded = expandZToken(x.value);
-    return expanded === x.value ? x : { termType: "NamedNode", value: expanded };
-  }
-
-  if (Array.isArray(x)) return x.map(expandCompressedGraphDeep);
-
-  if (typeof x === "object") {
-    const out = {};
-    for (const k of Object.keys(x)) {
-      // Expand predicate keys (e.g., "z:35") to full IRIs.
-      const newKey = expandZToken(k);
-      out[newKey] = expandCompressedGraphDeep(x[k]);
-    }
-    return out;
-  }
-
-  return x;
-}
-
-function rewriteQuery(sparql) {
-    const zIndexByIri = new Map();
-    for (let i = 0; i < ZURL.length; i++) zIndexByIri.set(ZURL[i], i);
-	let rewrittenSparql = sparql;
-rewrittenSparql = rewrittenSparql.replace(
-  /<([^>\s]+)>/g,
-  (match, iri) => {
-    const idx = zIndexByIri.get(iri);
-    return idx === undefined ? match : `<z:${idx}>`;
-  }
-);
-rewrittenSparql = rewrittenSparql.replace(
-  /<z:0>(?=(?:[^()]*\([^()]*\))*[^()]*$)/g,
-  "a"
-);
-
-return rewrittenSparql;
-
-}
-
-function flattenJsonLd(input) {
-  // --- Helpers ---------------------------------------------------------------
-
-  const isObject = (x) => x && typeof x === "object" && !Array.isArray(x);
-
-  const isValueObject = (o) => isObject(o) && ("@value" in o);
-
-  const hasOnlyId = (o) => isObject(o) && typeof o["@id"] === "string" && Object.keys(o).every(k => k === "@id");
-
-  const isNodeLike = (o) => {
-    // “node-like” means: not a value object, and has at least @type or a non-@ key
-    if (!isObject(o) || isValueObject(o)) return false;
-    if (typeof o["@id"] === "string") return true;
-    if ("@type" in o) return true;
-    return Object.keys(o).some((k) => !k.startsWith("@"));
-  };
-
-  // Determine if input is your container shape or a plain graph array
-  const containers = Array.isArray(input) ? input : [input];
-  const isContainerDoc =
-    containers.length > 0 &&
-    containers.every(c => isObject(c) && Array.isArray(c["@graph"]));
-
-  const docs = isContainerDoc ? containers : [{ "@graph": containers }];
-
-  // Collect existing ids so we don’t collide when generating _:bX
-  const existingIds = new Set();
-  for (const d of docs) {
-    for (const n of d["@graph"]) {
-      if (isObject(n) && typeof n["@id"] === "string") existingIds.add(n["@id"]);
-    }
-  }
-
-  let bCounter = 0;
-  const newBNodeId = () => {
-    let id;
-    do { id = `_:b${bCounter++}`; } while (existingIds.has(id));
-    existingIds.add(id);
-    return id;
-  };
-
-  // Graph accumulator (preserve order: existing first, newly extracted later)
-  const nodesById = new Map();
-  const order = [];
-
-  const ensureNode = (id) => {
-    if (!nodesById.has(id)) {
-      nodesById.set(id, { "@id": id });
-      order.push(id);
-    }
-    return nodesById.get(id);
-  };
-
-  // Merge: arrays get concatenated; scalars overwritten only if target missing
-  const mergeNode = (id, patch) => {
-    const tgt = ensureNode(id);
-    for (const [k, v] of Object.entries(patch)) {
-      if (k === "@id") continue;
-
-      if (Array.isArray(tgt[k]) && Array.isArray(v)) {
-        tgt[k] = tgt[k].concat(v);
-      } else if (tgt[k] === undefined) {
-        tgt[k] = v;
-      } else {
-        // keep existing by default (conservative)
-      }
-    }
-  };
-
-  // Normalize @type to array form
-  const normalizeType = (t) => {
-    if (typeof t === "string") return [t];
-    if (Array.isArray(t)) return t.filter(x => typeof x === "string");
-    return undefined;
-  };
-
-  // Normalize a predicate object value into your canonical item object
-  const normalizeItem = (item) => {
-    // Keep proper value objects as-is
-    if (isValueObject(item)) return item;
-
-    // If it's a ref object {"@id": "..."} keep as-is
-    if (hasOnlyId(item)) return item;
-
-    // If it's node-like (embedded) => extract node and return {"@id": "..."}
-    if (isNodeLike(item)) {
-      const id = typeof item["@id"] === "string" ? item["@id"] : newBNodeId();
-      const normalizedNode = normalizeNode({ ...item, "@id": id });
-      mergeNode(id, normalizedNode);
-      return { "@id": id };
-    }
-
-    // Scalars become value objects
-    if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
-      return { "@value": item };
-    }
-
-    // null / other: keep as a value object-ish (rare)
-    return { "@value": item };
-  };
-
-  // Normalize predicate value to array-of-items
-  const normalizePredicateValue = (v) => {
-    if (Array.isArray(v)) return v.map(normalizeItem);
-    return [normalizeItem(v)];
-  };
-
-  // Normalize a node object to your convention (does not require it was already extracted)
-  const normalizeNode = (node) => {
-    const out = { "@id": node["@id"] };
-
-    for (const [k, v] of Object.entries(node)) {
-      if (k === "@id") continue;
-
-      if (k === "@type") {
-        const t = normalizeType(v);
-        if (t && t.length) out["@type"] = t;
-        continue;
-      }
-
-      // JSON-LD keywords other than @id/@type: keep (rare in your data)
-      if (k.startsWith("@")) {
-        out[k] = v;
-        continue;
-      }
-
-      // All predicates normalized to array of objects
-      out[k] = normalizePredicateValue(v);
-    }
-
-    return out;
-  };
-
-  // Walk the graph and extract nodes
-  const processTopLevelNode = (n) => {
-    if (!isObject(n) || typeof n["@id"] !== "string") return;
-    const id = n["@id"];
-    const normalized = normalizeNode(n);
-    mergeNode(id, normalized);
-  };
-
-  // --- Execute for each doc --------------------------------------------------
-
-  const outputs = docs.map((doc) => {
-    nodesById.clear();
-    order.length = 0;
-
-    // First pass: seed top-level nodes in original order
-    for (const n of doc["@graph"]) processTopLevelNode(n);
-
-    // Output as a graph array
-    const flattenedGraph = order.map((id) => nodesById.get(id));
-
-    // Return in the same wrapping shape as input
-    if (isContainerDoc) {
-      return { ...doc, "@graph": flattenedGraph };
-    }
-    return flattenedGraph;
-  });
-
-  return isContainerDoc ? outputs : outputs[0];
-}
-
-function compressGraph(input) {
-  if (!Array.isArray(ZURL)) {
-    throw new Error("ZURL must be an array of IRIs (strings).");
-  }
-
-  // Build stable IRI -> index map (first occurrence wins)
-  const iriMap = new Map();
-  for (let i = 0; i < ZURL.length; i++) {
-    const iri = ZURL[i];
-    if (typeof iri === "string" && !iriMap.has(iri)) iriMap.set(iri, i);
-  }
-
-  const toZ = (iri) => {
-    const idx = iriMap.get(iri);
-    return idx === undefined ? iri : `z:${idx}`;
-  };
-
-  const transform = (node) => {
-    if (Array.isArray(node)) return node.map(transform);
-
-    if (node && typeof node === "object") {
-      const out = {};
-      for (const [key, value] of Object.entries(node)) {
-        // Rewrite predicate keys unless JSON-LD keyword
-        const newKey = key.startsWith("@") ? key : toZ(key);
-
-        if (key === "@type") {
-          if (typeof value === "string") out[newKey] = toZ(value);
-          else if (Array.isArray(value)) {
-            out[newKey] = value.map((t) => (typeof t === "string" ? toZ(t) : t));
-          } else {
-            out[newKey] = value;
-          }
-          continue;
-        }
-
-        if (key === "@id" && typeof value === "string") {
-          out[newKey] = toZ(value);
-          continue;
-        }
-
-        // Recurse into objects/arrays; leave primitives untouched
-        if (value && typeof value === "object") {
-          out[newKey] = transform(value);
-        } else {
-          out[newKey] = value;
-        }
-      }
-      return out;
-    }
-
-    // primitives unchanged
-    return node;
-  };
-
-  return transform(input);
-}
-
-  // ----------------------------------------------------------------------------
-  // Startup loader: zurl
-  // ----------------------------------------------------------------------------
-
-  let ZURL = [];
-
-  async function loadZurlJsonOnStartup() {
-    try {
-      const filePath = process.env.URDF_ZURL_PATH || "/opt/urdf/zurl.json";
-      ZURL = JSON.parse(fs.readFileSync(filePath, "utf8"));
-      if (!Array.isArray(ZURL)) {
-        throw new Error("[uRDF] ZURL list must be a JSON array.");
-      }
-      else {
-        RED.log.info("[uRDF] ZURL list loaded from " + filePath);
-      }
-    } catch (err) {
-      RED.log.error(`[uRDF] Failed to load ZURL list: ${err.message}`);
-      ZURL = [];
-    }
-  }
-
-  loadZurlJsonOnStartup();
-
-  function z(iri) { 
-    if(ZURL.includes(iri)) return "z:"+ZURL.indexOf(iri);
-    else return iri;
-  }
-
-  RED.httpAdmin.get(
-    "/urdf/zurl",
-    (req, res) => {
-      res.set("Content-Type", "application/json; charset=utf-8");
-      res.status(200).json(ZURL);
-    }
-  );
-
-async function urdfQueryViaPluginApiContract(sparql) {
-  const ts = now();
-
-  if (!sparql || typeof sparql !== "string" || !sparql.trim()) {
-    return { ok: false, ts, error: 'Body must be JSON: { "sparql": "..." }' };
-  }
-
-  const summary = summarizeSparql(sparql);
-
-  try {
-    const rewritten = (ZMAP && ZMAP.size > 0)
-      ? rewriteSparqlPredicatesAndTypes(sparql, ZMAP)
-      : sparql;
-
-    const result = await urdf.query(rewritten);
-
-    const payload =
-      typeof result === "boolean"
-        ? { ok: true, ts, type: "ASK", result }
-        : { ok: true, ts, type: "SELECT", results: result };
-
-    // Keep your existing publish/log behavior consistent
-    publish({
-      ts,
-      type: "query",
-      request: { method: "POST", path: "/urdf/query", summary },
-      response: payload
-    });
-
-    return payload;
-  } catch (e) {
-    const message = e && e.message ? e.message : String(e);
-    const payload = { ok: false, ts, error: message };
-
-    publish({
-      ts,
-      type: "query",
-      request: { method: "POST", path: "/urdf/query", summary },
-      response: payload
-    });
-
-    return payload;
-  }
-}
-
-
   // ----------------------------------------------------------------------------
   // Startup loader: ontology graph
   // ----------------------------------------------------------------------------
@@ -521,8 +102,8 @@ async function urdfQueryViaPluginApiContract(sparql) {
   async function loadOntologyJsonLdOnStartup() {
     if (!urdf) return;
 
-    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/app-ontology.flattened.compressed.jsonld";
-    const gid = z(process.env.URDF_ONTOLOGY_GID || "urn:nrua:ontology");
+    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/app-ontology.flattened.jsonld";
+    const gid = process.env.URDF_ONTOLOGY_GID || "urn:nrua:ontology";
 
     if (!fs.existsSync(filePath)) {
       RED.log.warn("[uRDF] Ontology file not found: " + filePath);
@@ -577,8 +158,8 @@ async function urdfQueryViaPluginApiContract(sparql) {
 async function loadRulesJsonLdOnStartup() {
   if (!urdf) return;
 
-  const filePath = process.env.URDF_RULES_PATH || "/opt/urdf/rules.flattened.compressed.jsonld";
-  const gid = z(process.env.URDF_RULES_GID || "urn:nrua:rules");
+  const filePath = process.env.URDF_RULES_PATH || "/opt/urdf/rules.flattened.jsonld";
+  const gid = process.env.URDF_RULES_GID || "urn:nrua:rules";
 
   if (!fs.existsSync(filePath)) {
     RED.log.warn("[uRDF] Rules file not found: " + filePath);
@@ -646,7 +227,7 @@ async function loadRulesJsonLdOnStartup() {
   // that waits until the Admin API is ready.
   const NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#";
   const SCHEMA = "https://schema.org/";
-  const GID_ENV = z(process.env.URDF_ENV_GID || "urn:nrua:env");
+  const GID_ENV = process.env.URDF_ENV_GID || "urn:nrua:env";
 
   // ----------------------------------------------------------------------------
   // Small helpers used by the environment mapping
@@ -680,9 +261,9 @@ async function loadRulesJsonLdOnStartup() {
   // The returned document is shaped as:
   //   { "@context": ..., "@id": <GID_ENV>, "@graph": [ ...nodes... ] }
 function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
-  const osId = "n:os";
-  const nodeJsId = "n:njs";
-  const nodeRedId = "n:nr";
+  const osId = "urn:nrua:os";
+  const nodeJsId = "urn:nrua:nodejs";
+  const nodeRedId = "urn:nrua:nodered";
 
   const d = diagnostics || {};
   const s = settings || {};
@@ -696,51 +277,35 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
 
   graph.push({
     "@id": osId,
-    "@type": [z("https://schema.org/OperatingSystem")],
-    ...(notUnset(osInfo.platform)
-      ? { [z("https://schema.org/name")]: [{ "@value": String(osInfo.platform) }] }
-      : {}),
-    ...(notUnset(osInfo.release)
-      ? { [z("https://schema.org/softwareVersion")]: [{ "@value": String(osInfo.release) }] }
-      : {}),
-    ...(notUnset(osInfo.version)
-      ? { [z("https://schema.org/description")]: [{ "@value": String(osInfo.version) }] }
-      : {}),
+    "@type": ["https://schema.org/OperatingSystem"],
+    ...(notUnset(osInfo.platform) ? { "https://schema.org/name": [{ "@value": String(osInfo.platform) }] } : {}),
+    ...(notUnset(osInfo.release) ? { "https://schema.org/softwareVersion": [{ "@value": String(osInfo.release) }] } : {}),
+    ...(notUnset(osInfo.version) ? { "https://schema.org/description": [{ "@value": String(osInfo.version) }] } : {}),
     ...(typeof osInfo.containerised === "boolean"
-      ? {
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised")]:
-            [{ "@value": osInfo.containerised }]
-        }
+      ? { "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [{ "@value": osInfo.containerised }] }
       : {}),
-    ...(typeof osInfo.wsl === "boolean"
-      ? {
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#isWsl")]:
-            [{ "@value": osInfo.wsl }]
-        }
-      : {})
+    ...(typeof osInfo.wsl === "boolean" ? { "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isWsl": [{ "@value": osInfo.wsl }] } : {})
   });
 
   graph.push({
     "@id": nodeJsId,
-    "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs")],
-    ...(notUnset(nodeInfo.version)
-      ? { [z("https://schema.org/version")]: [{ "@value": String(nodeInfo.version) }] }
-      : {}),
-    [z("https://schema.org/operatingSystem")]: [{ "@id": osId }]
+    "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs"],
+    ...(notUnset(nodeInfo.version) ? { "https://schema.org/version": [{ "@value": String(nodeInfo.version) }] } : {}),
+    "https://schema.org/operatingSystem": [{ "@id": osId }]
   });
 
-  graph.push({
+  const nodeRed = {
     "@id": nodeRedId,
-    "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed")],
-    ...(notUnset(rt.version)
-      ? { [z("https://schema.org/version")]: [{ "@value": String(rt.version) }] }
-      : {}),
-    [z("https://schema.org/runtimePlatform")]: [{ "@id": nodeJsId }]
-  });
+    "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"],
+    ...(notUnset(rt.version) ? { "https://schema.org/version": [{ "@value": String(rt.version) }] } : {}),
+    "https://schema.org/runtimePlatform": [{ "@id": nodeJsId }]
+  };
+
+  graph.push(nodeRed);
 
   return [
     {
-      "@context": {},
+      "@context": { },
       "@id": GID_ENV,
       "@graph": graph
     }
@@ -833,8 +398,8 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
   // Note: the actual orchestration that executes rules and replaces the inferred
   // graph appears later; this chunk focuses on the utilities and rule decoding.
 
-  const GID_RULES = z(process.env.URDF_RULES_GID || "urn:nrua:rules");
-  const GID_INFERRED = z(process.env.URDF_INFERRED_GID || "urn:graph:inferred");
+  const GID_RULES = process.env.URDF_RULES_GID || "urn:nrua:rules";
+  const GID_INFERRED = process.env.URDF_INFERRED_GID || "urn:graph:inferred";
 
   // ----------------------------------------------------------------------------
   // Rule encoding vocabulary (schema.org + NRUA)
@@ -843,12 +408,12 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
   // Their executable program is stored in schema:text, and metadata indicates
   // the "language" and "format" of that program. Some rules may also contain
   // parts (schema:hasPart) to store auxiliary code such as a projection query.
-  const SCHEMA_TEXT = z("https://schema.org/text");
+  const SCHEMA_TEXT = "https://schema.org/text";
   const NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
-  const SCHEMA_PROGRAMMING_LANGUAGE = z("https://schema.org/programmingLanguage");
-  const SCHEMA_ENCODING_FORMAT = z("https://schema.org/encodingFormat");
-  const SCHEMA_HASPART = z("https://schema.org/hasPart");
-  const SCHEMA_SOFTWARE_SOURCE_CODE = z("https://schema.org/SoftwareSourceCode");
+  const SCHEMA_PROGRAMMING_LANGUAGE = "https://schema.org/programmingLanguage";
+  const SCHEMA_ENCODING_FORMAT = "https://schema.org/encodingFormat";
+  const SCHEMA_HASPART = "https://schema.org/hasPart";
+  const SCHEMA_SOFTWARE_SOURCE_CODE = "https://schema.org/SoftwareSourceCode";
 
   // ----------------------------------------------------------------------------
   // Eyeling output normalization
@@ -857,42 +422,8 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
   // literals may arrive as quoted N3-like strings (e.g. "\"Flow 1\"").
   // These helpers normalize those shapes into JSON-LD objects suitable for
   // loading into uRDF.
-function stripN3Quotes(v) {
-  if (typeof v !== "string") return String(v ?? "");
-
-  const s = v.trim();
-
-  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
-    const inner = s.slice(1, -1);
-    return inner
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, "\\")
-      .replace(/\\n/g, "\n")
-      .replace(/\\r/g, "\r")
-      .replace(/\\t/g, "\t");
-  }
-
-  return s;
-}
-
-function looksLikeIri(v) {
-  return typeof v === "string" && (v.startsWith("urn:") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("_:"));
-}
-
-function eyelingDfToSpo(df) {
-  const f = df && df.fact;
-  const s = f && f.s && f.s.value;
-  const p = f && f.p && f.p.value;
-  const o = f && f.o && f.o.value;
-
-  if (!s || !p || o == null) return null;
-  return { s, p, o };
-}
-
-function eyelingObjectToJsonLd(oVal) {
-  if (looksLikeIri(oVal)) return { "@id": oVal };
-  return { "@value": stripN3Quotes(oVal) };
-}
+  //
+// No eyeling in this experimental image.
 
   // ----------------------------------------------------------------------------
   // RDFJS term -> JSON-LD conversion
@@ -920,7 +451,7 @@ function rdfjsTermToJsonLd(term) {
 
     if (term.language) {
       out["@language"] = term.language;
-    } else if (term.datatype && term.datatype.value && term.datatype.value !== z("http://www.w3.org/2001/XMLSchema#string")) {
+    } else if (term.datatype && term.datatype.value && term.datatype.value !== "http://www.w3.org/2001/XMLSchema#string") {
       out["@type"] = term.datatype.value;
     }
 
@@ -956,76 +487,9 @@ function addToBySubject(bySubject, sId, pIri, oJsonLd) {
   //   3) concatenate facts + the N3 program text and pass it to eyeling
   //
   // These functions normalize common binding shapes into N-Triples safely.
-function escapeNTriplesString(s) {
-  return String(s)
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")
-    .replace(/\t/g, "\\t");
-}
-
-function termToNTriples(term) {
-  if (term == null) throw new Error("Null term");
-
-  if (typeof term === "object") {
-    const t = (term.type || "").toLowerCase();
-    const v = term.value;
-
-    if (t === "uri") {
-      if (!v) throw new Error("URI term missing value");
-      return `<${v}>`;
-    }
-
-    if (t === "bnode" || t === "blanknode") {
-      if (!v) throw new Error("Blank node term missing value");
-      return v.startsWith("_:") ? v : `_:${v}`;
-    }
-
-    if (t === "literal") {
-      const lex = escapeNTriplesString(v ?? "");
-      if (term["xml:lang"] || term.lang) {
-        const lang = term["xml:lang"] || term.lang;
-        return `"${lex}"@${lang}`;
-      }
-      if (term.datatype) {
-        return `"${lex}"^^<${term.datatype}>`;
-      }
-      return `"${lex}"`;
-    }
-
-    if (typeof term["@id"] === "string") {
-      const id = term["@id"];
-      if (id.startsWith("_:")) return id;
-      return `<${id}>`;
-    }
-  }
-
-  if (typeof term === "string") {
-    if (term.startsWith("_:")) return term;
-    return `<${term}>`;
-  }
-
-  throw new Error("Unsupported term shape: " + JSON.stringify(term));
-}
-
-function bindingToNTripleLine(b) {
-  const s = termToNTriples(b.s);
-  const p = termToNTriples(b.p);
-  const o = termToNTriples(b.o);
-  return `${s} ${p} ${o} .`;
-}
-
-function normalizeQueryResults(qres) {
-  if (Array.isArray(qres)) return qres;
-  if (qres && Array.isArray(qres.results)) return qres.results;
-  return [];
-}
-
-function hasSpo(binding) {
-  if (!binding || typeof binding !== "object") return false;
-  return binding.s != null && binding.p != null && binding.o != null;
-}
+  //
+// No eyeling in this experimental image.
+//  
 
   // ----------------------------------------------------------------------------
   // Rule decoding helpers
@@ -1037,49 +501,8 @@ function hasSpo(binding) {
   // For N3 rules, an additional SPARQL "projection" query is expected in a part
   // resource referenced by schema:hasPart. That query is executed to generate
   // the facts passed as input to the N3 program.
-function normalizeLang(x) {
-  if (!x) return "";
-  return String(x).trim().toLowerCase();
-}
 
-function isN3Rule(rule) {
-  const lang = normalizeLang(getPropFirstValue(rule, expandZToken(SCHEMA_PROGRAMMING_LANGUAGE)));
-  const fmt  = normalizeLang(getPropFirstValue(rule, expandZToken(SCHEMA_ENCODING_FORMAT)));
-
-  return (
-    lang === "n3" ||
-    lang === "notation3" ||
-    lang.includes("n3") ||
-    fmt.includes("n3") ||
-    fmt.includes("notation3")
-  );
-}
-
-function extractN3ProjectionSparql(rule, nodesById) {
-  const parts = rule && rule[expandZToken(SCHEMA_HASPART)];
-  if (!Array.isArray(parts) || parts.length === 0) return undefined;
-
-  for (const partRef of parts) {
-    if (!partRef || typeof partRef !== "object") continue;
-
-    let part = partRef;
-    const pid = partRef["@id"];
-    if (pid && nodesById && nodesById.has(pid)) {
-      part = nodesById.get(pid);
-    }
-
-    const pl = normalizeLang(getPropFirstValue(part, expandZToken(SCHEMA_PROGRAMMING_LANGUAGE)));
-    const types = part["@type"];
-    const t = Array.isArray(types) ? types : (types ? [types] : []);
-    const hasSoftwareSourceCodeType = t.includes(expandZToken(SCHEMA_SOFTWARE_SOURCE_CODE));
-
-    if (hasSoftwareSourceCodeType || pl === "sparql") {
-      const q = getPropFirstValue(part, expandZToken(SCHEMA_TEXT));
-      if (typeof q === "string" && q.trim()) return q;
-    }
-  }
-  return undefined;
-}
+// No eyeling in this experimental image. 
 
 function getPropFirstValue(node, iri) {
   const arr = node && node[iri];
@@ -1189,8 +612,8 @@ async function recomputeInferencesFromRules(triggerReason) {
     // ------------------------------------------------------------------------
     // Step 1: read the rules graph
     // ------------------------------------------------------------------------
-     const compressedRulesGraph = urdf.findGraph(GID_RULES);
-    if (!Array.isArray(compressedRulesGraph) || compressedRulesGraph.length === 0) {
+    const rulesGraph = urdf.findGraph(GID_RULES);
+    if (!Array.isArray(rulesGraph) || rulesGraph.length === 0) {
       await urdf.clear(GID_INFERRED);
       publish({
         ts,
@@ -1202,8 +625,7 @@ async function recomputeInferencesFromRules(triggerReason) {
     }
 
     // Build a lookup of nodes by @id to allow dereferencing schema:hasPart refs.
-	  const rulesGraph = expandCompressedGraphDeep(compressedRulesGraph);
-	  const nodesById = new Map();
+    const nodesById = new Map();
 for (const n of rulesGraph) {
   if (n && typeof n === "object" && typeof n["@id"] === "string") {
     nodesById.set(n["@id"], n);
@@ -1224,129 +646,22 @@ for (const n of rulesGraph) {
 
     let firedTriples = 0;
 for (const rule of rules) {
-  const programText = getPropFirstValue(rule, expandZToken(SCHEMA_TEXT));
+  const programText = getPropFirstValue(rule, SCHEMA_TEXT);
   if (!programText || typeof programText !== "string" || !programText.trim()) continue;
 
   // ----------------------------------------------------------------------
   // N3 rule path (Eyeling)
   // ----------------------------------------------------------------------
-if (isN3Rule(rule)) {
-  const projection = extractN3ProjectionSparql(rule, nodesById);
-  if (!projection) {
-    RED.log.warn("[uRDF] N3 rule found but missing schema:hasPart projection SPARQL query: " + (rule["@id"] || "(no @id)"));
-    continue;
-  }
 
-  // Execute the projection query to produce bindings of {s,p,o} facts.
-  let projRes;
-  try {
-    // projRes = await urdf.query(projection);
-    // projRes = await urdfQueryViaPluginApiContract(projection);
-    const projResCompressed = await urdf.query(rewriteQuery(projection));
-    projRes = expandCompressedQueryDeep(projResCompressed);
-  } catch (e) {
-    RED.log.warn("[uRDF] N3 projection query failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
-    continue;
-  }
-
-  const bindings = normalizeQueryResults(projRes);
-  const ok = bindings.filter(hasSpo);
-  const bad = bindings.length - ok.length;
-
-  // Serialize projection bindings into N-Triples facts to feed the reasoner.
-  let factsLines = [];
-for (const b of ok) {
-  try {
-    factsLines.push(bindingToNTripleLine(b));
-  } catch (e) {
-    RED.log.warn("[uRDF] Failed to serialize binding to N-Triples for rule " + (rule["@id"] || "(no @id)") +
-      ": " + (e && e.message ? e.message : e) +
-      " binding=" + JSON.stringify(b)
-    );
-  }
-}
-
-const factsText = factsLines.join("\n");
-
-const previewCount = Math.min(10, factsLines.length);
-
-  // Prepare the N3 input as:
-  //   <facts as N-Triples>
-  //   <blank line>
-  //   <N3 program text>
-  const n3Program = programText;
-  const n3Input = factsText + "\n\n" + n3Program;
-
-
-  // If Eyeling is unavailable at runtime, N3 execution is skipped safely.
-  if (!eyeling || typeof eyeling.reasonStream !== "function") {
-    RED.log.warn("[uRDF] Eyeling reasonStream not available at runtime, skipping N3 execution for " + (rule["@id"] || "(no @id)"));
-    continue;
-  }
-
-  let derivedCount = 0;
-  const maxPreview = 10;
-
-  const derivedDF = [];
-  const derivedPreview = [];
-
-  let loggedFirstDf = false;
-
-  // Callback invoked by Eyeling when new facts are derived.
-  function onDerived(ev) {
-    derivedCount++;
-
-    if (ev && ev.df) {
-      derivedDF.push(ev.df);
-
-      if (!loggedFirstDf) {
-        loggedFirstDf = true;
-      }
-    }
-
-    if (derivedPreview.length < 2 && ev && typeof ev.triple === "string") {
-      derivedPreview.push(ev.triple);
-    }
-  }
-
-  try {
-    const out = eyeling.reasonStream(n3Input, { onDerived });
-
-for (const df of derivedDF) {
-  const spo = eyelingDfToSpo(df);
-  if (!spo) {
-    RED.log.warn("[uRDF] Derived df missing fact.s/p/o: " + JSON.stringify(df));
-    continue;
-  }
-
-  const sId = spo.s;
-  const pIri = spo.p;
-  const oJson = eyelingObjectToJsonLd(spo.o);
-
-	const INTERNAL_PRED_PREFIX = "urn:nrua:pv:";
-if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
-  continue;
-}
-
-  addToBySubject(bySubject, sId, pIri, oJson);
-}
-
-  } catch (e) {
-    RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
-  }
-
-  // N3 path ends here; results are already merged into bySubject.
-  continue;
-
-}
-
+// No eyeling in this experimental image. 
+	
   // ----------------------------------------------------------------------
   // SPARQL rule path (direct)
   // ----------------------------------------------------------------------
   const q = programText;
-  const qresCompressed = await urdf.query(rewriteQuery(q));
-  const qres = expandCompressedQueryDeep(qresCompressed);
+  const qres = await urdf.query(q);
   const bindings = Array.isArray(qres) ? qres : (qres && Array.isArray(qres.results) ? qres.results : []);
+
   for (const b of bindings) {
         const sTerm = b.s ?? b["?s"] ?? b.subject ?? b.S;
         const pTerm = b.p ?? b["?p"] ?? b.predicate ?? b.P;
@@ -1382,11 +697,10 @@ for (const n of inferredGraphToLoad) {
   }
 }
 
-
 await urdf.clear(GID_INFERRED);
 await urdf.load([{
   "@id": GID_INFERRED,
-  "@graph": compressGraph(inferredGraphToLoad)
+  "@graph": inferredGraphToLoad
 }]);
 
     const payload = {
@@ -1436,7 +750,7 @@ function asArray(x) {
 
 function isRuleNode(n) {
   const t = asArray(n && n["@type"]);
-  return t.includes(NRUA_RULE) || t.includes(z(NRUA_RULE));
+  return t.includes(NRUA_RULE) || t.includes("https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule");
 }
 
 function getGraphSafe(gid) {
@@ -1448,7 +762,7 @@ function getGraphSafe(gid) {
   // This avoids partial updates and keeps the stored graph consistent.
 async function replaceNamedGraph(gid, graphArray) {
   await urdf.clear(gid);
-  await urdf.load([{ "@id": gid, "@graph": graphArray }]);
+  await urdf.load({ "@id": gid, "@graph": graphArray });
 }
 
   // ----------------------------------------------------------------------------
@@ -1476,7 +790,7 @@ RED.httpAdmin.post("/urdf/rules/create", jsonParser, async (req, res) => {
     }
 
     graph.push(rule);
-    await replaceNamedGraph(GID_RULES, flattenJsonLd(compressGraph(graph)));
+    await replaceNamedGraph(GID_RULES, graph);
 
     return res.status(200).json({ ok: true, ts, gid: GID_RULES, created: rule["@id"], count: graph.length });
   } catch (e) {
@@ -1507,7 +821,7 @@ RED.httpAdmin.post("/urdf/rules/update", jsonParser, async (req, res) => {
     if (idx < 0) return res.status(404).json({ ok: false, ts, error: "Rule not found", id: rule["@id"] });
 
     graph[idx] = rule;
-    await replaceNamedGraph(GID_RULES, flattenJsonLd(compressGraph(graph)));
+    await replaceNamedGraph(GID_RULES, graph);
 
     return res.status(200).json({ ok: true, ts, gid: GID_RULES, updated: rule["@id"], count: graph.length });
   } catch (e) {
@@ -1534,7 +848,7 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
     const next = graph.filter(n => !(n && n["@id"] === id));
     if (next.length === graph.length) return res.status(404).json({ ok: false, ts, error: "Rule not found", id });
 
-    await replaceNamedGraph(GID_RULES, compressGraph(next));
+    await replaceNamedGraph(GID_RULES, next);
 
     return res.status(200).json({ ok: true, ts, gid: GID_RULES, deleted: id, count: next.length });
   } catch (e) {
@@ -1555,7 +869,7 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
   //
   // The resulting graph is stored in the named graph GID_APP and is refreshed
   // whenever flows are deployed/updated.
-  const GID_APP = z(process.env.URDF_APP_GID || "urn:nrua:app");
+  const GID_APP = process.env.URDF_APP_GID || "urn:nrua:app";
 
   // ----------------------------------------------------------------------------
   // Stable identifiers (URNs) for app/flow/node entities
@@ -1563,16 +877,16 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
   // These helpers produce stable IDs derived from Node-RED ids so that repeated
   // loads replace the same resources rather than creating new ones.
   function appId() {
-    return `urn:nrua:a${process.env.NODE_RED_INSTANCE_ID}`;
+    return "urn:nrua:app";
   }
   function flowId(tabId) {
-    return `urn:nrua:f${tabId}`;
+    return `urn:nrua:flow:${tabId}`;
   }
   function nodeId(id) {
-    return `urn:nrua:n${id}`;
+    return `urn:nrua:node:${id}`;
   }
   function outId(id, gate) {
-    return `urn:nrua:o${id}${gate}`;
+    return `urn:nrua:out:${id}:${gate}`;
   }
 
   // ----------------------------------------------------------------------------
@@ -1627,8 +941,8 @@ function encodeStructuredValue(graph, value, idBase) {
     const listId = makeId(idBase, "list");
     const list = {
       "@id": listId,
-      "@type": [z("https://schema.org/ItemList")],
-      [z("https://schema.org/itemListElement")]: []
+      "@type": ["https://schema.org/ItemList"],
+      "https://schema.org/itemListElement": []
     };
 
     for (let idx = 0; idx < value.length; idx++) {
@@ -1637,19 +951,19 @@ function encodeStructuredValue(graph, value, idBase) {
       const liId = makeId(listId, "li", String(idx));
       const li = {
         "@id": liId,
-        "@type": [z("https://schema.org/ListItem")],
-        [z("https://schema.org/position")]: [{ "@value": idx }]
+        "@type": ["https://schema.org/ListItem"],
+        "https://schema.org/position": [{ "@value": idx }]
       };
 
       if (isPrimitive(item)) {
-        li[z("https://schema.org/item")] = [{ "@value": item }];
+        li["https://schema.org/item"] = [{ "@value": item }];
       } else {
         const itemId = encodeStructuredValue(graph, item, makeId(liId, "item"));
-        li[z("https://schema.org/item")] = [{ "@id": itemId }];
+        li["https://schema.org/item"] = [{ "@id": itemId }];
       }
 
       graph.push(li);
-      list[z("https://schema.org/itemListElement")].push({ "@id": liId });
+      list["https://schema.org/itemListElement"].push({ "@id": liId });
     }
 
     graph.push(list);
@@ -1660,8 +974,8 @@ function encodeStructuredValue(graph, value, idBase) {
   const objId = makeId(idBase, "obj");
   const objNode = {
     "@id": objId,
-    "@type": [z("https://schema.org/StructuredValue")],
-    [z("https://schema.org/additionalProperty")]: []
+    "@type": ["https://schema.org/StructuredValue"],
+    "https://schema.org/additionalProperty": []
   };
 
   graph.push(objNode);
@@ -1673,19 +987,19 @@ function encodeStructuredValue(graph, value, idBase) {
     const pvId = makeId(objId, "pv", k);
     const pv = {
       "@id": pvId,
-      "@type": [z("https://schema.org/PropertyValue")],
-      [z("https://schema.org/name")]: [{ "@value": String(k) }]
+      "@type": ["https://schema.org/PropertyValue"],
+      "https://schema.org/name": [{ "@value": String(k) }]
     };
 
     if (isPrimitive(v)) {
-      pv[z("https://schema.org/value")] = [{ "@value": v }];
+      pv["https://schema.org/value"] = [{ "@value": v }];
     } else {
       const nestedId = encodeStructuredValue(graph, v, makeId(objId, "v", k));
-      pv[z("https://schema.org/valueReference")] = [{ "@id": nestedId }];
+      pv["https://schema.org/valueReference"] = [{ "@id": nestedId }];
     }
 
     graph.push(pv);
-    objNode[z("https://schema.org/additionalProperty")].push({ "@id": pvId });
+    objNode["https://schema.org/additionalProperty"].push({ "@id": pvId });
   }
 
   return objId;
@@ -1703,28 +1017,28 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
   const pv = {
     "@id": pvId,
-    "@type": [z("https://schema.org/PropertyValue")],
-    [z("https://schema.org/name")]: [{ "@value": String(key) }]
+    "@type": ["https://schema.org/PropertyValue"],
+    "https://schema.org/name": [{ "@value": String(key) }]
   };
 
   if (isPrimitive(value)) {
     // Store primitives as JSON-LD value objects (still wrapped in an array)
-    pv[z("https://schema.org/value")] = [{ "@value": value }];
+    pv["https://schema.org/value"] = [{ "@value": value }];
   } else {
     const structuredId = encodeStructuredValue(graph, value, makeId(baseId, "v", key));
-    pv[z("https://schema.org/valueReference")] = [{ "@id": structuredId }];
+    pv["https://schema.org/valueReference"] = [{ "@id": structuredId }];
   }
 
   graph.push(pv);
 
   const subj = graph.find((x) => x && x["@id"] === subjectId);
   if (subj) {
-    subj[z("https://schema.org/additionalProperty")] = subj[z("https://schema.org/additionalProperty")] || [];
+    subj["https://schema.org/additionalProperty"] = subj["https://schema.org/additionalProperty"] || [];
     // Ensure it's an array (paranoia for mixed producers)
-    if (!Array.isArray(subj[z("https://schema.org/additionalProperty")])) {
-      subj[z("https://schema.org/additionalProperty")] = [subj[z("https://schema.org/additionalProperty")]];
+    if (!Array.isArray(subj["https://schema.org/additionalProperty"])) {
+      subj["https://schema.org/additionalProperty"] = [subj["https://schema.org/additionalProperty"]];
     }
-    subj[z("https://schema.org/additionalProperty")].push({ "@id": pvId });
+    subj["https://schema.org/additionalProperty"].push({ "@id": pvId });
   }
 }
 
@@ -1749,7 +1063,7 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
   // Root application node
   graph.push({
     "@id": appId(),
-    "@type": [z("https://schema.org/Application")]
+    "@type": ["https://schema.org/Application"]
   });
 
   const flowKeywords = new Map();
@@ -1773,10 +1087,10 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
     graph.push({
       "@id": fid,
-      "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow")],
-      [z("https://schema.org/identifier")]: [{ "@value": String(t.id) }],
-      ...(t.label ? { [z("https://schema.org/name")]: [{ "@value": String(t.label) }] } : {}),
-      [z("https://schema.org/isPartOf")]: [{ "@id": appId() }]
+      "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow"],
+      "https://schema.org/identifier": [{ "@value": String(t.id) }],
+      ...(t.label ? { "https://schema.org/name": [{ "@value": String(t.label) }] } : {}),
+      "https://schema.org/isPartOf": [{ "@id": appId() }]
     });
 
     flowKeywords.set(fid, flowKeywords.get(fid) || new Set());
@@ -1795,11 +1109,11 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
     const node = {
       "@id": thisNodeId,
-      "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node")],
-      [z("https://schema.org/identifier")]: [{ "@value": String(n.id) }],
-      [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#type")]: [{ "@value": String(n.type) }],
-      ...(n.name ? { [z("https://schema.org/name")]: [{ "@value": String(n.name) }] } : {}),
-      [z("https://schema.org/isPartOf")]: [{ "@id": partOf }]
+      "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node"],
+      "https://schema.org/identifier": [{ "@value": String(n.id) }],
+      "https://w3id.org/nodered-static-program-analysis/user-application-ontology#type": [{ "@value": String(n.type) }],
+      ...(n.name ? { "https://schema.org/name": [{ "@value": String(n.name) }] } : {}),
+      "https://schema.org/isPartOf": [{ "@id": partOf }]
     };
 
     graph.push(node);
@@ -1822,13 +1136,13 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
         graph.push({
           "@id": outIri,
-          "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput")],
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate")]: [{ "@value": gate }],
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode")]: targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
+          "@type": ["https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput"],
+          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate": [{ "@value": gate }],
+          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode": targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
         });
 
-        node[z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput")] = node[z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput")] || [];
-        node[z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput")].push({ "@id": outIri });
+        node["https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput"] = node["https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput"] || [];
+        node["https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput"].push({ "@id": outIri });
       }
     }
   }
@@ -1839,7 +1153,7 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
     const flowNode = graph.find((x) => x && x["@id"] === flowIri);
     if (!flowNode) continue;
 
-    flowNode[z("https://schema.org/keywords")] = [
+    flowNode["https://schema.org/keywords"] = [
       {
         "@value": Array.from(set)
           .map((kw) => String(kw).trim())
@@ -2098,7 +1412,7 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
     const gid = req.query && req.query.gid ? String(req.query.gid) : undefined;
 
     try {
-      const graph = expandCompressedGraphDeep( gid ? urdf.findGraph(gid) : urdf.findGraph() );
+      const graph = gid ? urdf.findGraph(gid) : urdf.findGraph();
 
       if (gid && graph == null) {
         const payload = { ok: false, ts, gid, error: "Graph not found" };
@@ -2160,7 +1474,7 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
 
     res.setHeader("Content-Type", "application/ld+json; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.status(200).send(JSON.stringify(expandCompressedGraphDeep(doc), null, 2));
+    res.status(200).send(JSON.stringify(doc, null, 2));
 
     publish({
       ts,
@@ -2302,8 +1616,7 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
     }
 
     try {
-      // await urdf.load(body);
-      await urdf.load(flattenJsonLd(compressGraph(body)));
+      await urdf.load(body);
 
       const payload = { ok: true, ts, size: urdf.size() };
 
@@ -2392,90 +1705,62 @@ RED.httpAdmin.post("/urdf/loadFile", jsonParser, async function (req, res) {
   }
 });
 
-// ----------------------------------------------------------------------------
-// POST /urdf/query
-// ----------------------------------------------------------------------------
-// Body: { "sparql": "..." }
-// Executes a SPARQL query against the store.
-// Response:
-// - ASK queries -> { ok:true, ts, type:"ASK", result:boolean }
-// - SELECT queries -> { ok:true, ts, type:"SELECT", results:[...] }
-RED.httpAdmin.post("/urdf/query", jsonParser, async function (req, res) {
-  const ts = now();
-  if (!requireUrdf(ts, "query", { method: "POST", path: "/urdf/query" }, res)) return;
+  // ----------------------------------------------------------------------------
+  // POST /urdf/query
+  // ----------------------------------------------------------------------------
+  // Body: { "sparql": "..." }
+  // Executes a SPARQL query against the store.
+  // Response:
+  // - ASK queries -> { type: "ASK", result: boolean }
+  // - SELECT queries -> { type: "SELECT", results: ... }
+  RED.httpAdmin.post("/urdf/query", jsonParser, async function (req, res) {
+    const ts = now();
+    if (!requireUrdf(ts, "query", { method: "POST", path: "/urdf/query" }, res)) return;
 
-  const sparql = req.body && req.body.sparql;
+    const sparql = req.body && req.body.sparql;
 
-  if (!sparql || typeof sparql !== "string" || !sparql.trim()) {
-    const payload = { ok: false, ts, error: 'Body must be JSON: { "sparql": "..." }' };
-    publish({
-      ts,
-      type: "query",
-      request: { method: "POST", path: "/urdf/query", summary: "missing sparql" },
-      response: payload
-    });
-    return res.status(400).json(payload);
-  }
-
-  const summary = summarizeSparql(sparql);
-
-  try {
-    // ------------------------------------------------------------------------
-    // Contract enforcement:
-    // PREFIX and BASE declarations are forbidden in input queries.
-    // Reject if they appear anywhere as standalone SPARQL keywords.
-    // ------------------------------------------------------------------------
-    // Note: this is intentionally simple and fast; it may reject edge cases
-    // where "prefix" or "base" appear in comments/strings. If that matters,
-    // a tokenizer would be required.
-    if (/(^|\s)(prefix|base)\s+/i.test(sparql)) {
-      const payload = {
-        ok: false,
+    if (!sparql || typeof sparql !== "string" || !sparql.trim()) {
+      const payload = { ok: false, ts, error: 'Body must be JSON: { "sparql": "..." }' };
+      publish({
         ts,
-        error: "Rejected: PREFIX/BASE declarations are not allowed by contract for /urdf/query."
-      };
+        type: "query",
+        request: { method: "POST", path: "/urdf/query", summary: "missing sparql" },
+        response: payload
+      });
+      return res.status(400).json(payload);
+    }
+
+    const summary = summarizeSparql(sparql);
+
+    try {
+      const result = await urdf.query(sparql);
+
+      const payload =
+        typeof result === "boolean" ? { ok: true, ts, type: "ASK", result } : { ok: true, ts, type: "SELECT", results: result };
+
       publish({
         ts,
         type: "query",
         request: { method: "POST", path: "/urdf/query", summary },
         response: payload
       });
-      return res.status(400).json(payload);
+
+      res.status(200).json(payload);
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      const status = /not implemented/i.test(message) ? 501 : 500;
+      const payload = { ok: false, ts, error: message };
+
+      publish({
+        ts,
+        type: "query",
+        request: { method: "POST", path: "/urdf/query", summary },
+        response: payload
+      });
+
+      res.status(status).json(payload);
     }
-
-let rewrittenSparql = rewriteQuery(sparql);
-
-    // Execute the rewritten query against the store.
-    const result = await urdf.query(rewrittenSparql);
-
-    const payload =
-      typeof result === "boolean"
-        ? { ok: true, ts, type: "ASK", result }
-        : { ok: true, ts, type: "SELECT", results: expandCompressedQueryDeep(result) };
-
-    publish({
-      ts,
-      type: "query",
-      request: { method: "POST", path: "/urdf/query", summary },
-      response: payload
-    });
-
-    res.status(200).json(payload);
-  } catch (e) {
-    const message = e && e.message ? e.message : String(e);
-    const status = /not implemented/i.test(message) ? 501 : 500;
-    const payload = { ok: false, ts, error: message };
-
-    publish({
-      ts,
-      type: "query",
-      request: { method: "POST", path: "/urdf/query", summary },
-      response: payload
-    });
-
-    res.status(status).json(payload);
-  }
-});
+  });
 
   // ----------------------------------------------------------------------------
   // Startup log summary

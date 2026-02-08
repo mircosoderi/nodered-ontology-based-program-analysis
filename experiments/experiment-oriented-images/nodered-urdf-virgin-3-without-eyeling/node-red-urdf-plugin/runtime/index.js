@@ -20,7 +20,7 @@ module.exports = function (RED) {
   const TOPIC = "urdf/events";
 
   const express = require("express");
-  const jsonParser = express.json();
+  const jsonParser = express.json({limit:"1m"});
   const fs = require("fs");
 
   // ----------------------------------------------------------------------------
@@ -29,19 +29,9 @@ module.exports = function (RED) {
   // Eyeling is treated as an optional dependency: the runtime remains usable
   // without it (e.g., SPARQL-only operation). If Eyeling is missing or does not
   // expose the expected API, N3 execution is skipped and a warning is logged.
-  let eyeling;
-try {
-  eyeling = require("eyeling/eyeling.js");
-} catch (e) {
-  eyeling = null;
-}
-
-if (eyeling && typeof eyeling.reasonStream === "function") {
-  RED.log.info("[uRDF] Eyeling reasonStream loaded");
-} else {
-  RED.log.warn("[uRDF] Eyeling not available (reasonStream missing)");
-}
-
+  // 
+  // No eyeling in this experimental image.
+	
   // ----------------------------------------------------------------------------
   // RDF store (uRDF)
   // ----------------------------------------------------------------------------
@@ -857,42 +847,8 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
   // literals may arrive as quoted N3-like strings (e.g. "\"Flow 1\"").
   // These helpers normalize those shapes into JSON-LD objects suitable for
   // loading into uRDF.
-function stripN3Quotes(v) {
-  if (typeof v !== "string") return String(v ?? "");
-
-  const s = v.trim();
-
-  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
-    const inner = s.slice(1, -1);
-    return inner
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, "\\")
-      .replace(/\\n/g, "\n")
-      .replace(/\\r/g, "\r")
-      .replace(/\\t/g, "\t");
-  }
-
-  return s;
-}
-
-function looksLikeIri(v) {
-  return typeof v === "string" && (v.startsWith("urn:") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("_:"));
-}
-
-function eyelingDfToSpo(df) {
-  const f = df && df.fact;
-  const s = f && f.s && f.s.value;
-  const p = f && f.p && f.p.value;
-  const o = f && f.o && f.o.value;
-
-  if (!s || !p || o == null) return null;
-  return { s, p, o };
-}
-
-function eyelingObjectToJsonLd(oVal) {
-  if (looksLikeIri(oVal)) return { "@id": oVal };
-  return { "@value": stripN3Quotes(oVal) };
-}
+  //
+  // No eyeling in this experimental image.
 
   // ----------------------------------------------------------------------------
   // RDFJS term -> JSON-LD conversion
@@ -956,76 +912,8 @@ function addToBySubject(bySubject, sId, pIri, oJsonLd) {
   //   3) concatenate facts + the N3 program text and pass it to eyeling
   //
   // These functions normalize common binding shapes into N-Triples safely.
-function escapeNTriplesString(s) {
-  return String(s)
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")
-    .replace(/\t/g, "\\t");
-}
-
-function termToNTriples(term) {
-  if (term == null) throw new Error("Null term");
-
-  if (typeof term === "object") {
-    const t = (term.type || "").toLowerCase();
-    const v = term.value;
-
-    if (t === "uri") {
-      if (!v) throw new Error("URI term missing value");
-      return `<${v}>`;
-    }
-
-    if (t === "bnode" || t === "blanknode") {
-      if (!v) throw new Error("Blank node term missing value");
-      return v.startsWith("_:") ? v : `_:${v}`;
-    }
-
-    if (t === "literal") {
-      const lex = escapeNTriplesString(v ?? "");
-      if (term["xml:lang"] || term.lang) {
-        const lang = term["xml:lang"] || term.lang;
-        return `"${lex}"@${lang}`;
-      }
-      if (term.datatype) {
-        return `"${lex}"^^<${term.datatype}>`;
-      }
-      return `"${lex}"`;
-    }
-
-    if (typeof term["@id"] === "string") {
-      const id = term["@id"];
-      if (id.startsWith("_:")) return id;
-      return `<${id}>`;
-    }
-  }
-
-  if (typeof term === "string") {
-    if (term.startsWith("_:")) return term;
-    return `<${term}>`;
-  }
-
-  throw new Error("Unsupported term shape: " + JSON.stringify(term));
-}
-
-function bindingToNTripleLine(b) {
-  const s = termToNTriples(b.s);
-  const p = termToNTriples(b.p);
-  const o = termToNTriples(b.o);
-  return `${s} ${p} ${o} .`;
-}
-
-function normalizeQueryResults(qres) {
-  if (Array.isArray(qres)) return qres;
-  if (qres && Array.isArray(qres.results)) return qres.results;
-  return [];
-}
-
-function hasSpo(binding) {
-  if (!binding || typeof binding !== "object") return false;
-  return binding.s != null && binding.p != null && binding.o != null;
-}
+  //
+  // No eyeling in this experimental image.
 
   // ----------------------------------------------------------------------------
   // Rule decoding helpers
@@ -1037,49 +925,8 @@ function hasSpo(binding) {
   // For N3 rules, an additional SPARQL "projection" query is expected in a part
   // resource referenced by schema:hasPart. That query is executed to generate
   // the facts passed as input to the N3 program.
-function normalizeLang(x) {
-  if (!x) return "";
-  return String(x).trim().toLowerCase();
-}
 
-function isN3Rule(rule) {
-  const lang = normalizeLang(getPropFirstValue(rule, expandZToken(SCHEMA_PROGRAMMING_LANGUAGE)));
-  const fmt  = normalizeLang(getPropFirstValue(rule, expandZToken(SCHEMA_ENCODING_FORMAT)));
-
-  return (
-    lang === "n3" ||
-    lang === "notation3" ||
-    lang.includes("n3") ||
-    fmt.includes("n3") ||
-    fmt.includes("notation3")
-  );
-}
-
-function extractN3ProjectionSparql(rule, nodesById) {
-  const parts = rule && rule[expandZToken(SCHEMA_HASPART)];
-  if (!Array.isArray(parts) || parts.length === 0) return undefined;
-
-  for (const partRef of parts) {
-    if (!partRef || typeof partRef !== "object") continue;
-
-    let part = partRef;
-    const pid = partRef["@id"];
-    if (pid && nodesById && nodesById.has(pid)) {
-      part = nodesById.get(pid);
-    }
-
-    const pl = normalizeLang(getPropFirstValue(part, expandZToken(SCHEMA_PROGRAMMING_LANGUAGE)));
-    const types = part["@type"];
-    const t = Array.isArray(types) ? types : (types ? [types] : []);
-    const hasSoftwareSourceCodeType = t.includes(expandZToken(SCHEMA_SOFTWARE_SOURCE_CODE));
-
-    if (hasSoftwareSourceCodeType || pl === "sparql") {
-      const q = getPropFirstValue(part, expandZToken(SCHEMA_TEXT));
-      if (typeof q === "string" && q.trim()) return q;
-    }
-  }
-  return undefined;
-}
+  // No eyeling in this experimental image.
 
 function getPropFirstValue(node, iri) {
   const arr = node && node[iri];
@@ -1230,116 +1077,9 @@ for (const rule of rules) {
   // ----------------------------------------------------------------------
   // N3 rule path (Eyeling)
   // ----------------------------------------------------------------------
-if (isN3Rule(rule)) {
-  const projection = extractN3ProjectionSparql(rule, nodesById);
-  if (!projection) {
-    RED.log.warn("[uRDF] N3 rule found but missing schema:hasPart projection SPARQL query: " + (rule["@id"] || "(no @id)"));
-    continue;
-  }
 
-  // Execute the projection query to produce bindings of {s,p,o} facts.
-  let projRes;
-  try {
-    // projRes = await urdf.query(projection);
-    // projRes = await urdfQueryViaPluginApiContract(projection);
-    const projResCompressed = await urdf.query(rewriteQuery(projection));
-    projRes = expandCompressedQueryDeep(projResCompressed);
-  } catch (e) {
-    RED.log.warn("[uRDF] N3 projection query failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
-    continue;
-  }
-
-  const bindings = normalizeQueryResults(projRes);
-  const ok = bindings.filter(hasSpo);
-  const bad = bindings.length - ok.length;
-
-  // Serialize projection bindings into N-Triples facts to feed the reasoner.
-  let factsLines = [];
-for (const b of ok) {
-  try {
-    factsLines.push(bindingToNTripleLine(b));
-  } catch (e) {
-    RED.log.warn("[uRDF] Failed to serialize binding to N-Triples for rule " + (rule["@id"] || "(no @id)") +
-      ": " + (e && e.message ? e.message : e) +
-      " binding=" + JSON.stringify(b)
-    );
-  }
-}
-
-const factsText = factsLines.join("\n");
-
-const previewCount = Math.min(10, factsLines.length);
-
-  // Prepare the N3 input as:
-  //   <facts as N-Triples>
-  //   <blank line>
-  //   <N3 program text>
-  const n3Program = programText;
-  const n3Input = factsText + "\n\n" + n3Program;
-
-
-  // If Eyeling is unavailable at runtime, N3 execution is skipped safely.
-  if (!eyeling || typeof eyeling.reasonStream !== "function") {
-    RED.log.warn("[uRDF] Eyeling reasonStream not available at runtime, skipping N3 execution for " + (rule["@id"] || "(no @id)"));
-    continue;
-  }
-
-  let derivedCount = 0;
-  const maxPreview = 10;
-
-  const derivedDF = [];
-  const derivedPreview = [];
-
-  let loggedFirstDf = false;
-
-  // Callback invoked by Eyeling when new facts are derived.
-  function onDerived(ev) {
-    derivedCount++;
-
-    if (ev && ev.df) {
-      derivedDF.push(ev.df);
-
-      if (!loggedFirstDf) {
-        loggedFirstDf = true;
-      }
-    }
-
-    if (derivedPreview.length < 2 && ev && typeof ev.triple === "string") {
-      derivedPreview.push(ev.triple);
-    }
-  }
-
-  try {
-    const out = eyeling.reasonStream(n3Input, { onDerived });
-
-for (const df of derivedDF) {
-  const spo = eyelingDfToSpo(df);
-  if (!spo) {
-    RED.log.warn("[uRDF] Derived df missing fact.s/p/o: " + JSON.stringify(df));
-    continue;
-  }
-
-  const sId = spo.s;
-  const pIri = spo.p;
-  const oJson = eyelingObjectToJsonLd(spo.o);
-
-	const INTERNAL_PRED_PREFIX = "urn:nrua:pv:";
-if (pIri.startsWith(INTERNAL_PRED_PREFIX)) {
-  continue;
-}
-
-  addToBySubject(bySubject, sId, pIri, oJson);
-}
-
-  } catch (e) {
-    RED.log.warn("[uRDF] Eyeling failed for rule " + (rule["@id"] || "(no @id)") + ": " + (e && e.message ? e.message : e));
-  }
-
-  // N3 path ends here; results are already merged into bySubject.
-  continue;
-
-}
-
+  // No eyeling in this experimental image.
+	
   // ----------------------------------------------------------------------
   // SPARQL rule path (direct)
   // ----------------------------------------------------------------------
@@ -1563,16 +1303,16 @@ RED.httpAdmin.post("/urdf/rules/delete", jsonParser, async (req, res) => {
   // These helpers produce stable IDs derived from Node-RED ids so that repeated
   // loads replace the same resources rather than creating new ones.
   function appId() {
-    return `urn:nrua:a${process.env.NODE_RED_INSTANCE_ID}`;
+    return "urn:app";
   }
   function flowId(tabId) {
-    return `urn:nrua:f${tabId}`;
+    return `urn:flow:${tabId}`;
   }
   function nodeId(id) {
-    return `urn:nrua:n${id}`;
+    return `urn:node:${id}`;
   }
   function outId(id, gate) {
-    return `urn:nrua:o${id}${gate}`;
+    return `urn:out:${id}:${gate}`;
   }
 
   // ----------------------------------------------------------------------------
@@ -2098,7 +1838,7 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
     const gid = req.query && req.query.gid ? String(req.query.gid) : undefined;
 
     try {
-      const graph = expandCompressedGraphDeep( gid ? urdf.findGraph(gid) : urdf.findGraph() );
+      const graph = gid ? urdf.findGraph(gid) : urdf.findGraph();
 
       if (gid && graph == null) {
         const payload = { ok: false, ts, gid, error: "Graph not found" };

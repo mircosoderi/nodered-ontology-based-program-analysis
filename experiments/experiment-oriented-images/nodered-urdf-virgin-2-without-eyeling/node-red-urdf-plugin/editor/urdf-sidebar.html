@@ -98,10 +98,10 @@ function isRule(node) {
 }
 
 function isNodeUrn(subjectIri) {
-  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:n");
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:node:");
 }
 function nodeIdFromUrn(subjectIri) {
-  return subjectIri.slice("urn:nrua:n".length);
+  return subjectIri.slice("urn:nrua:node:".length);
 }
 
 function revealNodeInEditor(nodeId) {
@@ -131,10 +131,10 @@ function dateToMs(d) {
 }
 
 function isFlowUrn(subjectIri) {
-  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:f");
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:flow:");
 }
 function flowIdFromUrn(subjectIri) {
-  return subjectIri.slice("urn:nrua:f".length);
+  return subjectIri.slice("urn:nrua:flow:".length);
 }
 
 function revealFlowInEditor(flowId) {
@@ -392,6 +392,7 @@ function getFirstHasPartText(ruleObj) {
 }
 
 const projectionText = getFirstHasPartText(rule);
+
 const $projHint = $("<div>")
   .css({ "margin": "6px 0 2px 0", "font-size": "11px", "opacity": 0.75 })
   .text("Projection SPARQL (only applies to N3 rules):");
@@ -544,7 +545,7 @@ async function loadReasoningResults() {
 const sparql = `
 SELECT
   ?s ?p ?doc
-  ?sClass ?sClassLabel 
+  ?sClass ?sClassLabel
   ?pLabel
   ?title ?url ?site ?date ?rating ?cat
 WHERE {
@@ -557,6 +558,18 @@ WHERE {
   OPTIONAL {
     GRAPH <urn:nrua:app> {
       ?s a ?sClass .
+    }
+  }
+
+  # 3) Subject class label is in the ontology graph
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?sClass <http://www.w3.org/2000/01/rdf-schema#label> ?sClassLabel .
+    }
+  }
+  OPTIONAL {
+    GRAPH <urn:nrua:ontology> {
+      ?sClass <https://schema.org/name> ?sClassLabel .
     }
   }
 
@@ -617,15 +630,6 @@ WHERE {
       ""
     ) AS ?site
   )
-
-  # 7) Label of the class of the subject
-  BIND(
-    IF(BOUND(?sClass),
-      REPLACE(STR(?sClass), "^.*[#/](.+)$", "$1"),
-      "Thing"
-    ) AS ?sClassLabel
-  )
-
 
 }
 LIMIT 1000
@@ -739,7 +743,7 @@ const key = p + "||" + doc;
     else subjId = localIdFromIri(s);
 
     const firstItem = items[0] || {};
-    const cls = (firstItem.sClassLabel.replace(/^.*[#/](.+)$/, "$1") || "").trim() || "Thing";
+    const cls = (firstItem.sClassLabel || "").trim() || "Thing";
 
     const hdrText = `${cls} ${subjId}`;
 

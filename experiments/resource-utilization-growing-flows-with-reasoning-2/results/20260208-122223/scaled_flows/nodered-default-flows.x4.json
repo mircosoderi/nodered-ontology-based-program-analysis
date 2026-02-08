@@ -1,0 +1,1702 @@
+[
+  {
+    "id": "249d477bae20f87a",
+    "type": "tab",
+    "label": "Intro",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f6f2187d.f17ca8",
+    "type": "tab",
+    "label": "Function without output",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "5887eb05077a5c03",
+    "type": "tab",
+    "label": "Similar to cookbook",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "a482d619f57748b0",
+    "type": "tab",
+    "label": "Loop",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f0acb0cb6d18867a",
+    "type": "tab",
+    "label": "Same name",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "58a8e7da0e13d73f",
+    "type": "tab",
+    "label": "Issues and forum posts",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "8ed1e5dbc49b9e99",
+    "type": "comment",
+    "z": "249d477bae20f87a",
+    "name": "Example rules have been preloaded at startup. ",
+    "info": "",
+    "x": 210,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "abe95c85adeb961c",
+    "type": "comment",
+    "z": "249d477bae20f87a",
+    "name": "Example flows have also been preloaded at startup to make you see those rules in action.",
+    "info": "",
+    "x": 350,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d3f97343e44ab1f",
+    "type": "comment",
+    "z": "249d477bae20f87a",
+    "name": "Open the uRDF sidebar and navigate to the action \"Configure\" to inspect the rules.",
+    "info": "",
+    "x": 330,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "b831c5af7d68f435",
+    "type": "comment",
+    "z": "249d477bae20f87a",
+    "name": "Open the uRDF sidebar and navigate to the action \"Reason\" to inspect what was inferred by the example rules applied to the example flows.",
+    "info": "",
+    "x": 500,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "1d2f3dd88b82a3df",
+    "type": "inject",
+    "z": "f6f2187d.f17ca8",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "f55ddcdb94ae8b1a"
+      ]
+    ]
+  },
+  {
+    "id": "f55ddcdb94ae8b1a",
+    "type": "function",
+    "z": "f6f2187d.f17ca8",
+    "name": "function 1",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "1b7f5a60849144a1",
+    "type": "comment",
+    "z": "f6f2187d.f17ca8",
+    "name": "The function node in this flow will be flagged because it has no output.",
+    "info": "",
+    "x": 290,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "b3950769531511d2",
+    "type": "inject",
+    "z": "5887eb05077a5c03",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 120,
+    "wires": [
+      [
+        "9db0c193025da52b"
+      ]
+    ]
+  },
+  {
+    "id": "9db0c193025da52b",
+    "type": "change",
+    "z": "5887eb05077a5c03",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "dcec0e49be728db3"
+      ]
+    ]
+  },
+  {
+    "id": "dcec0e49be728db3",
+    "type": "range",
+    "z": "5887eb05077a5c03",
+    "minin": "",
+    "maxin": "",
+    "minout": "",
+    "maxout": "",
+    "action": "scale",
+    "round": false,
+    "property": "payload",
+    "name": "",
+    "x": 600,
+    "y": 120,
+    "wires": [
+      [
+        "89c017931b79c3c9"
+      ]
+    ]
+  },
+  {
+    "id": "89c017931b79c3c9",
+    "type": "debug",
+    "z": "5887eb05077a5c03",
+    "name": "debug 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 840,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d46e9992422bb1e",
+    "type": "comment",
+    "z": "5887eb05077a5c03",
+    "name": "Import example library flows using the tool flows-json-to-jsonld. This flow will be linked to one of such example flows because it uses the same types of nodes.",
+    "info": "",
+    "x": 560,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "f62732dfdb6456e9",
+    "type": "inject",
+    "z": "a482d619f57748b0",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "b5053a2d10604b9f"
+      ]
+    ]
+  },
+  {
+    "id": "b5053a2d10604b9f",
+    "type": "function",
+    "z": "a482d619f57748b0",
+    "name": "function 2",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 580,
+    "y": 120,
+    "wires": [
+      [
+        "1e106aca59b53bab"
+      ]
+    ]
+  },
+  {
+    "id": "1e106aca59b53bab",
+    "type": "change",
+    "z": "a482d619f57748b0",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 590,
+    "y": 240,
+    "wires": [
+      [
+        "b5053a2d10604b9f",
+        "023b526ff4cdef8c"
+      ]
+    ]
+  },
+  {
+    "id": "023b526ff4cdef8c",
+    "type": "debug",
+    "z": "a482d619f57748b0",
+    "name": "debug 2",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 860,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "eb7b53e827075b68",
+    "type": "comment",
+    "z": "a482d619f57748b0",
+    "name": "The function and change nodes in this flow will be flagged because they form a loop.",
+    "info": "",
+    "x": 350,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "d43534c34a4a54ce",
+    "type": "inject",
+    "z": "f0acb0cb6d18867a",
+    "name": "Hello",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "773192bab4698d7c"
+      ]
+    ]
+  },
+  {
+    "id": "773192bab4698d7c",
+    "type": "debug",
+    "z": "f0acb0cb6d18867a",
+    "name": "Hello",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 330,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "445f43a4b9bd206c",
+    "type": "comment",
+    "z": "f0acb0cb6d18867a",
+    "name": "The nodes in this flow will be flqgged because they have the same name.",
+    "info": "",
+    "x": 340,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "7b7af83db6639bcd",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f",
+    "name": "Load the example Node-RED GitHub issues and Node-RED forum posts using the tools github-issues-to-jsonld and discourse-forum-to-jsonld. ",
+    "info": "",
+    "x": 510,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "6656a2b23cb6c5e2",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f",
+    "name": "Nodes will be linked to issues and forum posts based on node type and issue/post title.",
+    "info": "",
+    "x": 340,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "249d477bae20f87a_2",
+    "type": "tab",
+    "label": "Intro",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "8ed1e5dbc49b9e99_2",
+    "type": "comment",
+    "z": "249d477bae20f87a_2",
+    "name": "Example rules have been preloaded at startup. ",
+    "info": "",
+    "x": 210,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "abe95c85adeb961c_2",
+    "type": "comment",
+    "z": "249d477bae20f87a_2",
+    "name": "Example flows have also been preloaded at startup to make you see those rules in action.",
+    "info": "",
+    "x": 350,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d3f97343e44ab1f_2",
+    "type": "comment",
+    "z": "249d477bae20f87a_2",
+    "name": "Open the uRDF sidebar and navigate to the action \"Configure\" to inspect the rules.",
+    "info": "",
+    "x": 330,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "b831c5af7d68f435_2",
+    "type": "comment",
+    "z": "249d477bae20f87a_2",
+    "name": "Open the uRDF sidebar and navigate to the action \"Reason\" to inspect what was inferred by the example rules applied to the example flows.",
+    "info": "",
+    "x": 500,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "f6f2187d.f17ca8_2",
+    "type": "tab",
+    "label": "Function without output",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "1d2f3dd88b82a3df_2",
+    "type": "inject",
+    "z": "f6f2187d.f17ca8_2",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "f55ddcdb94ae8b1a_2"
+      ]
+    ]
+  },
+  {
+    "id": "f55ddcdb94ae8b1a_2",
+    "type": "function",
+    "z": "f6f2187d.f17ca8_2",
+    "name": "function 1",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "1b7f5a60849144a1_2",
+    "type": "comment",
+    "z": "f6f2187d.f17ca8_2",
+    "name": "The function node in this flow will be flagged because it has no output.",
+    "info": "",
+    "x": 290,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "5887eb05077a5c03_2",
+    "type": "tab",
+    "label": "Similar to cookbook",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "b3950769531511d2_2",
+    "type": "inject",
+    "z": "5887eb05077a5c03_2",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 120,
+    "wires": [
+      [
+        "9db0c193025da52b_2"
+      ]
+    ]
+  },
+  {
+    "id": "9db0c193025da52b_2",
+    "type": "change",
+    "z": "5887eb05077a5c03_2",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "dcec0e49be728db3_2"
+      ]
+    ]
+  },
+  {
+    "id": "dcec0e49be728db3_2",
+    "type": "range",
+    "z": "5887eb05077a5c03_2",
+    "minin": "",
+    "maxin": "",
+    "minout": "",
+    "maxout": "",
+    "action": "scale",
+    "round": false,
+    "property": "payload",
+    "name": "",
+    "x": 600,
+    "y": 120,
+    "wires": [
+      [
+        "89c017931b79c3c9_2"
+      ]
+    ]
+  },
+  {
+    "id": "89c017931b79c3c9_2",
+    "type": "debug",
+    "z": "5887eb05077a5c03_2",
+    "name": "debug 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 840,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d46e9992422bb1e_2",
+    "type": "comment",
+    "z": "5887eb05077a5c03_2",
+    "name": "Import example library flows using the tool flows-json-to-jsonld. This flow will be linked to one of such example flows because it uses the same types of nodes.",
+    "info": "",
+    "x": 560,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "a482d619f57748b0_2",
+    "type": "tab",
+    "label": "Loop",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f62732dfdb6456e9_2",
+    "type": "inject",
+    "z": "a482d619f57748b0_2",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "b5053a2d10604b9f_2"
+      ]
+    ]
+  },
+  {
+    "id": "b5053a2d10604b9f_2",
+    "type": "function",
+    "z": "a482d619f57748b0_2",
+    "name": "function 2",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 580,
+    "y": 120,
+    "wires": [
+      [
+        "1e106aca59b53bab_2"
+      ]
+    ]
+  },
+  {
+    "id": "1e106aca59b53bab_2",
+    "type": "change",
+    "z": "a482d619f57748b0_2",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 590,
+    "y": 240,
+    "wires": [
+      [
+        "b5053a2d10604b9f_2",
+        "023b526ff4cdef8c_2"
+      ]
+    ]
+  },
+  {
+    "id": "023b526ff4cdef8c_2",
+    "type": "debug",
+    "z": "a482d619f57748b0_2",
+    "name": "debug 2",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 860,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "eb7b53e827075b68_2",
+    "type": "comment",
+    "z": "a482d619f57748b0_2",
+    "name": "The function and change nodes in this flow will be flagged because they form a loop.",
+    "info": "",
+    "x": 350,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "f0acb0cb6d18867a_2",
+    "type": "tab",
+    "label": "Same name",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "d43534c34a4a54ce_2",
+    "type": "inject",
+    "z": "f0acb0cb6d18867a_2",
+    "name": "Hello",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "773192bab4698d7c_2"
+      ]
+    ]
+  },
+  {
+    "id": "773192bab4698d7c_2",
+    "type": "debug",
+    "z": "f0acb0cb6d18867a_2",
+    "name": "Hello",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 330,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "445f43a4b9bd206c_2",
+    "type": "comment",
+    "z": "f0acb0cb6d18867a_2",
+    "name": "The nodes in this flow will be flqgged because they have the same name.",
+    "info": "",
+    "x": 340,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "58a8e7da0e13d73f_2",
+    "type": "tab",
+    "label": "Issues and forum posts",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "7b7af83db6639bcd_2",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f_2",
+    "name": "Load the example Node-RED GitHub issues and Node-RED forum posts using the tools github-issues-to-jsonld and discourse-forum-to-jsonld. ",
+    "info": "",
+    "x": 510,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "6656a2b23cb6c5e2_2",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f_2",
+    "name": "Nodes will be linked to issues and forum posts based on node type and issue/post title.",
+    "info": "",
+    "x": 340,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "249d477bae20f87a_3",
+    "type": "tab",
+    "label": "Intro",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "8ed1e5dbc49b9e99_3",
+    "type": "comment",
+    "z": "249d477bae20f87a_3",
+    "name": "Example rules have been preloaded at startup. ",
+    "info": "",
+    "x": 210,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "abe95c85adeb961c_3",
+    "type": "comment",
+    "z": "249d477bae20f87a_3",
+    "name": "Example flows have also been preloaded at startup to make you see those rules in action.",
+    "info": "",
+    "x": 350,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d3f97343e44ab1f_3",
+    "type": "comment",
+    "z": "249d477bae20f87a_3",
+    "name": "Open the uRDF sidebar and navigate to the action \"Configure\" to inspect the rules.",
+    "info": "",
+    "x": 330,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "b831c5af7d68f435_3",
+    "type": "comment",
+    "z": "249d477bae20f87a_3",
+    "name": "Open the uRDF sidebar and navigate to the action \"Reason\" to inspect what was inferred by the example rules applied to the example flows.",
+    "info": "",
+    "x": 500,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "f6f2187d.f17ca8_3",
+    "type": "tab",
+    "label": "Function without output",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "1d2f3dd88b82a3df_3",
+    "type": "inject",
+    "z": "f6f2187d.f17ca8_3",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "f55ddcdb94ae8b1a_3"
+      ]
+    ]
+  },
+  {
+    "id": "f55ddcdb94ae8b1a_3",
+    "type": "function",
+    "z": "f6f2187d.f17ca8_3",
+    "name": "function 1",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "1b7f5a60849144a1_3",
+    "type": "comment",
+    "z": "f6f2187d.f17ca8_3",
+    "name": "The function node in this flow will be flagged because it has no output.",
+    "info": "",
+    "x": 290,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "5887eb05077a5c03_3",
+    "type": "tab",
+    "label": "Similar to cookbook",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "b3950769531511d2_3",
+    "type": "inject",
+    "z": "5887eb05077a5c03_3",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 120,
+    "wires": [
+      [
+        "9db0c193025da52b_3"
+      ]
+    ]
+  },
+  {
+    "id": "9db0c193025da52b_3",
+    "type": "change",
+    "z": "5887eb05077a5c03_3",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "dcec0e49be728db3_3"
+      ]
+    ]
+  },
+  {
+    "id": "dcec0e49be728db3_3",
+    "type": "range",
+    "z": "5887eb05077a5c03_3",
+    "minin": "",
+    "maxin": "",
+    "minout": "",
+    "maxout": "",
+    "action": "scale",
+    "round": false,
+    "property": "payload",
+    "name": "",
+    "x": 600,
+    "y": 120,
+    "wires": [
+      [
+        "89c017931b79c3c9_3"
+      ]
+    ]
+  },
+  {
+    "id": "89c017931b79c3c9_3",
+    "type": "debug",
+    "z": "5887eb05077a5c03_3",
+    "name": "debug 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 840,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d46e9992422bb1e_3",
+    "type": "comment",
+    "z": "5887eb05077a5c03_3",
+    "name": "Import example library flows using the tool flows-json-to-jsonld. This flow will be linked to one of such example flows because it uses the same types of nodes.",
+    "info": "",
+    "x": 560,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "a482d619f57748b0_3",
+    "type": "tab",
+    "label": "Loop",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f62732dfdb6456e9_3",
+    "type": "inject",
+    "z": "a482d619f57748b0_3",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "b5053a2d10604b9f_3"
+      ]
+    ]
+  },
+  {
+    "id": "b5053a2d10604b9f_3",
+    "type": "function",
+    "z": "a482d619f57748b0_3",
+    "name": "function 2",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 580,
+    "y": 120,
+    "wires": [
+      [
+        "1e106aca59b53bab_3"
+      ]
+    ]
+  },
+  {
+    "id": "1e106aca59b53bab_3",
+    "type": "change",
+    "z": "a482d619f57748b0_3",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 590,
+    "y": 240,
+    "wires": [
+      [
+        "b5053a2d10604b9f_3",
+        "023b526ff4cdef8c_3"
+      ]
+    ]
+  },
+  {
+    "id": "023b526ff4cdef8c_3",
+    "type": "debug",
+    "z": "a482d619f57748b0_3",
+    "name": "debug 2",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 860,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "eb7b53e827075b68_3",
+    "type": "comment",
+    "z": "a482d619f57748b0_3",
+    "name": "The function and change nodes in this flow will be flagged because they form a loop.",
+    "info": "",
+    "x": 350,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "f0acb0cb6d18867a_3",
+    "type": "tab",
+    "label": "Same name",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "d43534c34a4a54ce_3",
+    "type": "inject",
+    "z": "f0acb0cb6d18867a_3",
+    "name": "Hello",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "773192bab4698d7c_3"
+      ]
+    ]
+  },
+  {
+    "id": "773192bab4698d7c_3",
+    "type": "debug",
+    "z": "f0acb0cb6d18867a_3",
+    "name": "Hello",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 330,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "445f43a4b9bd206c_3",
+    "type": "comment",
+    "z": "f0acb0cb6d18867a_3",
+    "name": "The nodes in this flow will be flqgged because they have the same name.",
+    "info": "",
+    "x": 340,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "58a8e7da0e13d73f_3",
+    "type": "tab",
+    "label": "Issues and forum posts",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "7b7af83db6639bcd_3",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f_3",
+    "name": "Load the example Node-RED GitHub issues and Node-RED forum posts using the tools github-issues-to-jsonld and discourse-forum-to-jsonld. ",
+    "info": "",
+    "x": 510,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "6656a2b23cb6c5e2_3",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f_3",
+    "name": "Nodes will be linked to issues and forum posts based on node type and issue/post title.",
+    "info": "",
+    "x": 340,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "249d477bae20f87a_4",
+    "type": "tab",
+    "label": "Intro",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "8ed1e5dbc49b9e99_4",
+    "type": "comment",
+    "z": "249d477bae20f87a_4",
+    "name": "Example rules have been preloaded at startup. ",
+    "info": "",
+    "x": 210,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "abe95c85adeb961c_4",
+    "type": "comment",
+    "z": "249d477bae20f87a_4",
+    "name": "Example flows have also been preloaded at startup to make you see those rules in action.",
+    "info": "",
+    "x": 350,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d3f97343e44ab1f_4",
+    "type": "comment",
+    "z": "249d477bae20f87a_4",
+    "name": "Open the uRDF sidebar and navigate to the action \"Configure\" to inspect the rules.",
+    "info": "",
+    "x": 330,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "b831c5af7d68f435_4",
+    "type": "comment",
+    "z": "249d477bae20f87a_4",
+    "name": "Open the uRDF sidebar and navigate to the action \"Reason\" to inspect what was inferred by the example rules applied to the example flows.",
+    "info": "",
+    "x": 500,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "f6f2187d.f17ca8_4",
+    "type": "tab",
+    "label": "Function without output",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "1d2f3dd88b82a3df_4",
+    "type": "inject",
+    "z": "f6f2187d.f17ca8_4",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "f55ddcdb94ae8b1a_4"
+      ]
+    ]
+  },
+  {
+    "id": "f55ddcdb94ae8b1a_4",
+    "type": "function",
+    "z": "f6f2187d.f17ca8_4",
+    "name": "function 1",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "1b7f5a60849144a1_4",
+    "type": "comment",
+    "z": "f6f2187d.f17ca8_4",
+    "name": "The function node in this flow will be flagged because it has no output.",
+    "info": "",
+    "x": 290,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "5887eb05077a5c03_4",
+    "type": "tab",
+    "label": "Similar to cookbook",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "b3950769531511d2_4",
+    "type": "inject",
+    "z": "5887eb05077a5c03_4",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 120,
+    "wires": [
+      [
+        "9db0c193025da52b_4"
+      ]
+    ]
+  },
+  {
+    "id": "9db0c193025da52b_4",
+    "type": "change",
+    "z": "5887eb05077a5c03_4",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "dcec0e49be728db3_4"
+      ]
+    ]
+  },
+  {
+    "id": "dcec0e49be728db3_4",
+    "type": "range",
+    "z": "5887eb05077a5c03_4",
+    "minin": "",
+    "maxin": "",
+    "minout": "",
+    "maxout": "",
+    "action": "scale",
+    "round": false,
+    "property": "payload",
+    "name": "",
+    "x": 600,
+    "y": 120,
+    "wires": [
+      [
+        "89c017931b79c3c9_4"
+      ]
+    ]
+  },
+  {
+    "id": "89c017931b79c3c9_4",
+    "type": "debug",
+    "z": "5887eb05077a5c03_4",
+    "name": "debug 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 840,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "8d46e9992422bb1e_4",
+    "type": "comment",
+    "z": "5887eb05077a5c03_4",
+    "name": "Import example library flows using the tool flows-json-to-jsonld. This flow will be linked to one of such example flows because it uses the same types of nodes.",
+    "info": "",
+    "x": 560,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "a482d619f57748b0_4",
+    "type": "tab",
+    "label": "Loop",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f62732dfdb6456e9_4",
+    "type": "inject",
+    "z": "a482d619f57748b0_4",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 370,
+    "y": 120,
+    "wires": [
+      [
+        "b5053a2d10604b9f_4"
+      ]
+    ]
+  },
+  {
+    "id": "b5053a2d10604b9f_4",
+    "type": "function",
+    "z": "a482d619f57748b0_4",
+    "name": "function 2",
+    "func": "\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 580,
+    "y": 120,
+    "wires": [
+      [
+        "1e106aca59b53bab_4"
+      ]
+    ]
+  },
+  {
+    "id": "1e106aca59b53bab_4",
+    "type": "change",
+    "z": "a482d619f57748b0_4",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 590,
+    "y": 240,
+    "wires": [
+      [
+        "b5053a2d10604b9f_4",
+        "023b526ff4cdef8c_4"
+      ]
+    ]
+  },
+  {
+    "id": "023b526ff4cdef8c_4",
+    "type": "debug",
+    "z": "a482d619f57748b0_4",
+    "name": "debug 2",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 860,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "eb7b53e827075b68_4",
+    "type": "comment",
+    "z": "a482d619f57748b0_4",
+    "name": "The function and change nodes in this flow will be flagged because they form a loop.",
+    "info": "",
+    "x": 350,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "f0acb0cb6d18867a_4",
+    "type": "tab",
+    "label": "Same name",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "d43534c34a4a54ce_4",
+    "type": "inject",
+    "z": "f0acb0cb6d18867a_4",
+    "name": "Hello",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "773192bab4698d7c_4"
+      ]
+    ]
+  },
+  {
+    "id": "773192bab4698d7c_4",
+    "type": "debug",
+    "z": "f0acb0cb6d18867a_4",
+    "name": "Hello",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 330,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "445f43a4b9bd206c_4",
+    "type": "comment",
+    "z": "f0acb0cb6d18867a_4",
+    "name": "The nodes in this flow will be flqgged because they have the same name.",
+    "info": "",
+    "x": 340,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "58a8e7da0e13d73f_4",
+    "type": "tab",
+    "label": "Issues and forum posts",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "7b7af83db6639bcd_4",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f_4",
+    "name": "Load the example Node-RED GitHub issues and Node-RED forum posts using the tools github-issues-to-jsonld and discourse-forum-to-jsonld. ",
+    "info": "",
+    "x": 510,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "6656a2b23cb6c5e2_4",
+    "type": "comment",
+    "z": "58a8e7da0e13d73f_4",
+    "name": "Nodes will be linked to issues and forum posts based on node type and issue/post title.",
+    "info": "",
+    "x": 340,
+    "y": 140,
+    "wires": []
+  }
+]

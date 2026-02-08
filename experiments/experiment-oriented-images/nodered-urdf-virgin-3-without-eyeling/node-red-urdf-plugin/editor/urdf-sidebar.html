@@ -98,10 +98,10 @@ function isRule(node) {
 }
 
 function isNodeUrn(subjectIri) {
-  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:n");
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:node:");
 }
 function nodeIdFromUrn(subjectIri) {
-  return subjectIri.slice("urn:nrua:n".length);
+  return subjectIri.slice("urn:node:".length);
 }
 
 function revealNodeInEditor(nodeId) {
@@ -131,10 +131,10 @@ function dateToMs(d) {
 }
 
 function isFlowUrn(subjectIri) {
-  return typeof subjectIri === "string" && subjectIri.startsWith("urn:nrua:f");
+  return typeof subjectIri === "string" && subjectIri.startsWith("urn:flow:");
 }
 function flowIdFromUrn(subjectIri) {
-  return subjectIri.slice("urn:nrua:f".length);
+  return subjectIri.slice("urn:flow:".length);
 }
 
 function revealFlowInEditor(flowId) {
