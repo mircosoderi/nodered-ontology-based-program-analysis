@@ -21,6 +21,18 @@ This section provides details for each class and property defined by Node-RED Us
    <dd>
     <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
    </dd>
+   <dt>
+    is in domain of
+   </dt>
+   <dd>
+    <a href="#http://schema.org/identifier" title="http://schema.org/identifier">identifier</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#isPartOfApp" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp">is Part Of App</a> <sup class="type-op" title="object property">op</sup>, <a href="#http://schema.org/keywords" title="http://schema.org/keywords">keywords</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#http://schema.org/name" title="http://schema.org/name">name</a> <sup class="type-dp" title="data property">dp</sup>
+   </dd>
+   <dt>
+    is in range of
+   </dt>
+   <dd>
+    <a href="#isPartOfFlow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow">is Part Of Flow</a> <sup class="type-op" title="object property">op</sup>
+   </dd>
   </dl>
  </div>
  <div class="entity" id="Node">
@@ -37,7 +49,7 @@ This section provides details for each class and property defined by Node-RED Us
     is in domain of
    </dt>
    <dd>
-    <a href="#hasOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput">has output</a> <sup class="type-op" title="object property">op</sup>, <a href="#runsSubflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow">runs subflow</a> <sup class="type-op" title="object property">op</sup>, <a href="#type" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type">type</a> <sup class="type-dp" title="data property">dp</sup>
+    <a href="#hasOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput">has output</a> <sup class="type-op" title="object property">op</sup>, <a href="#http://schema.org/identifier" title="http://schema.org/identifier">identifier</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#isPartOfFlow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow">is Part Of Flow</a> <sup class="type-op" title="object property">op</sup>, <a href="#http://schema.org/name" title="http://schema.org/name">name</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#runsSubflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow">runs subflow</a> <sup class="type-op" title="object property">op</sup>, <a href="#type" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type">type</a> <sup class="type-dp" title="data property">dp</sup>
    </dd>
    <dt>
     is in range of
@@ -82,6 +94,12 @@ This section provides details for each class and property defined by Node-RED Us
     <a href="https://schema.org/RuntimePlatform" target="_blank" title="https://schema.org/RuntimePlatform">Runtime Platform</a> <sup class="type-c" title="class">c</sup>
    </dd>
    <dt>
+    is in domain of
+   </dt>
+   <dd>
+    <a href="#http://schema.org/runtimePlatform" title="http://schema.org/runtimePlatform">runtime Platform</a> <sup class="type-op" title="object property">op</sup>, <a href="#http://schema.org/version" title="http://schema.org/version">version</a> <sup class="type-dp" title="data property">dp</sup>
+   </dd>
+   <dt>
     has members
    </dt>
    <dd>
@@ -100,6 +118,18 @@ This section provides details for each class and property defined by Node-RED Us
     <a href="https://schema.org/RuntimePlatform" target="_blank" title="https://schema.org/RuntimePlatform">Runtime Platform</a> <sup class="type-c" title="class">c</sup>
    </dd>
    <dt>
+    is in domain of
+   </dt>
+   <dd>
+    <a href="#http://schema.org/operatingSystem" title="http://schema.org/operatingSystem">operating System</a> <sup class="type-op" title="object property">op</sup>, <a href="#http://schema.org/version" title="http://schema.org/version">version</a> <sup class="type-dp" title="data property">dp</sup>
+   </dd>
+   <dt>
+    is in range of
+   </dt>
+   <dd>
+    <a href="#http://schema.org/runtimePlatform" title="http://schema.org/runtimePlatform">runtime Platform</a> <sup class="type-op" title="object property">op</sup>
+   </dd>
+   <dt>
     has members
    </dt>
    <dd>
@@ -116,6 +146,12 @@ This section provides details for each class and property defined by Node-RED Us
    </dt>
    <dd>
     <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+   <dt>
+    is in domain of
+   </dt>
+   <dd>
+    <a href="#http://schema.org/encodingFormat" title="http://schema.org/encodingFormat">encoding Format</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#http://schema.org/hasPart" title="http://schema.org/hasPart">has Part</a> <sup class="type-op" title="object property">op</sup>, <a href="#http://schema.org/programmingLanguage" title="http://schema.org/programmingLanguage">programming Language</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#http://schema.org/text" title="http://schema.org/text">text</a> <sup class="type-dp" title="data property">dp</sup>
    </dd>
   </dl>
  </div>
@@ -141,7 +177,12 @@ This section provides details for each class and property defined by Node-RED Us
  <h3 id="properties" class="list">Object Properties</h3>
  <ul class="hlist">
   <li><a href="#hasOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput">has output</a></li>
+  <li><a href="#http://schema.org/hasPart" title="http://schema.org/hasPart"> <span>has Part</span> </a></li>
+  <li><a href="#isPartOfApp" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp"> <span>is Part Of App</span> </a></li>
+  <li><a href="#isPartOfFlow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow"> <span>is Part Of Flow</span> </a></li>
+  <li><a href="#http://schema.org/operatingSystem" title="http://schema.org/operatingSystem"> <span>operating System</span> </a></li>
   <li><a href="#runsSubflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow">runs subflow</a></li>
+  <li><a href="#http://schema.org/runtimePlatform" title="http://schema.org/runtimePlatform"> <span>runtime Platform</span> </a></li>
   <li><a href="#toNode" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode">to node</a></li>
  </ul>
  <div class="entity" id="hasOutput">
@@ -164,6 +205,98 @@ This section provides details for each class and property defined by Node-RED Us
    </dl>
   </div>
  </div>
+ <div class="entity" id="http://schema.org/hasPart">
+  <h3>has Part<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/hasPart</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Rule" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule">Rule</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="isPartOfApp">
+  <h3>is Part Of App<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has super-properties
+    </dt>
+    <dd>
+     <a href="http://schema.org/isPartOf" target="_blank" title="http://schema.org/isPartOf">is Part Of</a> <sup class="type-op" title="object property">op</sup>
+    </dd>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Flow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow">Flow</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="https://schema.org/Application" target="_blank" title="https://schema.org/Application">Application</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="isPartOfFlow">
+  <h3>is Part Of Flow<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has super-properties
+    </dt>
+    <dd>
+     <a href="http://schema.org/isPartOf" target="_blank" title="http://schema.org/isPartOf">is Part Of</a> <sup class="type-op" title="object property">op</sup>
+    </dd>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="#Flow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow">Flow</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/operatingSystem">
+  <h3>operating System<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/operatingSystem</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#NodeJs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs">Node.js Runtime</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
  <div class="entity" id="runsSubflow">
   <h3>runs subflow<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
   <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow</p>
@@ -180,6 +313,26 @@ This section provides details for each class and property defined by Node-RED Us
     </dt>
     <dd>
      <a href="#Subflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow">Subflow</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/runtimePlatform">
+  <h3>runtime Platform<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/runtimePlatform</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#NodeRed" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed">Node-RED Platform</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="#NodeJs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs">Node.js Runtime</a> <sup class="type-c" title="class">c</sup>
     </dd>
    </dl>
   </div>
@@ -208,8 +361,17 @@ This section provides details for each class and property defined by Node-RED Us
  <h3 id="dataproperties-headline" class="list">Data Properties</h3>
  <ul class="hlist">
   <li><a href="#isContainerised" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised">containerised</a></li>
+  <li><a href="#http://schema.org/description" title="http://schema.org/description"> <span>description</span> </a></li>
+  <li><a href="#http://schema.org/encodingFormat" title="http://schema.org/encodingFormat"> <span>encoding Format</span> </a></li>
   <li><a href="#fromGate" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate">from gate</a></li>
+  <li><a href="#http://schema.org/identifier" title="http://schema.org/identifier"> <span>identifier</span> </a></li>
+  <li><a href="#http://schema.org/keywords" title="http://schema.org/keywords"> <span>keywords</span> </a></li>
+  <li><a href="#http://schema.org/name" title="http://schema.org/name"> <span>name</span> </a></li>
+  <li><a href="#http://schema.org/programmingLanguage" title="http://schema.org/programmingLanguage"> <span>programming Language</span> </a></li>
+  <li><a href="#http://schema.org/softwareVersion" title="http://schema.org/softwareVersion"> <span>software Version</span> </a></li>
+  <li><a href="#http://schema.org/text" title="http://schema.org/text"> <span>text</span> </a></li>
   <li><a href="#type" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type">type</a></li>
+  <li><a href="#http://schema.org/version" title="http://schema.org/version"> <span>version</span> </a></li>
   <li><a href="#isWsl" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl">WSL</a></li>
  </ul>
  <div class="entity" id="isContainerised">
@@ -228,6 +390,46 @@ This section provides details for each class and property defined by Node-RED Us
     </dt>
     <dd>
      <a href="http://www.w3.org/2001/XMLSchema#boolean" target="_blank" title="http://www.w3.org/2001/XMLSchema#boolean">boolean</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/description">
+  <h3>description<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/description</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/encodingFormat">
+  <h3>encoding Format<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/encodingFormat</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Rule" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule">Rule</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
     </dd>
    </dl>
   </div>
@@ -252,6 +454,126 @@ This section provides details for each class and property defined by Node-RED Us
    </dl>
   </div>
  </div>
+ <div class="entity" id="http://schema.org/identifier">
+  <h3>identifier<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/identifier</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Flow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow">Flow</a> <sup class="type-c" title="class">c</sup> <span class="logic">or</span> <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/keywords">
+  <h3>keywords<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/keywords</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Flow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow">Flow</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/name">
+  <h3>name<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/name</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup> <span class="logic">or</span> <a href="#Flow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow">Flow</a> <sup class="type-c" title="class">c</sup> <span class="logic">or</span> <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/programmingLanguage">
+  <h3>programming Language<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/programmingLanguage</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Rule" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule">Rule</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/softwareVersion">
+  <h3>software Version<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/softwareVersion</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/text">
+  <h3>text<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/text</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Rule" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule">Rule</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
  <div class="entity" id="type">
   <h3>type<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
   <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type</p>
@@ -262,6 +584,26 @@ This section provides details for each class and property defined by Node-RED Us
     </dt>
     <dd>
      <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="http://schema.org/version">
+  <h3>version<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> http://schema.org/version</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#NodeJs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs">Node.js Runtime</a> <sup class="type-c" title="class">c</sup> <span class="logic">or</span> <a href="#NodeRed" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed">Node-RED Platform</a> <sup class="type-c" title="class">c</sup>
     </dd>
     <dt>
      has range

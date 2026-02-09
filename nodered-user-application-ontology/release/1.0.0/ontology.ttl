@@ -17,11 +17,47 @@
 #    Object Properties
 #################################################################
 
+###  http://schema.org/hasPart
+<http://schema.org/hasPart> rdf:type owl:ObjectProperty ;
+                            rdfs:domain :Rule ;
+                            rdfs:range <https://schema.org/SoftwareSourceCode> .
+
+
+###  http://schema.org/isPartOf
+<http://schema.org/isPartOf> rdf:type owl:ObjectProperty .
+
+
+###  http://schema.org/operatingSystem
+<http://schema.org/operatingSystem> rdf:type owl:ObjectProperty ;
+                                    rdfs:domain :NodeJs ;
+                                    rdfs:range <https://schema.org/OperatingSystem> .
+
+
+###  http://schema.org/runtimePlatform
+<http://schema.org/runtimePlatform> rdf:type owl:ObjectProperty ;
+                                    rdfs:domain :NodeRed ;
+                                    rdfs:range :NodeJs .
+
+
 ###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput
 :hasOutput rdf:type owl:ObjectProperty ;
            rdfs:domain :Node ;
            rdfs:range :NodeOutput ;
            rdfs:label "has output" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp
+:isPartOfApp rdf:type owl:ObjectProperty ;
+             rdfs:subPropertyOf <http://schema.org/isPartOf> ;
+             rdfs:domain :Flow ;
+             rdfs:range <https://schema.org/Application> .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow
+:isPartOfFlow rdf:type owl:ObjectProperty ;
+              rdfs:subPropertyOf <http://schema.org/isPartOf> ;
+              rdfs:domain :Node ;
+              rdfs:range :Flow .
 
 
 ###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow
@@ -41,6 +77,73 @@
 #################################################################
 #    Data properties
 #################################################################
+
+###  http://schema.org/description
+<http://schema.org/description> rdf:type owl:DatatypeProperty ;
+                                rdfs:domain <https://schema.org/OperatingSystem> ;
+                                rdfs:range xsd:string .
+
+
+###  http://schema.org/encodingFormat
+<http://schema.org/encodingFormat> rdf:type owl:DatatypeProperty ;
+                                   rdfs:domain :Rule ;
+                                   rdfs:range xsd:string .
+
+
+###  http://schema.org/identifier
+<http://schema.org/identifier> rdf:type owl:DatatypeProperty ;
+                               rdfs:domain [ rdf:type owl:Class ;
+                                             owl:unionOf ( :Flow
+                                                           :Node
+                                                         )
+                                           ] ;
+                               rdfs:range xsd:string .
+
+
+###  http://schema.org/keywords
+<http://schema.org/keywords> rdf:type owl:DatatypeProperty ;
+                             rdfs:domain :Flow ;
+                             rdfs:range xsd:string .
+
+
+###  http://schema.org/name
+<http://schema.org/name> rdf:type owl:DatatypeProperty ;
+                         rdfs:domain [ rdf:type owl:Class ;
+                                       owl:unionOf ( <https://schema.org/OperatingSystem>
+                                                     :Flow
+                                                     :Node
+                                                   )
+                                     ] ;
+                         rdfs:range xsd:string .
+
+
+###  http://schema.org/programmingLanguage
+<http://schema.org/programmingLanguage> rdf:type owl:DatatypeProperty ;
+                                        rdfs:domain :Rule ;
+                                        rdfs:range xsd:string .
+
+
+###  http://schema.org/softwareVersion
+<http://schema.org/softwareVersion> rdf:type owl:DatatypeProperty ;
+                                    rdfs:domain <https://schema.org/OperatingSystem> ;
+                                    rdfs:range xsd:string .
+
+
+###  http://schema.org/text
+<http://schema.org/text> rdf:type owl:DatatypeProperty ;
+                         rdfs:domain :Rule ;
+                         rdfs:range xsd:string .
+
+
+###  http://schema.org/version
+<http://schema.org/version> rdf:type owl:DatatypeProperty ;
+                            rdfs:domain [ rdf:type owl:Class ;
+                                          owl:unionOf ( :NodeJs
+                                                        :NodeRed
+                                                      )
+                                        ] ;
+                            rdfs:range xsd:string .
+
 
 ###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate
 :fromGate rdf:type owl:DatatypeProperty ;

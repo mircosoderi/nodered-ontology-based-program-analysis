@@ -13,11 +13,41 @@
 # #################################################################
 # 
 # 
+# http://schema.org/hasPart
+<http://schema.org/hasPart> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://schema.org/hasPart> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule> .
+<http://schema.org/hasPart> <http://www.w3.org/2000/01/rdf-schema#range> <https://schema.org/SoftwareSourceCode> .
+# 
+# http://schema.org/isPartOf
+<http://schema.org/isPartOf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+# 
+# http://schema.org/operatingSystem
+<http://schema.org/operatingSystem> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://schema.org/operatingSystem> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> .
+<http://schema.org/operatingSystem> <http://www.w3.org/2000/01/rdf-schema#range> <https://schema.org/OperatingSystem> .
+# 
+# http://schema.org/runtimePlatform
+<http://schema.org/runtimePlatform> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://schema.org/runtimePlatform> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed> .
+<http://schema.org/runtimePlatform> <http://www.w3.org/2000/01/rdf-schema#range> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> .
+# 
 # https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput
 <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
 <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
 <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/2000/01/rdf-schema#range> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> .
 <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/2000/01/rdf-schema#label> "has output" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://schema.org/isPartOf> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp> <http://www.w3.org/2000/01/rdf-schema#range> <https://schema.org/Application> .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://schema.org/isPartOf> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow> <http://www.w3.org/2000/01/rdf-schema#range> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> .
 # 
 # https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow
 <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
@@ -39,6 +69,78 @@
 # #
 # #################################################################
 # 
+# 
+# http://schema.org/description
+<http://schema.org/description> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/description> <http://www.w3.org/2000/01/rdf-schema#domain> <https://schema.org/OperatingSystem> .
+<http://schema.org/description> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/encodingFormat
+<http://schema.org/encodingFormat> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/encodingFormat> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule> .
+<http://schema.org/encodingFormat> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/identifier
+<http://schema.org/identifier> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/identifier> <http://www.w3.org/2000/01/rdf-schema#domain> _:genid1 .
+_:genid1 <http://www.w3.org/2002/07/owl#unionOf> _:genid3 .
+_:genid3 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:genid2 .
+_:genid2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
+_:genid2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+_:genid2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid3 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> .
+_:genid3 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://schema.org/identifier> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/keywords
+<http://schema.org/keywords> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/keywords> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> .
+<http://schema.org/keywords> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/name
+<http://schema.org/name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/name> <http://www.w3.org/2000/01/rdf-schema#domain> _:genid4 .
+_:genid4 <http://www.w3.org/2002/07/owl#unionOf> _:genid7 .
+_:genid7 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:genid6 .
+_:genid6 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:genid5 .
+_:genid5 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
+_:genid5 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+_:genid5 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid6 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> .
+_:genid6 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid7 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://schema.org/OperatingSystem> .
+_:genid7 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid4 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://schema.org/name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/programmingLanguage
+<http://schema.org/programmingLanguage> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/programmingLanguage> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule> .
+<http://schema.org/programmingLanguage> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/softwareVersion
+<http://schema.org/softwareVersion> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/softwareVersion> <http://www.w3.org/2000/01/rdf-schema#domain> <https://schema.org/OperatingSystem> .
+<http://schema.org/softwareVersion> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/text
+<http://schema.org/text> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/text> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule> .
+<http://schema.org/text> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+# 
+# http://schema.org/version
+<http://schema.org/version> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://schema.org/version> <http://www.w3.org/2000/01/rdf-schema#domain> _:genid8 .
+_:genid8 <http://www.w3.org/2002/07/owl#unionOf> _:genid10 .
+_:genid10 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:genid9 .
+_:genid9 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
+_:genid9 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed> .
+_:genid9 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid10 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> .
+_:genid10 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+_:genid8 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://schema.org/version> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
 # 
 # https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate
 <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
