@@ -2,8 +2,30 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// -----------------------------------------------------------------------------
+// Module path resolution (ESM)
+// -----------------------------------------------------------------------------
+//
+// In ES modules, __filename and __dirname are not provided by Node.js.
+// They are reconstructed from import.meta.url to support relative file access.
+// -----------------------------------------------------------------------------
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// -----------------------------------------------------------------------------
+// CLI argument parsing
+// -----------------------------------------------------------------------------
+//
+// Supported flags:
+//   --in <file>         Input JSON-LD filename (default: input.jsonld)
+//   --iris <file>       IRI list filename (default: iris.json)
+//   --out <file>        Output JSON-LD filename (default: output.jsonld)
+//   --pretty            Pretty-print JSON output (default: false)
+//   --rewrite-ids       Rewrite @id and other IRI-looking string values (default: false)
+//
+// Unknown flags cause an error and exit code 2.
+// -----------------------------------------------------------------------------
 
 function parseArgs(argv) {
   const args = {
@@ -29,6 +51,17 @@ function parseArgs(argv) {
   return args;
 }
 
+// -----------------------------------------------------------------------------
+// JSON parsing with contextual error messages
+// -----------------------------------------------------------------------------
+//
+// Two JSON inputs are expected:
+//   1) JSON-LD input file (object or array; valid JSON)
+//   2) IRI list file (JSON array of strings)
+//
+// Errors are wrapped to provide a targeted hint.
+// -----------------------------------------------------------------------------
+
 function safeJsonParse(text, label) {
   try {
     return JSON.parse(text);
@@ -40,6 +73,18 @@ function safeJsonParse(text, label) {
     throw new Error(`Failed to parse ${label}: ${e.message}${hint}`);
   }
 }
+
+// -----------------------------------------------------------------------------
+// IRI dictionary indexing
+// -----------------------------------------------------------------------------
+//
+// iris.json is expected to be a JSON array of strings.
+// The array position becomes the stable index for that IRI.
+//
+// Mapping rules:
+//   - First occurrence wins (later duplicates are ignored).
+//   - Non-string entries are rejected.
+// -----------------------------------------------------------------------------
 
 function buildIriIndexMap(iriArray) {
   if (!Array.isArray(iriArray)) {
@@ -56,20 +101,49 @@ function buildIriIndexMap(iriArray) {
   return map;
 }
 
+// -----------------------------------------------------------------------------
+// IRI compaction helper
+// -----------------------------------------------------------------------------
+//
+// If iri is present in the dictionary map:
+//   iri -> "z:<index>"
+// Otherwise:
+//   iri -> iri (unchanged)
+//
+// This compacts repeated IRIs to reduce output size.
+// -----------------------------------------------------------------------------
+
 function toZ(iri, iriMap) {
   const idx = iriMap.get(iri);
   return idx === undefined ? iri : `z:${idx}`;
 }
 
+// -----------------------------------------------------------------------------
+// Lightweight IRI detection
+// -----------------------------------------------------------------------------
+//
+// This is a heuristic, not a full RFC validation.
+// It is used only to decide whether a string should be considered IRI-like.
+// -----------------------------------------------------------------------------
+
 function looksLikeIri(s) {
   return typeof s === "string" && (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("urn:"));
 }
 
-/**
- * Heuristic "looks like SPARQL":
- * - contains common SPARQL keywords OR PREFIX/BASE lines
- * - and has at least one of: SELECT/CONSTRUCT/ASK/DESCRIBE
- */
+// -----------------------------------------------------------------------------
+// SPARQL detection heuristic
+// -----------------------------------------------------------------------------
+//
+// "SPARQL-ish" strings are detected to allow safe comment stripping.
+//
+// Requirements:
+//   - must include at least one query form: SELECT / CONSTRUCT / ASK / DESCRIBE
+//   - and must include at least one additional SPARQL-ish marker:
+//       PREFIX, BASE, WHERE, FILTER, OPTIONAL, GRAPH, BIND, VALUES
+//
+// This reduces the chance of stripping text that merely contains comment markers.
+// -----------------------------------------------------------------------------
+
 function looksLikeSparql(s) {
   if (typeof s !== "string") return false;
   const t = s.trim();
@@ -96,16 +170,27 @@ function looksLikeSparql(s) {
   return hasForm && hasSparqlish;
 }
 
+// -----------------------------------------------------------------------------
+// SPARQL comment stripping
+// -----------------------------------------------------------------------------
+//
+// Supported comment types:
+//   - Line comments starting with '#', ending at newline
+//   - Block comments delimited by '/*' and '*/'
+//
+// Protected regions where comment markers must be ignored:
+//   - Single quoted strings: '...'
+//   - Double quoted strings: "..."
+//   - IRIREFs: <...>
+//
+// Implementation notes:
+//   - A simple state machine scans the query character-by-character.
+//   - Escapes inside quoted strings are honored (backslash).
+//   - Newlines are preserved for line comments to keep line structure.
+//
+// This is not a full SPARQL parser; it aims to be correct for typical queries.
+// -----------------------------------------------------------------------------
 
-/**
- * Strip SPARQL comments, preserving comment markers inside:
- *  - quoted strings ("..." or '...')
- *  - IRIREFs (<...>)  <-- IMPORTANT because IRIs often contain '#'
- *
- * Supports:
- *  - # line comments
- *  - /* block comments *\/
- */
 function stripSparqlComments(query) {
   if (typeof query !== "string" || query.length === 0) return query;
 
@@ -114,7 +199,7 @@ function stripSparqlComments(query) {
 
   let inSingle = false;       // '...'
   let inDouble = false;       // "..."
-  let inIriRef = false;       // <...>  (IRIREF)
+  let inIriRef = false;       // <...>
   let inLineComment = false;  // # ... \n
   let inBlockComment = false; // /* ... */
 
@@ -122,17 +207,17 @@ function stripSparqlComments(query) {
     const c = query[i];
     const next = i + 1 < query.length ? query[i + 1] : "";
 
-    // End of line comment
+    // End of line comment: drop content until newline; keep newline.
     if (inLineComment) {
       if (c === "\n") {
         inLineComment = false;
-        out += c; // keep newline
+        out += c;
       }
       i++;
       continue;
     }
 
-    // End of block comment
+    // End of block comment: drop content until closing '*/'.
     if (inBlockComment) {
       if (c === "*" && next === "/") {
         inBlockComment = false;
@@ -143,9 +228,7 @@ function stripSparqlComments(query) {
       continue;
     }
 
-    // Inside IRIREF <...>: copy verbatim, do NOT interpret comment markers.
-    // Note: SPARQL IRIREF does not allow '>' inside except escaped forms; for our purposes
-    // this simple state machine is correct for typical queries.
+    // IRIREF <...>: copy verbatim until '>'.
     if (inIriRef) {
       out += c;
       if (c === ">") inIriRef = false;
@@ -153,7 +236,7 @@ function stripSparqlComments(query) {
       continue;
     }
 
-    // Inside quoted strings: copy verbatim, honor escapes
+    // Quoted strings: copy verbatim, handle escapes.
     if (inSingle || inDouble) {
       out += c;
 
@@ -174,7 +257,7 @@ function stripSparqlComments(query) {
       continue;
     }
 
-    // Not in quote/comment/IRIREF: detect start of protected regions
+    // Enter protected regions.
     if (c === "<") {
       inIriRef = true;
       out += c;
@@ -194,21 +277,19 @@ function stripSparqlComments(query) {
       continue;
     }
 
-    // Start of line comment: #  (only when not in IRIREF/quotes)
+    // Enter comments (only when not in protected regions).
     if (c === "#") {
       inLineComment = true;
       i++;
       continue;
     }
-
-    // Start of block comment: /*  (only when not in IRIREF/quotes)
     if (c === "/" && next === "*") {
       inBlockComment = true;
       i += 2;
       continue;
     }
 
-    // Normal char
+    // Ordinary character.
     out += c;
     i++;
   }
@@ -216,20 +297,45 @@ function stripSparqlComments(query) {
   return out;
 }
 
-/**
- * If it's SPARQL-ish, strip comments; otherwise return unchanged.
- */
+// -----------------------------------------------------------------------------
+// Conditional SPARQL comment stripping
+// -----------------------------------------------------------------------------
+//
+// Only strip comments when the value looks like a SPARQL query.
+// Otherwise return the original string unchanged.
+// -----------------------------------------------------------------------------
+
 function maybeStripSparqlComments(s) {
   return looksLikeSparql(s) ? stripSparqlComments(s) : s;
 }
 
-/**
- * Transform JSON-LD:
- * - rewrite predicate IRIs (object keys), excluding JSON-LD keywords (starting with "@")
- * - rewrite @type values (string or array)
- * - optionally rewrite @id and other IRI-looking string values (if --rewrite-ids)
- * - additionally: if any string value looks like SPARQL, strip comments from it
- */
+// -----------------------------------------------------------------------------
+// JSON-LD transformation
+// -----------------------------------------------------------------------------
+//
+// Recursively transform a JSON-LD input to use "z:<index>" identifiers.
+//
+// Operations:
+//   1) Predicate keys (object properties) are rewritten via toZ(), except:
+//        - JSON-LD keywords starting with '@' are preserved
+//
+//   2) @type rewriting:
+//        - string => toZ(value)
+//        - array of strings => each string rewritten
+//        - other forms unchanged
+//
+//   3) Optional ID/value rewriting when rewriteIds is true:
+//        - @id string values may be rewritten if they look like IRIs
+//        - other string values may be rewritten if they look like IRIs
+//
+//   4) SPARQL comment stripping:
+//        - any string that looks like SPARQL is cleaned by removing comments
+//        - cleaning happens before optional IRI rewriting
+//
+// This function does not change the structural shape of the JSON; it only
+// rewrites keys and string values under the above rules.
+// -----------------------------------------------------------------------------
+
 function transformJsonLd(node, iriMap, { rewriteIds }) {
   if (Array.isArray(node)) {
     return node.map((x) => transformJsonLd(x, iriMap, { rewriteIds }));
@@ -239,9 +345,10 @@ function transformJsonLd(node, iriMap, { rewriteIds }) {
     const out = {};
 
     for (const [key, value] of Object.entries(node)) {
+      // Rewrite non-JSON-LD keys; preserve JSON-LD keywords (starting with '@').
       const newKey = key.startsWith("@") ? key : toZ(key, iriMap);
 
-      // @type rewriting
+      // @type rewriting.
       if (key === "@type") {
         if (typeof value === "string") {
           out[newKey] = toZ(value, iriMap);
@@ -253,22 +360,22 @@ function transformJsonLd(node, iriMap, { rewriteIds }) {
         continue;
       }
 
-      // Optional @id rewriting
+      // Optional @id rewriting (only if enabled).
       if (rewriteIds && key === "@id" && typeof value === "string") {
         const cleaned = maybeStripSparqlComments(value);
         out[newKey] = looksLikeIri(cleaned) ? toZ(cleaned, iriMap) : cleaned;
         continue;
       }
 
-      // Recurse for objects/arrays
+      // Recurse into objects/arrays.
       if (value && typeof value === "object") {
         out[newKey] = transformJsonLd(value, iriMap, { rewriteIds });
         continue;
       }
 
-      // Primitive string handling:
-      // 1) strip SPARQL comments if needed
-      // 2) optionally rewrite IRI-valued strings
+      // Primitive handling:
+      //   - For strings: optionally strip SPARQL comments, then optionally rewrite IRIs.
+      //   - For other primitives: copy as-is.
       if (typeof value === "string") {
         const cleaned = maybeStripSparqlComments(value);
         if (rewriteIds && looksLikeIri(cleaned)) {
@@ -284,13 +391,27 @@ function transformJsonLd(node, iriMap, { rewriteIds }) {
     return out;
   }
 
-  // Primitive: if it's a string, also apply SPARQL stripping (covers strings in arrays)
+  // Primitive at root or inside arrays:
+  // Apply SPARQL stripping to standalone strings as well.
   if (typeof node === "string") {
     return maybeStripSparqlComments(node);
   }
 
   return node;
 }
+
+// -----------------------------------------------------------------------------
+// Main program flow
+// -----------------------------------------------------------------------------
+//
+// Steps:
+//   - Parse CLI args
+//   - Read input JSON-LD and iris list
+//   - Parse/validate JSON
+//   - Build IRI index map
+//   - Transform JSON-LD structure
+//   - Write output JSON (pretty or compact)
+// -----------------------------------------------------------------------------
 
 async function main() {
   const args = parseArgs(process.argv);
@@ -318,6 +439,13 @@ async function main() {
     `Done. Wrote ${args.outFile} (pretty=${args.pretty}, rewriteIds=${args.rewriteIds}).`
   );
 }
+
+// -----------------------------------------------------------------------------
+// Top-level error handling
+// -----------------------------------------------------------------------------
+//
+// Ensures a clear error message and a non-zero exit code for failures.
+// -----------------------------------------------------------------------------
 
 main().catch((err) => {
   console.error(err.message || err);

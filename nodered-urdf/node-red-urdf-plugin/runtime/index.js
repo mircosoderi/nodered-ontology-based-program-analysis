@@ -2204,7 +2204,7 @@ RED.httpAdmin.get("/urdf/export", function (req, res) {
     }
 
     try {
-      const node = gid ? await urdf.find(id, gid) : await urdf.find(id);
+      const node = expandCompressedGraphDeep( gid ? await urdf.find(id, gid) : await urdf.find(id) ) ;
       const payload = { ok: true, ts, id, gid: gid || null, node };
 
       publish({

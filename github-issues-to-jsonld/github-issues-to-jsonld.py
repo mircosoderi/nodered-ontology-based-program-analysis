@@ -1,57 +1,136 @@
 #!/usr/bin/env python3
 """
-GitHub Issues/PRs (REST /issues) JSON -> JSON-LD (schema:DigitalDocument) exporter.
+GitHub Issues/PRs JSON -> JSON-LD exporter.
 
-Layout:
-- input files:  ./input/*.json
-- output files: ./output/<same_basename>.jsonld
-- script:        ./generate_jsonld.py  (run from repo/container root)
+Purpose
+-------
+Transforms one or more GitHub REST API /issues JSON exports into JSON-LD datasets
+describing schema:DigitalDocument items, enriched with lightweight heuristics.
 
-Per input file:
-- Produces a JSON-LD document with a named graph whose @id depends on the input filename.
-- Creates:
-  * One schema:DigitalDocument per item in the JSON array
-  * A schema:DefinedTermSet for Node-RED labels (with the full known label list)
-  * One schema:DefinedTerm per label (and uses them in schema:category)
-  * One schema:Rating per document (schema:contentRating)
-  * Optional schema:OperatingSystem instance linked via schema:about (title keyword matching)
-  * Optional nrua:NodeJs instance linked via schema:about (title contains "node.js" + version)
-  * Optional nrua:NodeRed instance(s) linked via schema:about (version tokens in title, excluding Node.js versions)
-  * Optional nrua:isContainerised boolean on the document (title keyword matching)
+I/O Layout
+----------
+Input:
+  ./input/*.json
+Each input file is expected to contain a JSON array of Issue/PR objects
+(as returned by GitHub REST API list endpoints).
+
+Output:
+  ./output/<same_basename>.jsonld
+Exactly one JSON-LD dataset is produced per input file. Each dataset contains:
+  - One named graph (@id derived from the input filename)
+  - A collection of nodes describing:
+      * A DefinedTermSet for Node-RED labels (full known label list)
+      * DefinedTerm nodes for each known label
+      * A Rating node per issue/PR (derived from reactions)
+      * A DigitalDocument node per issue/PR, enriched with heuristics
+      * Optional about nodes for inferred OS/runtime entities
+
+Issue/PR-to-JSON-LD Mapping (per item)
+--------------------------------------
+- schema:DigitalDocument
+  * schema:title <- title
+  * schema:date  <- updated_at
+  * schema:url   <- html_url (preferred)
+  * schema:category <- schema:DefinedTerm per label (filtered to KNOWN_LABELS)
+  * schema:contentRating <- schema:Rating (clamped from reactions +1/-1)
+  * schema:about <- inferred OS/Node.js/Node-RED runtime nodes (when present)
+  * nrua:isContainerised <- boolean (title keyword matching)
+
+Heuristic Enrichment (title-only)
+---------------------------------
+- OS detection uses ordered patterns and returns a Node.js-like os.platform label.
+- Containerisation detection triggers on docker/container-related substrings.
+- Node.js version: if "node.js" appears, the immediately following token is
+  parsed as a digits-and-dots version.
+- Node-RED versions: any version-like tokens are extracted from title, excluding
+  the Node.js token immediately after "node.js" (to avoid double counting).
+
+JSON-LD Style
+-------------
+- No compact context and no prefixes are used in the output graph content.
+- A ZURL indirection feature may shorten IRIs to "z:<index>" identifiers,
+  when those IRIs are present in a runtime-provided ZURL list.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import os
-import urllib.request
-import urllib.error
+
+# -----------------------------------------------------------------------------
+# Filesystem configuration
+# -----------------------------------------------------------------------------
 
 INPUT_DIR = Path("input")
 OUTPUT_DIR = Path("output")
+
+# Base URL for a Node-RED runtime exposing URDF endpoints (required for ZURL+upload).
 NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
+
+# -----------------------------------------------------------------------------
+# Vocabulary IRIs
+# -----------------------------------------------------------------------------
 
 SCHEMA = "https://schema.org/"
 XSD = "http://www.w3.org/2001/XMLSchema#"
 NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
 
+# -----------------------------------------------------------------------------
+# GitHub label vocabulary (stable list)
+# -----------------------------------------------------------------------------
+
 KNOWN_LABELS = [
-    "backport-2.x", "bug", "build", "chore", "dependencies", "docs", "duplicate",
-    "editor", "enhancement", "epic", "feature", "fixed", "good first issue",
-    "hacktoberfest-accepted", "needs-info", "needs-test-case", "needs-triage",
-    "node", "packaging", "project-modernization", "question", "ready-to-review",
-    "runtime", "task", "testing", "upstream", "wontfix",
+    "backport-2.x",
+    "bug",
+    "build",
+    "chore",
+    "dependencies",
+    "docs",
+    "duplicate",
+    "editor",
+    "enhancement",
+    "epic",
+    "feature",
+    "fixed",
+    "good first issue",
+    "hacktoberfest-accepted",
+    "needs-info",
+    "needs-test-case",
+    "needs-triage",
+    "node",
+    "packaging",
+    "project-modernization",
+    "question",
+    "ready-to-review",
+    "runtime",
+    "task",
+    "testing",
+    "upstream",
+    "wontfix",
 ]
+
+# -----------------------------------------------------------------------------
+# Title heuristics configuration: container detection
+# -----------------------------------------------------------------------------
 
 CONTAINER_TERMS = [
-    "docker", "container", "containerised", "containerized", "dockerised", "dockerized"
+    "docker",
+    "container",
+    "containerised",
+    "containerized",
+    "dockerised",
+    "dockerized",
 ]
 
-# OS detection mapping (title keyword -> schema:name = os.platform taxonomy)
-# Order matters (e.g., "macos" should map to darwin)
+# -----------------------------------------------------------------------------
+# Title heuristics configuration: OS detection
+# -----------------------------------------------------------------------------
+
 OS_RULES: List[Tuple[re.Pattern, str]] = [
     (re.compile(r"linux", re.I), "linux"),
     (re.compile(r"darwin|macos|ios", re.I), "darwin"),
@@ -64,26 +143,45 @@ OS_RULES: List[Tuple[re.Pattern, str]] = [
     (re.compile(r"android", re.I), "android"),
 ]
 
-# Version token: starts with number-dot, optionally preceded by v, optionally wrapped in parentheses.
-# We will extract digits+dots and validate.
-VERSION_TOKEN_RE = re.compile(r"(\(?\s*v?\s*(\d+\.\d+(?:\.\d+)*)\s*\)?)")
+# -----------------------------------------------------------------------------
+# Title heuristics configuration: version token parsing
+# -----------------------------------------------------------------------------
 
+VERSION_TOKEN_RE = re.compile(r"(\(?\s*v?\s*(\d+\.\d+(?:\.\d+)*)\s*\)?)")
 NODEJS_RE = re.compile(r"node\.js", re.I)
 
-# ZURL
+# -----------------------------------------------------------------------------
+# ZURL support
+# -----------------------------------------------------------------------------
+#
+# ZURL is a runtime-provided array of IRIs. If an IRI exists in that array, it
+# can be replaced with a compact identifier "z:<index>" to reduce output size.
+#
+# The ZURL list is fetched from:
+#   GET {NODERED_URDF}/urdf/zurl
+#
+# This script fetches ZURL at import time so all builder functions can compact
+# IRIs consistently.
+# -----------------------------------------------------------------------------
 
 def get_zurl(nodered_urdf: str, timeout: int = 30) -> List[str]:
     """
-    Fetches the ZURL JSON array from the Node-RED runtime admin endpoint:
-      GET {NODERED_URDF}/urdf/zurl
+    Fetch a JSON array of IRIs from the URDF ZURL endpoint.
+
+    Args:
+        nodered_urdf:
+            Base URL of the Node-RED runtime exposing /urdf endpoints.
+        timeout:
+            Socket timeout (seconds) for the HTTP request.
 
     Returns:
-      A Python list of strings (IRIs). Raises on HTTP / JSON errors.
+        A Python list of string IRIs.
 
-    Notes:
-      - Assumes the endpoint returns a JSON array (e.g., ["iri1", "iri2", ...]).
-      - If your Node-RED admin endpoint requires authentication, add headers
-        (e.g. Authorization) in the Request below.
+    Raises:
+        ValueError:
+            When the base URL is missing or the response JSON is malformed.
+        RuntimeError:
+            When the HTTP request fails.
     """
     if not nodered_urdf:
         raise ValueError("Missing nodered_urdf base URL (e.g., http://host:1880).")
@@ -118,16 +216,28 @@ def get_zurl(nodered_urdf: str, timeout: int = 30) -> List[str]:
 
     return data
 
+
 def z(iri: str, ZURL: list[str]) -> str:
+    """
+    Convert a full IRI to a compact "z:<index>" identifier if it exists in ZURL.
+    """
     try:
         idx = ZURL.index(iri)
         return f"z:{idx}"
     except ValueError:
         return iri
 
+
 ZURL = get_zurl(NODERED_URDF)
 
+# -----------------------------------------------------------------------------
+# Utility functions
+# -----------------------------------------------------------------------------
+
 def safe_slug(name: str) -> str:
+    """
+    Convert an arbitrary string into a lowercase slug usable in URNs.
+    """
     s = name.strip()
     s = re.sub(r"\.[^.]+$", "", s)
     s = re.sub(r"[^a-zA-Z0-9_-]+", "-", s)
@@ -136,16 +246,27 @@ def safe_slug(name: str) -> str:
 
 
 def urn(*parts: str) -> str:
+    """
+    Build a URN by joining parts with ":".
+    """
     joined = ":".join(p.strip(":") for p in parts if p)
     return f"urn:{joined}"
 
 
 def clamp(v: int, lo: int, hi: int) -> int:
+    """
+    Clamp an integer v to the inclusive range [lo, hi].
+    """
     return max(lo, min(hi, v))
 
+# -----------------------------------------------------------------------------
+# JSON-LD node builders (full IRIs; optionally Z-compacted)
+# -----------------------------------------------------------------------------
 
 def build_defined_term_set(set_id: str, name: str) -> Dict[str, Any]:
-    # values must be arrays
+    """
+    Build a schema:DefinedTermSet node.
+    """
     return {
         "@id": set_id,
         "@type": [z("https://schema.org/DefinedTermSet", ZURL)],
@@ -154,7 +275,9 @@ def build_defined_term_set(set_id: str, name: str) -> Dict[str, Any]:
 
 
 def build_defined_term(term_id: str, label: str, set_id: str) -> Dict[str, Any]:
-    # values must be arrays
+    """
+    Build a schema:DefinedTerm node belonging to a schema:DefinedTermSet.
+    """
     return {
         "@id": term_id,
         "@type": [z("https://schema.org/DefinedTerm", ZURL)],
@@ -164,7 +287,9 @@ def build_defined_term(term_id: str, label: str, set_id: str) -> Dict[str, Any]:
 
 
 def build_rating(rating_id: str, value: int) -> Dict[str, Any]:
-    # values must be arrays
+    """
+    Build a schema:Rating node with a fixed [-10, 10] scale.
+    """
     return {
         "@id": rating_id,
         "@type": [z("https://schema.org/Rating", ZURL)],
@@ -173,8 +298,18 @@ def build_rating(rating_id: str, value: int) -> Dict[str, Any]:
         z("https://schema.org/ratingValue", ZURL): [{"@value": value}],
     }
 
+# -----------------------------------------------------------------------------
+# Input helpers and title heuristics
+# -----------------------------------------------------------------------------
 
 def extract_label_names(item: Dict[str, Any]) -> List[str]:
+    """
+    Extract label names from a GitHub issue/PR object.
+
+    Supports the common GitHub formats:
+      - labels: [{name: "..."} ...]
+      - labels: ["...", "..."]
+    """
     out: List[str] = []
     labels = item.get("labels") or []
     for lab in labels:
@@ -188,6 +323,9 @@ def extract_label_names(item: Dict[str, Any]) -> List[str]:
 
 
 def detect_os_platform_from_title(title: str) -> Optional[str]:
+    """
+    Apply OS_RULES in order and return the first matched platform name.
+    """
     for pat, platform_name in OS_RULES:
         if pat.search(title):
             return platform_name
@@ -195,14 +333,21 @@ def detect_os_platform_from_title(title: str) -> Optional[str]:
 
 
 def title_has_container_hint(title: str) -> bool:
+    """
+    Detect whether the title includes any containerisation hint substrings.
+    """
     t = title.lower()
     return any(term in t for term in CONTAINER_TERMS)
 
 
 def extract_nodejs_version_from_title(title: str) -> Optional[str]:
     """
-    If 'node.js' appears, take the term immediately following it,
-    strip all non [0-9.] characters; if empty or invalid, return None.
+    Extract a Node.js version number from a title.
+
+    Rule:
+      - If "node.js" occurs, take the immediately following whitespace token.
+      - Strip all characters except digits and dots.
+      - Validate the resulting string as a dot-separated numeric version.
     """
     m = NODEJS_RE.search(title)
     if not m:
@@ -212,27 +357,59 @@ def extract_nodejs_version_from_title(title: str) -> Optional[str]:
     if not after:
         return None
 
-    # "term that follows node.js" -> take next whitespace-delimited token
     token = after.split()[0] if after.split() else ""
-    # keep digits and dots only
     cleaned = re.sub(r"[^0-9.]+", "", token)
     if not cleaned:
         return None
-    # validate: digits(.digits)+
+
     if not re.fullmatch(r"\d+(?:\.\d+)*", cleaned):
         return None
+
     return cleaned
 
 
-def extract_nodered_versions_from_title(title: str, nodejs_span: Optional[Tuple[int, int]] = None) -> List[str]:
+def nodejs_version_span(title: str) -> Optional[Tuple[int, int]]:
     """
-    Find version tokens in title. Exclude tokens that belong to Node.js version
-    (i.e., the version token immediately following 'node.js').
-    Return list of cleaned version strings.
+    Return the (start, end) character span of the Node.js version token that
+    immediately follows "node.js", if it exists and validates.
+    """
+    m = NODEJS_RE.search(title)
+    if not m:
+        return None
+
+    after = title[m.end():]
+    ws = re.match(r"\s*", after)
+    offset = ws.end() if ws else 0
+    rest = after[offset:]
+    if not rest:
+        return None
+
+    token_m = re.match(r"\S+", rest)
+    if not token_m:
+        return None
+
+    token = token_m.group(0)
+    cleaned = re.sub(r"[^0-9.]+", "", token)
+    if not cleaned or not re.fullmatch(r"\d+(?:\.\d+)*", cleaned):
+        return None
+
+    start = m.end() + offset
+    end = start + len(token)
+    return (start, end)
+
+
+def extract_nodered_versions_from_title(
+    title: str,
+    nodejs_span: Optional[Tuple[int, int]] = None,
+) -> List[str]:
+    """
+    Extract version-like tokens from a title, excluding the Node.js version token
+    immediately after "node.js" (when its span is provided).
+
+    This is intentionally permissive: any token matching digits+dots (at least
+    "X.Y") is accepted, except those overlapping the excluded span.
     """
     versions: List[str] = []
-
-    # Identify node.js immediate version token span to exclude (best-effort).
     exclude_spans: List[Tuple[int, int]] = []
     if nodejs_span:
         exclude_spans.append(nodejs_span)
@@ -242,45 +419,46 @@ def extract_nodered_versions_from_title(title: str, nodejs_span: Optional[Tuple[
         ver = match.group(2)
         if not ver:
             continue
-        # Exclude if overlaps with nodejs span
-        if any(not (full_span[1] <= ex[0] or full_span[0] >= ex[1]) for ex in exclude_spans):
+
+        overlaps_excluded = any(
+            not (full_span[1] <= ex[0] or full_span[0] >= ex[1]) for ex in exclude_spans
+        )
+        if overlaps_excluded:
             continue
+
         cleaned = re.sub(r"[^0-9.]+", "", ver)
         if cleaned and re.fullmatch(r"\d+\.\d+(?:\.\d+)*", cleaned):
             versions.append(cleaned)
 
     return versions
 
-
-def nodejs_version_span(title: str) -> Optional[Tuple[int, int]]:
-    """
-    Returns the character span (start, end) of the Node.js version token immediately after 'node.js',
-    so we can exclude it from Node-RED version extraction.
-    """
-    m = NODEJS_RE.search(title)
-    if not m:
-        return None
-    after = title[m.end():]
-    # find next token with indices
-    ws = re.match(r"\s*", after)
-    offset = ws.end() if ws else 0
-    rest = after[offset:]
-    if not rest:
-        return None
-    token_m = re.match(r"\S+", rest)
-    if not token_m:
-        return None
-    token = token_m.group(0)
-    cleaned = re.sub(r"[^0-9.]+", "", token)
-    if not cleaned or not re.fullmatch(r"\d+(?:\.\d+)*", cleaned):
-        return None
-    # compute span in original title
-    start = m.end() + offset
-    end = start + len(token)
-    return (start, end)
-
+# -----------------------------------------------------------------------------
+# Core transformation
+# -----------------------------------------------------------------------------
 
 def transform_file(path: Path) -> List[Dict[str, Any]]:
+    """
+    Transform one GitHub issues/PR JSON file into a JSON-LD dataset (list with one graph).
+
+    Dataset structure:
+      [
+        {
+          "@context": {},   # intentionally empty
+          "@id": "<graph_urn>",
+          "@graph": [ ...nodes... ]
+        }
+      ]
+
+    The @graph will include:
+      - One DefinedTermSet for known labels
+      - One DefinedTerm per known label
+      - One Rating node per issue/PR (reactions-based)
+      - One DigitalDocument node per issue/PR, referencing:
+          * categories (DefinedTerms)
+          * contentRating (Rating)
+          * optional about nodes (OS, Node.js, Node-RED versions)
+          * optional isContainerised boolean
+    """
     base = path.stem
     slug = safe_slug(base)
     graph_id = urn("graph", slug)
@@ -294,33 +472,28 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
 
     nodes: List[Dict[str, Any]] = []
 
-    # DefinedTermSet + all known label terms
     nodes.append(build_defined_term_set(label_set_id, "Node-RED GitHub Labels"))
     for lab in KNOWN_LABELS:
         nodes.append(build_defined_term(label_term_id[lab], lab, label_set_id))
 
-    # Transform each issue/PR
     for item in raw:
         if not isinstance(item, dict):
             continue
 
         title = (item.get("title") or "").strip()
         updated_at = (item.get("updated_at") or "").strip()
-        html_url = (item.get("html_url") or "").strip()  # requested: prefer html_url
+        html_url = (item.get("html_url") or "").strip()
 
-        # Categories from labels (only those present in KNOWN_LABELS; ignore unknown)
         cats: List[str] = []
         for lab in extract_label_names(item):
             if lab in label_term_id:
                 cats.append(label_term_id[lab])
 
-        # Rating
         reactions = item.get("reactions") or {}
         plus = int(reactions.get("+1") or 0)
         minus = int(reactions.get("-1") or 0)
         rating_value = clamp(plus - minus, -10, 10)
 
-        # Stable-ish id components
         number = item.get("number")
         local_key = str(number) if number is not None else str(item.get("id") or "unknown")
 
@@ -329,47 +502,56 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
 
         about_ids: List[str] = []
 
-        # OS detection from title
         os_platform = detect_os_platform_from_title(title)
         if os_platform:
             os_id = urn("os", slug, local_key, os_platform)
-            nodes.append({
-                "@id": os_id,
-                "@type": [z("https://schema.org/OperatingSystem", ZURL)],
-                z("https://schema.org/name", ZURL): [{"@value": os_platform}],
-            })
+            nodes.append(
+                {
+                    "@id": os_id,
+                    "@type": [z("https://schema.org/OperatingSystem", ZURL)],
+                    z("https://schema.org/name", ZURL): [{"@value": os_platform}],
+                }
+            )
             about_ids.append(os_id)
 
-        # Node.js mention + version extraction from title
         nj_span = nodejs_version_span(title)
         nodejs_ver = extract_nodejs_version_from_title(title)
         if nodejs_ver:
             nodejs_id = urn("runtime", slug, local_key, "nodejs", safe_slug(nodejs_ver))
-            nodes.append({
-                "@id": nodejs_id,
-                "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs", ZURL)],
-                z("https://schema.org/version", ZURL): [{"@value": nodejs_ver}],
-            })
+            nodes.append(
+                {
+                    "@id": nodejs_id,
+                    "@type": [
+                        z(
+                            "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs",
+                            ZURL,
+                        )
+                    ],
+                    z("https://schema.org/version", ZURL): [{"@value": nodejs_ver}],
+                }
+            )
             about_ids.append(nodejs_id)
 
-        # Node-RED version(s) in title (excluding Node.js version token)
-        nodered_versions = extract_nodered_versions_from_title(title, nodejs_span=nj_span)
-        for v in nodered_versions:
+        for v in extract_nodered_versions_from_title(title, nodejs_span=nj_span):
             nodered_id = urn("runtime", slug, local_key, "nodered", safe_slug(v))
-            nodes.append({
-                "@id": nodered_id,
-                "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed", ZURL)],
-                z("https://schema.org/version", ZURL): [{"@value": v}],
-            })
+            nodes.append(
+                {
+                    "@iD": nodered_id,  # NOTE: preserve "@id" casing in JSON-LD consumers if needed
+                    "@id": nodered_id,
+                    "@type": [
+                        z(
+                            "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed",
+                            ZURL,
+                        )
+                    ],
+                    z("https://schema.org/version", ZURL): [{"@value": v}],
+                }
+            )
             about_ids.append(nodered_id)
 
-        # Containerisation hint on the document itself
         is_containerised = title_has_container_hint(title)
 
-        # DigitalDocument
-        # Use html_url as the @id when present (it is a proper IRI).
         doc_id = html_url if html_url else urn("doc", slug, local_key)
-
         doc: Dict[str, Any] = {
             "@id": doc_id,
             "@type": [z("https://schema.org/DigitalDocument", ZURL)],
@@ -378,29 +560,48 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
             **({z("https://schema.org/url", ZURL): [{"@value": html_url}]} if html_url else {}),
             **({z("https://schema.org/category", ZURL): [{"@id": c} for c in cats]} if cats else {}),
             z("https://schema.org/contentRating", ZURL): [{"@id": rating_id}],
-            **({z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised", ZURL): [{"@value": True}]} if is_containerised else {}),
+            **(
+                {
+                    z(
+                        "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised",
+                        ZURL,
+                    ): [{"@value": True}]
+                }
+                if is_containerised
+                else {}
+            ),
             **({z("https://schema.org/about", ZURL): [{"@id": a} for a in about_ids]} if about_ids else {}),
         }
 
         nodes.append(doc)
 
-    # IMPORTANT: return an ARRAY of graph objects so urdf.load() can do json.filter(...)
-    return [{
-        "@context": {},
-        "@id": graph_id,
-        "@graph": nodes,
-    }]
+    return [
+        {
+            "@context": {},
+            "@id": graph_id,
+            "@graph": nodes,
+        }
+    ]
 
+# -----------------------------------------------------------------------------
+# Upload support
+# -----------------------------------------------------------------------------
 
 def post_jsonld(doc: dict, out_path) -> None:
+    """
+    POST a generated JSON-LD dataset to the URDF /urdf/loadFile endpoint.
+
+    Behavior:
+      - If NODERED_URDF is not set, upload is skipped.
+      - If a dataset list is provided, the first graph object is uploaded
+        (to match endpoints expecting a single JSON-LD object with "@id").
+    """
     if not NODERED_URDF:
         print("No 'NODERED_URDF' env var set; skipping upload.")
         return
 
     url = f"{NODERED_URDF}/urdf/loadFile"
 
-    # --- FIX: /urdf/loadFile expects a single JSON-LD object with top-level "@id"
-    # If we generated a dataset (list), upload the first graph object.
     doc_to_upload = doc
     if isinstance(doc, list):
         if not doc:
@@ -431,7 +632,23 @@ def post_jsonld(doc: dict, out_path) -> None:
         print(f"Upload failed for {out_path}: {e}")
         raise
 
+# -----------------------------------------------------------------------------
+# CLI entrypoint
+# -----------------------------------------------------------------------------
+
 def main() -> int:
+    """
+    Main program flow:
+      - Validate input directory
+      - Create output directory if missing
+      - For each input JSON file:
+          * Transform to JSON-LD dataset (list)
+          * Write to output/<basename>.jsonld
+          * Optionally upload to URDF endpoint
+
+    Returns:
+        Process exit code (0 indicates success).
+    """
     if not INPUT_DIR.exists():
         raise SystemExit(f"Missing input directory: {INPUT_DIR.resolve()}")
 
@@ -444,7 +661,7 @@ def main() -> int:
 
     for in_path in inputs:
         out_path = OUTPUT_DIR / f"{in_path.stem}.jsonld"
-        jsonld = transform_file(in_path)  # now returns a LIST (dataset)
+        jsonld = transform_file(in_path)
         out_path.write_text(json.dumps(jsonld, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Wrote {out_path}")
         post_jsonld(jsonld, out_path)

@@ -3,7 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Rewrite JSON-LD predicate and @type IRIs into compact z:<index> tokens based on a provided IRI list.",
+  "description": "Transform JSON-LD by rewriting predicate IRIs and @type values into compact z:<index> tokens using a provided IRI list; optionally rewrite @id and other IRI-looking string values; strip SPARQL comments from query-like strings.",
+  "keywords": [
+    "json-ld",
+    "jsonld",
+    "linked-data",
+    "rdf",
+    "iri",
+    "sparql",
+    "cli",
+    "transform"
+  ],
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

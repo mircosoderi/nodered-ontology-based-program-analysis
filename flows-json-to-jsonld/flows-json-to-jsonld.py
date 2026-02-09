@@ -1,28 +1,121 @@
 #!/usr/bin/env python3
-import os
+"""
+Node-RED flow export -> JSON-LD exporter (flow library index).
+
+Purpose
+-------
+Transforms one or more Node-RED flow exports into a JSON-LD dataset describing
+each flow (tab) as a schema:SoftwareSourceCode entry, enriched with a simple
+keyword summary (unique node types used in the flow).
+
+I/O Layout
+----------
+Input:
+  ./input/*.json
+Each input file is expected to be either:
+  - a list of Node-RED nodes (typical export), or
+  - a JSON object containing such a list under a common key (flows/nodes/data/items/content)
+
+Output:
+  ./output/<same_basename>.jsonld
+Exactly one JSON-LD dataset is produced per input file. Each dataset contains:
+  - One named graph (@id fixed to "urn:graph:flowslib")
+  - One node per Node-RED tab, using:
+      * schema:title
+      * schema:url
+      * schema:identifier
+      * schema:keywords
+
+Runtime Coupling (URDF + ZURL)
+------------------------------
+This script is designed to cooperate with a Node-RED runtime exposing URDF
+endpoints:
+
+  - ZURL compaction dictionary:
+      GET {NODERED_URDF}/urdf/zurl
+    Used to optionally shorten repeated IRIs to identifiers "z:<index>".
+
+  - Dataset ingestion endpoint:
+      POST {NODERED_URDF}/urdf/loadFile
+    Payload format:
+      {"doc": <dataset>}
+
+JSON-LD Style and Loader Constraints
+------------------------------------
+- No compact @context and no prefixes are used in emitted graph content.
+- The dataset is always a JSON array (list), because the downstream loader
+  expects to apply list-level operations (e.g., json.filter(...)).
+- Every predicate value is an array, because the downstream renaming logic
+  expects to iterate n[p].forEach(...).
+
+Environment Variables
+---------------------
+- FLOWS_URL:
+    Required. Used only to populate schema:url in each flow entry.
+- NODERED_URDF:
+    Optional but required for ZURL fetching and upload; if missing, upload is
+    skipped. ZURL fetch occurs at import time and will raise if NODERED_URDF is
+    unset or unreachable.
+"""
+
+from __future__ import annotations
+
 import json
-from pathlib import Path
-import urllib.request
+import os
 import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Any, Dict, List
+
+# -----------------------------------------------------------------------------
+# Filesystem configuration
+# -----------------------------------------------------------------------------
 
 INPUT_DIR = Path("input")
 OUTPUT_DIR = Path("output")
+
+# -----------------------------------------------------------------------------
+# Runtime configuration (URDF endpoints)
+# -----------------------------------------------------------------------------
+
 NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
+
+# -----------------------------------------------------------------------------
+# Vocabulary IRIs
+# -----------------------------------------------------------------------------
 
 SCHEMA = "https://schema.org/"
 LIBFLOW_CLASS = f"{SCHEMA}SoftwareSourceCode"
 
-# -----------------------
-# ZURL support (same approach as earlier scripts)
-# -----------------------
+# -----------------------------------------------------------------------------
+# ZURL support
+# -----------------------------------------------------------------------------
+#
+# ZURL is a runtime-provided array of IRIs. If an IRI exists in that array, it
+# can be replaced with a compact identifier "z:<index>" to reduce output size.
+#
+# The ZURL list is fetched from:
+#   GET {NODERED_URDF}/urdf/zurl
+# -----------------------------------------------------------------------------
 
-def get_zurl(nodered_urdf: str, timeout: int = 30) -> list[str]:
+def get_zurl(nodered_urdf: str, timeout: int = 30) -> List[str]:
     """
-    Fetches the ZURL JSON array from the Node-RED runtime admin endpoint:
-      GET {NODERED_URDF}/urdf/zurl
+    Fetch a JSON array of IRIs from the URDF ZURL endpoint.
+
+    Args:
+        nodered_urdf:
+            Base URL of the Node-RED runtime exposing /urdf endpoints.
+        timeout:
+            Socket timeout (seconds) for the HTTP request.
 
     Returns:
-      A Python list of strings (IRIs). Raises on HTTP / JSON errors.
+        A Python list of string IRIs.
+
+    Raises:
+        ValueError:
+            When the base URL is missing or the response JSON is malformed.
+        RuntimeError:
+            When the HTTP request fails.
     """
     if not nodered_urdf:
         raise ValueError("Missing nodered_urdf base URL (e.g., http://host:1880).")
@@ -46,7 +139,7 @@ def get_zurl(nodered_urdf: str, timeout: int = 30) -> list[str]:
         raise RuntimeError(f"GET {url} failed: {e}") from e
 
     try:
-        data = json.loads(body)
+        data: Any = json.loads(body)
     except Exception as e:
         raise ValueError(f"Invalid JSON returned by {url}: {e}\nBody: {body[:500]}") from e
 
@@ -58,70 +151,129 @@ def get_zurl(nodered_urdf: str, timeout: int = 30) -> list[str]:
     return data
 
 
-def z(iri: str, ZURL: list[str]) -> str:
+def z(iri: str, zurl: List[str]) -> str:
+    """
+    Convert a full IRI to a compact "z:<index>" identifier if it exists in ZURL.
+
+    Args:
+        iri:
+            Full IRI to compact.
+        zurl:
+            List of IRIs acting as the compaction dictionary.
+
+    Returns:
+        "z:<index>" if iri is present in zurl, otherwise the original iri.
+    """
     try:
-        idx = ZURL.index(iri)
+        idx = zurl.index(iri)
         return f"z:{idx}"
     except ValueError:
         return iri
 
 
+# Fetch ZURL at import time so that downstream builder functions can use it.
 ZURL = get_zurl(NODERED_URDF)
 
-# -----------------------
-# End ZURL support
-# -----------------------
+# -----------------------------------------------------------------------------
+# Input loading helpers
+# -----------------------------------------------------------------------------
 
+def load_json(path: Path) -> Any:
+    """
+    Load and parse a UTF-8 JSON file.
 
-def load_json(path: Path):
+    Args:
+        path:
+            Input file path.
+
+    Returns:
+        Parsed JSON value (dict/list/scalar).
+    """
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def extract_nodes_list(doc):
+def extract_nodes_list(doc: Any) -> List[Dict[str, Any]]:
     """
-    Supports the most common Node-RED exports:
-      - a list of nodes (typical export)
-      - an object with a top-level list under common keys
+    Extract the Node-RED node list from common export shapes.
+
+    Supported input shapes:
+      - list: treated as the nodes list directly
+      - dict: first list found under common keys (flows/nodes/data/items/content)
+
+    Args:
+        doc:
+            Parsed JSON content.
+
+    Returns:
+        A list of node dictionaries.
+
+    Raises:
+        ValueError:
+            If no node list can be located.
     """
     if isinstance(doc, list):
-        return doc
+        return [n for n in doc if isinstance(n, dict)]
 
     if isinstance(doc, dict):
         for key in ("flows", "nodes", "data", "items", "content"):
             val = doc.get(key)
             if isinstance(val, list):
-                return val
+                return [n for n in val if isinstance(n, dict)]
 
     raise ValueError(
         "Unsupported input JSON structure: expected a list of Node-RED nodes or an object containing one."
     )
 
+# -----------------------------------------------------------------------------
+# JSON-LD builder
+# -----------------------------------------------------------------------------
 
-def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> list:
-    # Identify flows: nodes with type == "tab"
-    tabs = [n for n in nodes_list if isinstance(n, dict) and n.get("type") == "tab"]
+def build_jsonld(flows_url: str, graph_id: str, nodes_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Convert a Node-RED export into a JSON-LD dataset describing each tab as a node.
 
-    # Group nodes by tab id ("z")
-    by_tab = {}
+    Flow identification rule:
+      - A "flow" is a node with type == "tab".
+
+    Grouping rule:
+      - Nodes are assigned to a tab via their "z" property (tab id).
+      - The tab node itself is excluded from keywords.
+
+    Emitted properties:
+      - schema:title: label/name/id fallback
+      - schema:url: FLOWS_URL (external landing page for the library)
+      - schema:identifier: tab id
+      - schema:keywords: comma-separated unique node types in the tab
+
+    Args:
+        flows_url:
+            URL string used only to set schema:url on each emitted flow record.
+        graph_id:
+            JSON-LD named graph identifier.
+        nodes_list:
+            Node-RED nodes list.
+
+    Returns:
+        A JSON-LD dataset (list) containing one graph object.
+    """
+    tabs = [n for n in nodes_list if n.get("type") == "tab" and isinstance(n.get("id"), str)]
+
+    by_tab: Dict[str, List[Dict[str, Any]]] = {}
     for n in nodes_list:
-        if not isinstance(n, dict):
-            continue
         ztab = n.get("z")
         if isinstance(ztab, str) and ztab:
             by_tab.setdefault(ztab, []).append(n)
 
-    libflows = []
+    libflows: List[Dict[str, Any]] = []
     for tab in tabs:
         flow_id = tab.get("id")
         if not isinstance(flow_id, str) or not flow_id:
             continue
 
-        # Label of the flow: prefer "label", fallback "name", fallback id
         label = tab.get("label") or tab.get("name") or flow_id
 
-        # Collect unique node types in that flow (exclude the tab itself)
-        types = set()
+        types: set[str] = set()
         for n in by_tab.get(flow_id, []):
             t = n.get("type")
             if isinstance(t, str) and t and t != "tab":
@@ -129,28 +281,44 @@ def build_jsonld(flows_url: str, graph_id: str, nodes_list: list) -> list:
 
         libflows.append(
             {
-                "@id": f"urn:libflow:{flow_id}",  # resource IRI untouched
-                "@type": [z(LIBFLOW_CLASS, ZURL)],  # type IRI wrapped
-                z(f"{SCHEMA}title", ZURL): [{"@value": str(label)}],  # predicate IRI wrapped
+                "@id": f"urn:libflow:{flow_id}",
+                "@type": [z(LIBFLOW_CLASS, ZURL)],
+                z(f"{SCHEMA}title", ZURL): [{"@value": str(label)}],
                 z(f"{SCHEMA}url", ZURL): [{"@value": str(flows_url)}],
                 z(f"{SCHEMA}identifier", ZURL): [{"@value": str(flow_id)}],
                 z(f"{SCHEMA}keywords", ZURL): [{"@value": ",".join(sorted(types))}],
             }
         )
 
-    # IMPORTANT:
-    # - uRDF's store loader expects a DATASET (array) because it does json.filter(...)
-    # - all predicate values must be ARRAYS because rename() does n[p].forEach(...)
     return [
         {
-            "@context": {},  # you requested no context/abbreviations
-            "@id": graph_id,  # resource IRI untouched
+            "@context": {},
+            "@id": graph_id,
             "@graph": libflows,
         }
     ]
 
+# -----------------------------------------------------------------------------
+# Upload support
+# -----------------------------------------------------------------------------
 
-def post_jsonld(doc, out_path) -> None:
+def post_jsonld(doc: Any, out_path: Path) -> None:
+    """
+    POST a generated JSON-LD dataset to the URDF /urdf/loadFile endpoint.
+
+    The request payload format is:
+      {"doc": <dataset>}
+
+    Args:
+        doc:
+            The JSON-LD dataset (list containing one graph).
+        out_path:
+            Path of the file used for logging context.
+
+    Behavior:
+        - If NODERED_URDF is not set, upload is skipped.
+        - HTTP errors are printed and re-raised.
+    """
     if not NODERED_URDF:
         print("No 'NODERED_URDF' env var set; skipping upload.")
         return
@@ -180,8 +348,24 @@ def post_jsonld(doc, out_path) -> None:
         print(f"Upload failed for {out_path}: {e}")
         raise
 
+# -----------------------------------------------------------------------------
+# CLI entrypoint
+# -----------------------------------------------------------------------------
 
-def main():
+def main() -> int:
+    """
+    Main program flow:
+      - Validate required environment variables
+      - Ensure input/output directories exist
+      - For each input JSON file:
+          * Parse and extract nodes
+          * Build JSON-LD dataset (list with one graph)
+          * Write to output/<basename>.jsonld
+          * Optionally upload to URDF endpoint
+
+    Returns:
+        Process exit code (0 indicates success).
+    """
     flows_url = os.environ.get("FLOWS_URL", "").strip()
     if not flows_url:
         raise SystemExit(
@@ -191,10 +375,7 @@ def main():
     INPUT_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    input_files = sorted(
-        [p for p in INPUT_DIR.iterdir() if p.is_file() and p.suffix.lower() == ".json"]
-    )
-
+    input_files = sorted(p for p in INPUT_DIR.iterdir() if p.is_file() and p.suffix.lower() == ".json")
     if not input_files:
         raise SystemExit("No .json files found in ./input")
 
@@ -202,9 +383,7 @@ def main():
         doc = load_json(input_path)
         nodes_list = extract_nodes_list(doc)
 
-        # graph name: urn:graph:<input filename without extension>
         graph_id = "urn:graph:flowslib"
-
         jsonld = build_jsonld(flows_url, graph_id, nodes_list)
 
         output_path = OUTPUT_DIR / f"{input_path.stem}.jsonld"
@@ -213,7 +392,9 @@ def main():
 
         post_jsonld(jsonld, output_path)
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
 
