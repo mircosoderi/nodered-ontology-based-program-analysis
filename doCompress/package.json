@@ -1,0 +1,17 @@
+{
+  "name": "jsonld-zify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Rewrite JSON-LD predicate and @type IRIs into compact z:<index> tokens based on a provided IRI list.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:pretty": "node index.js --pretty",
+    "start:all": "node index.js --pretty --rewrite-ids"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
+

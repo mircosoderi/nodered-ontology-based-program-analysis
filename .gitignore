@@ -15,4 +15,12 @@
 !flows-json-to-jsonld/**
 !experiments/
 !experiments/**
+!nodered-user-application-ontology/
+!nodered-user-application-ontology/**
+!isFlattened/
+!isFlattened/**
+!doFlatten/
+!doFlatten/**
+!doCompress/
+!doCompress/**
 !README.md

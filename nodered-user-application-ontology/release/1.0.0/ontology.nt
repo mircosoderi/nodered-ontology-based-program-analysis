@@ -1,0 +1,154 @@
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Ontology> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> <http://www.w3.org/2002/07/owl#versionIRI> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology/1.0.0> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> <http://www.w3.org/2000/01/rdf-schema#comment> "This ontology models a selection of aspects related to the hardware/software architecture (including operating system, Node.js runtime, Node-RED platform) and most importantly the Node-RED user application that lives on top of it (including flows, subflows, nodes and connections between them), with the purpose of connecting the user application to external official and community knowledge and ultimately enabling efficient and context-rich static program analysis of Node-RED applications, including reachability, dependency tracing, policy compliance, misconfiguration detection, context-aware correctness checks or code smells detection." .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> <http://www.w3.org/2000/01/rdf-schema#label> "Node-RED User Application Ontology for Node-RED Ontology-Based Program Analysis" .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> <http://www.w3.org/2000/01/rdf-schema#seeAlso> "https://w3id.org/nodered-ontology-based-program-analysis" .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> <http://www.w3.org/2002/07/owl#versionInfo> "1.0.0" .
+# 
+# 
+# #################################################################
+# #
+# #    Object Properties
+# #
+# #################################################################
+# 
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/2000/01/rdf-schema#range> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput> <http://www.w3.org/2000/01/rdf-schema#label> "has output" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow> <http://www.w3.org/2000/01/rdf-schema#range> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow> <http://www.w3.org/2000/01/rdf-schema#label> "runs subflow" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode> <http://www.w3.org/2000/01/rdf-schema#range> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode> <http://www.w3.org/2000/01/rdf-schema#label> "to node" .
+# 
+# 
+# 
+# #################################################################
+# #
+# #    Data properties
+# #
+# #################################################################
+# 
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate> <http://www.w3.org/2000/01/rdf-schema#label> "from gate" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised> <http://www.w3.org/2000/01/rdf-schema#domain> <https://schema.org/OperatingSystem> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#boolean> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised> <http://www.w3.org/2000/01/rdf-schema#label> "containerised" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl> <http://www.w3.org/2000/01/rdf-schema#domain> <https://schema.org/OperatingSystem> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#boolean> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl> <http://www.w3.org/2000/01/rdf-schema#label> "WSL" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type> <http://www.w3.org/2000/01/rdf-schema#domain> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type> <http://www.w3.org/2000/01/rdf-schema#label> "type" .
+# 
+# 
+# 
+# #################################################################
+# #
+# #    Classes
+# #
+# #################################################################
+# 
+# 
+# http://schema.org/Action
+<http://schema.org/Action> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+# 
+# https://schema.org/Application
+<https://schema.org/Application> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+# 
+# https://schema.org/OperatingSystem
+<https://schema.org/OperatingSystem> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+# 
+# https://schema.org/RuntimePlatform
+<https://schema.org/RuntimePlatform> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+# 
+# https://schema.org/SoftwareSourceCode
+<https://schema.org/SoftwareSourceCode> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/SoftwareSourceCode> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow> <http://www.w3.org/2000/01/rdf-schema#label> "Flow" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/SoftwareSourceCode> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node> <http://www.w3.org/2000/01/rdf-schema#label> "Node" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/RuntimePlatform> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> <http://www.w3.org/2000/01/rdf-schema#label> "Node.js Runtime" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/SoftwareSourceCode> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput> <http://www.w3.org/2000/01/rdf-schema#label> "Node Output" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/RuntimePlatform> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed> <http://www.w3.org/2000/01/rdf-schema#label> "Node-RED Platform" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/SoftwareSourceCode> .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://schema.org/SoftwareSourceCode> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow> <http://www.w3.org/2000/01/rdf-schema#label> "Subflow" .
+# 
+# 
+# 
+# #################################################################
+# #
+# #    Individuals
+# #
+# #################################################################
+# 
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://schema.org/Application> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app> <http://www.w3.org/2000/01/rdf-schema#label> "User application" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs> <http://www.w3.org/2000/01/rdf-schema#label> "Node.js runtime" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered> <http://www.w3.org/2000/01/rdf-schema#label> "Node-RED platform" .
+# 
+# https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://schema.org/OperatingSystem> .
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os> <http://www.w3.org/2000/01/rdf-schema#label> "Operating system" .
+# 
+# Generated by the OWL API (version 5.1.18) https://github.com/owlcs/owlapi/

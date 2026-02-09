@@ -1,0 +1,412 @@
+{
+  "_comment" : "Created with OWL2VOWL (version 0.3.5), http://vowl.visualdataweb.org",
+  "header" : {
+    "languages" : [ "undefined" ],
+    "baseIris" : [ "http://schema.org", "http://www.w3.org/2000/01/rdf-schema", "https://schema.org", "http://www.w3.org/2001/XMLSchema", "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology" ],
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "version" : "1.0.0",
+    "labels" : {
+      "undefined" : "Node-RED User Application Ontology for Node-RED Ontology-Based Program Analysis"
+    },
+    "comments" : {
+      "undefined" : "This ontology models a selection of aspects related to the hardware/software architecture (including operating system, Node.js runtime, Node-RED platform) and most importantly the Node-RED user application that lives on top of it (including flows, subflows, nodes and connections between them), with the purpose of connecting the user application to external official and community knowledge and ultimately enabling efficient and context-rich static program analysis of Node-RED applications, including reachability, dependency tracing, policy compliance, misconfiguration detection, context-aware correctness checks or code smells detection."
+    },
+    "other" : {
+      "versionInfo" : [ {
+        "identifier" : "versionInfo",
+        "language" : "undefined",
+        "value" : "1.0.0",
+        "type" : "label"
+      } ],
+      "seeAlso" : [ {
+        "identifier" : "seeAlso",
+        "language" : "undefined",
+        "value" : "https://w3id.org/nodered-ontology-based-program-analysis",
+        "type" : "label"
+      } ]
+    }
+  },
+  "namespace" : [ ],
+  "class" : [ {
+    "id" : "0",
+    "type" : "rdfs:Datatype"
+  }, {
+    "id" : "1",
+    "type" : "rdfs:Datatype"
+  }, {
+    "id" : "14",
+    "type" : "owl:Class"
+  }, {
+    "id" : "3",
+    "type" : "owl:Class"
+  }, {
+    "id" : "18",
+    "type" : "rdfs:Datatype"
+  }, {
+    "id" : "4",
+    "type" : "owl:Class"
+  }, {
+    "id" : "22",
+    "type" : "rdfs:Datatype"
+  }, {
+    "id" : "9",
+    "type" : "owl:Class"
+  }, {
+    "id" : "23",
+    "type" : "owl:Class"
+  }, {
+    "id" : "24",
+    "type" : "owl:Class"
+  }, {
+    "id" : "13",
+    "type" : "owl:Class"
+  }, {
+    "id" : "16",
+    "type" : "owl:Class"
+  }, {
+    "id" : "20",
+    "type" : "owl:Class"
+  }, {
+    "id" : "8",
+    "type" : "owl:Class"
+  }, {
+    "id" : "11",
+    "type" : "owl:Class"
+  }, {
+    "id" : "6",
+    "type" : "owl:Class"
+  } ],
+  "classAttribute" : [ {
+    "iri" : "http://www.w3.org/2001/XMLSchema#boolean",
+    "baseIri" : "http://www.w3.org/2001/XMLSchema",
+    "id" : "0",
+    "label" : {
+      "IRI-based" : "boolean"
+    }
+  }, {
+    "iri" : "http://www.w3.org/2001/XMLSchema#string",
+    "baseIri" : "http://www.w3.org/2001/XMLSchema",
+    "id" : "1",
+    "label" : {
+      "IRI-based" : "string"
+    }
+  }, {
+    "iri" : "https://schema.org/Application",
+    "baseIri" : "https://schema.org",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "Application"
+    },
+    "individuals" : [ {
+      "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app",
+      "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+      "labels" : {
+        "IRI-based" : "app",
+        "undefined" : "User application"
+      }
+    } ],
+    "attributes" : [ "external" ],
+    "id" : "14"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "NodeRed",
+      "undefined" : "Node-RED Platform"
+    },
+    "individuals" : [ {
+      "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered",
+      "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+      "labels" : {
+        "IRI-based" : "nodered",
+        "undefined" : "Node-RED platform"
+      }
+    } ],
+    "id" : "3",
+    "superClasses" : [ "4" ]
+  }, {
+    "iri" : "http://www.w3.org/2001/XMLSchema#integer",
+    "baseIri" : "http://www.w3.org/2001/XMLSchema",
+    "id" : "18",
+    "label" : {
+      "IRI-based" : "integer"
+    }
+  }, {
+    "iri" : "https://schema.org/RuntimePlatform",
+    "baseIri" : "https://schema.org",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "RuntimePlatform"
+    },
+    "subClasses" : [ "3", "6" ],
+    "attributes" : [ "external" ],
+    "id" : "4"
+  }, {
+    "iri" : "http://www.w3.org/2001/XMLSchema#boolean",
+    "baseIri" : "http://www.w3.org/2001/XMLSchema",
+    "id" : "22",
+    "label" : {
+      "IRI-based" : "boolean"
+    }
+  }, {
+    "iri" : "https://schema.org/SoftwareSourceCode",
+    "baseIri" : "https://schema.org",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "SoftwareSourceCode"
+    },
+    "subClasses" : [ "8", "11", "13", "16", "20" ],
+    "attributes" : [ "external" ],
+    "id" : "9"
+  }, {
+    "iri" : "http://schema.org/Action",
+    "baseIri" : "http://schema.org",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "Action"
+    },
+    "attributes" : [ "external" ],
+    "id" : "23"
+  }, {
+    "iri" : "https://schema.org/OperatingSystem",
+    "baseIri" : "https://schema.org",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "OperatingSystem"
+    },
+    "individuals" : [ {
+      "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os",
+      "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+      "labels" : {
+        "IRI-based" : "os",
+        "undefined" : "Operating system"
+      }
+    } ],
+    "attributes" : [ "external" ],
+    "id" : "24"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "NodeOutput",
+      "undefined" : "Node Output"
+    },
+    "id" : "13",
+    "superClasses" : [ "9" ]
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "Rule"
+    },
+    "id" : "16",
+    "superClasses" : [ "9" ]
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "Node",
+      "undefined" : "Node"
+    },
+    "id" : "20",
+    "superClasses" : [ "9" ]
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "Flow",
+      "undefined" : "Flow"
+    },
+    "id" : "8",
+    "superClasses" : [ "9" ]
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "Subflow",
+      "undefined" : "Subflow"
+    },
+    "id" : "11",
+    "superClasses" : [ "9" ]
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "instances" : 0,
+    "label" : {
+      "IRI-based" : "NodeJs",
+      "undefined" : "Node.js Runtime"
+    },
+    "individuals" : [ {
+      "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs",
+      "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+      "labels" : {
+        "IRI-based" : "nodejs",
+        "undefined" : "Node.js runtime"
+      }
+    } ],
+    "id" : "6",
+    "superClasses" : [ "4" ]
+  } ],
+  "property" : [ {
+    "id" : "2",
+    "type" : "rdfs:SubClassOf"
+  }, {
+    "id" : "5",
+    "type" : "rdfs:SubClassOf"
+  }, {
+    "id" : "7",
+    "type" : "rdfs:SubClassOf"
+  }, {
+    "id" : "10",
+    "type" : "rdfs:SubClassOf"
+  }, {
+    "id" : "12",
+    "type" : "rdfs:SubClassOf"
+  }, {
+    "id" : "15",
+    "type" : "rdfs:SubClassOf"
+  }, {
+    "id" : "17",
+    "type" : "owl:datatypeProperty"
+  }, {
+    "id" : "19",
+    "type" : "owl:objectProperty"
+  }, {
+    "id" : "21",
+    "type" : "owl:objectProperty"
+  }, {
+    "id" : "25",
+    "type" : "owl:datatypeProperty"
+  }, {
+    "id" : "26",
+    "type" : "owl:objectProperty"
+  }, {
+    "id" : "27",
+    "type" : "owl:datatypeProperty"
+  }, {
+    "id" : "28",
+    "type" : "owl:datatypeProperty"
+  }, {
+    "id" : "29",
+    "type" : "rdfs:SubClassOf"
+  } ],
+  "propertyAttribute" : [ {
+    "range" : "4",
+    "domain" : "3",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "2"
+  }, {
+    "range" : "4",
+    "domain" : "6",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "5"
+  }, {
+    "range" : "9",
+    "domain" : "8",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "7"
+  }, {
+    "range" : "9",
+    "domain" : "11",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "10"
+  }, {
+    "range" : "9",
+    "domain" : "13",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "12"
+  }, {
+    "range" : "9",
+    "domain" : "16",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "15"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "18",
+    "label" : {
+      "IRI-based" : "fromGate",
+      "undefined" : "from gate"
+    },
+    "domain" : "13",
+    "attributes" : [ "datatype" ],
+    "id" : "17"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "11",
+    "label" : {
+      "IRI-based" : "runsSubflow",
+      "undefined" : "runs subflow"
+    },
+    "domain" : "20",
+    "attributes" : [ "object" ],
+    "id" : "19"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "20",
+    "label" : {
+      "IRI-based" : "toNode",
+      "undefined" : "to node"
+    },
+    "domain" : "13",
+    "attributes" : [ "object" ],
+    "id" : "21"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "22",
+    "label" : {
+      "IRI-based" : "isContainerised",
+      "undefined" : "containerised"
+    },
+    "domain" : "24",
+    "attributes" : [ "datatype" ],
+    "id" : "25"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "13",
+    "label" : {
+      "IRI-based" : "hasOutput",
+      "undefined" : "has output"
+    },
+    "domain" : "20",
+    "attributes" : [ "object" ],
+    "id" : "26"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "0",
+    "label" : {
+      "IRI-based" : "isWsl",
+      "undefined" : "WSL"
+    },
+    "domain" : "24",
+    "attributes" : [ "datatype" ],
+    "id" : "27"
+  }, {
+    "iri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type",
+    "baseIri" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology",
+    "range" : "1",
+    "label" : {
+      "IRI-based" : "type",
+      "undefined" : "type"
+    },
+    "domain" : "20",
+    "attributes" : [ "datatype" ],
+    "id" : "28"
+  }, {
+    "range" : "9",
+    "domain" : "20",
+    "attributes" : [ "object", "anonymous" ],
+    "id" : "29"
+  } ]
+}

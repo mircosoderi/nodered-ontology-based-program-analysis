@@ -1,0 +1,359 @@
+<h2 id="crossreference" class="list">Cross-reference for Node-RED User Application Ontology for Node-RED Ontology-Based Program Analysis classes, object properties and data properties <span class="backlink"> back to <a href="#toc">ToC</a></span></h2>
+This section provides details for each class and property defined by Node-RED User Application Ontology for Node-RED Ontology-Based Program Analysis.
+<div xmlns:widoco="https://w3id.org/widoco/vocab#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="classes">
+ <h3 id="classes-headline" class="list">Classes</h3>
+ <ul class="hlist">
+  <li><a href="#Flow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow">Flow</a></li>
+  <li><a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a></li>
+  <li><a href="#NodeOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput">Node Output</a></li>
+  <li><a href="#NodeRed" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed">Node-RED Platform</a></li>
+  <li><a href="#NodeJs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs">Node.js Runtime</a></li>
+  <li><a href="#Rule" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule"> <span>Rule</span> </a></li>
+  <li><a href="#Subflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow">Subflow</a></li>
+ </ul>
+ <div class="entity" id="Flow">
+  <h3>Flow<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="Node">
+  <h3>Node<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+   <dt>
+    is in domain of
+   </dt>
+   <dd>
+    <a href="#hasOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput">has output</a> <sup class="type-op" title="object property">op</sup>, <a href="#runsSubflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow">runs subflow</a> <sup class="type-op" title="object property">op</sup>, <a href="#type" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type">type</a> <sup class="type-dp" title="data property">dp</sup>
+   </dd>
+   <dt>
+    is in range of
+   </dt>
+   <dd>
+    <a href="#toNode" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode">to node</a> <sup class="type-op" title="object property">op</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="NodeOutput">
+  <h3>Node Output<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+   <dt>
+    is in domain of
+   </dt>
+   <dd>
+    <a href="#fromGate" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate">from gate</a> <sup class="type-dp" title="data property">dp</sup>, <a href="#toNode" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode">to node</a> <sup class="type-op" title="object property">op</sup>
+   </dd>
+   <dt>
+    is in range of
+   </dt>
+   <dd>
+    <a href="#hasOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput">has output</a> <sup class="type-op" title="object property">op</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="NodeRed">
+  <h3>Node-RED Platform<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/RuntimePlatform" target="_blank" title="https://schema.org/RuntimePlatform">Runtime Platform</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+   <dt>
+    has members
+   </dt>
+   <dd>
+    <a href="#nodered" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered">Node-RED platform</a> <sup class="type-ni" title="named individual">ni</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="NodeJs">
+  <h3>Node.js Runtime<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/RuntimePlatform" target="_blank" title="https://schema.org/RuntimePlatform">Runtime Platform</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+   <dt>
+    has members
+   </dt>
+   <dd>
+    <a href="#nodejs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs">Node.js runtime</a> <sup class="type-ni" title="named individual">ni</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="Rule">
+  <h3>Rule<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="Subflow">
+  <h3>Subflow<sup class="type-c" title="class">c</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#classes">Class ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow</p>
+  <dl class="description">
+   <dt>
+    has super-classes
+   </dt>
+   <dd>
+    <a href="https://schema.org/SoftwareSourceCode" target="_blank" title="https://schema.org/SoftwareSourceCode">Software Source Code</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+   <dt>
+    is in range of
+   </dt>
+   <dd>
+    <a href="#runsSubflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow">runs subflow</a> <sup class="type-op" title="object property">op</sup>
+   </dd>
+  </dl>
+ </div>
+</div><div xmlns:widoco="https://w3id.org/widoco/vocab#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="objectproperties">
+ <h3 id="properties" class="list">Object Properties</h3>
+ <ul class="hlist">
+  <li><a href="#hasOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput">has output</a></li>
+  <li><a href="#runsSubflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow">runs subflow</a></li>
+  <li><a href="#toNode" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode">to node</a></li>
+ </ul>
+ <div class="entity" id="hasOutput">
+  <h3>has output<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="#NodeOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput">Node Output</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="runsSubflow">
+  <h3>runs subflow<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="#Subflow" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow">Subflow</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="toNode">
+  <h3>to node<sup class="type-op" title="object property">op</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#objectproperties">Object Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#NodeOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput">Node Output</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+   </dl>
+  </div>
+ </div>
+</div><div xmlns:widoco="https://w3id.org/widoco/vocab#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="dataproperties">
+ <h3 id="dataproperties-headline" class="list">Data Properties</h3>
+ <ul class="hlist">
+  <li><a href="#isContainerised" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised">containerised</a></li>
+  <li><a href="#fromGate" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate">from gate</a></li>
+  <li><a href="#type" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type">type</a></li>
+  <li><a href="#isWsl" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl">WSL</a></li>
+ </ul>
+ <div class="entity" id="isContainerised">
+  <h3>containerised<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#boolean" target="_blank" title="http://www.w3.org/2001/XMLSchema#boolean">boolean</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="fromGate">
+  <h3>from gate<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#NodeOutput" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput">Node Output</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#integer" target="_blank" title="http://www.w3.org/2001/XMLSchema#integer">integer</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="type">
+  <h3>type<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="#Node" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node">Node</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#string" target="_blank" title="http://www.w3.org/2001/XMLSchema#string">string</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+ <div class="entity" id="isWsl">
+  <h3>WSL<sup class="type-dp" title="data property">dp</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#dataproperties">Data Property ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl</p>
+  <div class="description">
+   <dl>
+    <dt>
+     has domain
+    </dt>
+    <dd>
+     <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup>
+    </dd>
+    <dt>
+     has range
+    </dt>
+    <dd>
+     <a href="http://www.w3.org/2001/XMLSchema#boolean" target="_blank" title="http://www.w3.org/2001/XMLSchema#boolean">boolean</a>
+    </dd>
+   </dl>
+  </div>
+ </div>
+</div><div xmlns:widoco="https://w3id.org/widoco/vocab#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="namedindividuals">
+ <h3 id="namedindividuals" class="list">Named Individuals</h3>
+ <ul class="hlist">
+  <li><a href="#nodered" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered">Node-RED platform</a></li>
+  <li><a href="#nodejs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs">Node.js runtime</a></li>
+  <li><a href="#os" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os">Operating system</a></li>
+  <li><a href="#app" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app">User application</a></li>
+ </ul>
+ <div class="entity" id="nodered">
+  <h3>Node-RED platform<sup class="type-ni" title="named individual">ni</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#namedindividuals">Named Individual ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered</p>
+  <dl class="description">
+   <dt>
+    belongs to
+   </dt>
+   <dd>
+    <a href="#NodeRed" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed">Node-RED Platform</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="nodejs">
+  <h3>Node.js runtime<sup class="type-ni" title="named individual">ni</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#namedindividuals">Named Individual ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs</p>
+  <dl class="description">
+   <dt>
+    belongs to
+   </dt>
+   <dd>
+    <a href="#NodeJs" title="https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs">Node.js Runtime</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="os">
+  <h3>Operating system<sup class="type-ni" title="named individual">ni</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#namedindividuals">Named Individual ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os</p>
+  <dl class="description">
+   <dt>
+    belongs to
+   </dt>
+   <dd>
+    <a href="https://schema.org/OperatingSystem" target="_blank" title="https://schema.org/OperatingSystem">Operating System</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+  </dl>
+ </div>
+ <div class="entity" id="app">
+  <h3>User application<sup class="type-ni" title="named individual">ni</sup> <span class="backlink"> back to <a href="#toc">ToC</a> or <a href="#namedindividuals">Named Individual ToC</a> </span></h3>
+  <p><strong>IRI:</strong> https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app</p>
+  <dl class="description">
+   <dt>
+    belongs to
+   </dt>
+   <dd>
+    <a href="https://schema.org/Application" target="_blank" title="https://schema.org/Application">Application</a> <sup class="type-c" title="class">c</sup>
+   </dd>
+  </dl>
+ </div>
+</div><div id="legend">
+<h2>Legend <span class="backlink"> back to <a href="#toc">ToC</a></span></h2>
+<div   class="entity">
+<sup class="type-c" title="Classes">c</sup>: Classes <br/>
+<sup class="type-op" title="Object Properties">op</sup>: Object Properties <br/>
+<sup class="type-dp" title="Data Properties">dp</sup>: Data Properties <br/>
+<sup class="type-ni" title="Named Individuals">ni</sup>: Named Individuals <br/>
+</div>
+</div>

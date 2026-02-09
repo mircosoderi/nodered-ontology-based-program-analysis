@@ -1,0 +1,166 @@
+@prefix : <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@base <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#> .
+
+<https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology> rdf:type owl:Ontology ;
+                                                                                              owl:versionIRI <https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology/1.0.0> ;
+                                                                                              rdfs:comment "This ontology models a selection of aspects related to the hardware/software architecture (including operating system, Node.js runtime, Node-RED platform) and most importantly the Node-RED user application that lives on top of it (including flows, subflows, nodes and connections between them), with the purpose of connecting the user application to external official and community knowledge and ultimately enabling efficient and context-rich static program analysis of Node-RED applications, including reachability, dependency tracing, policy compliance, misconfiguration detection, context-aware correctness checks or code smells detection." ;
+                                                                                              rdfs:label "Node-RED User Application Ontology for Node-RED Ontology-Based Program Analysis" ;
+                                                                                              rdfs:seeAlso "https://w3id.org/nodered-ontology-based-program-analysis" ;
+                                                                                              owl:versionInfo "1.0.0" .
+
+#################################################################
+#    Object Properties
+#################################################################
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput
+:hasOutput rdf:type owl:ObjectProperty ;
+           rdfs:domain :Node ;
+           rdfs:range :NodeOutput ;
+           rdfs:label "has output" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#runsSubflow
+:runsSubflow rdf:type owl:ObjectProperty ;
+             rdfs:domain :Node ;
+             rdfs:range :Subflow ;
+             rdfs:label "runs subflow" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode
+:toNode rdf:type owl:ObjectProperty ;
+        rdfs:domain :NodeOutput ;
+        rdfs:range :Node ;
+        rdfs:label "to node" .
+
+
+#################################################################
+#    Data properties
+#################################################################
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate
+:fromGate rdf:type owl:DatatypeProperty ;
+          rdfs:domain :NodeOutput ;
+          rdfs:range xsd:integer ;
+          rdfs:label "from gate" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised
+:isContainerised rdf:type owl:DatatypeProperty ;
+                 rdfs:domain <https://schema.org/OperatingSystem> ;
+                 rdfs:range xsd:boolean ;
+                 rdfs:label "containerised" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl
+:isWsl rdf:type owl:DatatypeProperty ;
+       rdfs:domain <https://schema.org/OperatingSystem> ;
+       rdfs:range xsd:boolean ;
+       rdfs:label "WSL" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type
+:type rdf:type owl:DatatypeProperty ;
+      rdfs:domain :Node ;
+      rdfs:range xsd:string ;
+      rdfs:label "type" .
+
+
+#################################################################
+#    Classes
+#################################################################
+
+###  http://schema.org/Action
+<http://schema.org/Action> rdf:type owl:Class .
+
+
+###  https://schema.org/Application
+<https://schema.org/Application> rdf:type owl:Class .
+
+
+###  https://schema.org/OperatingSystem
+<https://schema.org/OperatingSystem> rdf:type owl:Class .
+
+
+###  https://schema.org/RuntimePlatform
+<https://schema.org/RuntimePlatform> rdf:type owl:Class .
+
+
+###  https://schema.org/SoftwareSourceCode
+<https://schema.org/SoftwareSourceCode> rdf:type owl:Class .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow
+:Flow rdf:type owl:Class ;
+      rdfs:subClassOf <https://schema.org/SoftwareSourceCode> ;
+      rdfs:label "Flow" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node
+:Node rdf:type owl:Class ;
+      rdfs:subClassOf <https://schema.org/SoftwareSourceCode> ;
+      rdfs:label "Node" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs
+:NodeJs rdf:type owl:Class ;
+        rdfs:subClassOf <https://schema.org/RuntimePlatform> ;
+        rdfs:label "Node.js Runtime" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput
+:NodeOutput rdf:type owl:Class ;
+            rdfs:subClassOf <https://schema.org/SoftwareSourceCode> ;
+            rdfs:label "Node Output" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed
+:NodeRed rdf:type owl:Class ;
+         rdfs:subClassOf <https://schema.org/RuntimePlatform> ;
+         rdfs:label "Node-RED Platform" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule
+:Rule rdf:type owl:Class ;
+      rdfs:subClassOf <https://schema.org/SoftwareSourceCode> .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Subflow
+:Subflow rdf:type owl:Class ;
+         rdfs:subClassOf <https://schema.org/SoftwareSourceCode> ;
+         rdfs:label "Subflow" .
+
+
+#################################################################
+#    Individuals
+#################################################################
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#app
+:app rdf:type owl:NamedIndividual ,
+              <https://schema.org/Application> ;
+     rdfs:label "User application" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodejs
+:nodejs rdf:type owl:NamedIndividual ,
+                 :NodeJs ;
+        rdfs:label "Node.js runtime" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#nodered
+:nodered rdf:type owl:NamedIndividual ,
+                  :NodeRed ;
+         rdfs:label "Node-RED platform" .
+
+
+###  https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#os
+:os rdf:type owl:NamedIndividual ,
+             <https://schema.org/OperatingSystem> ;
+    rdfs:label "Operating system" .
+
+
+###  Generated by the OWL API (version 5.1.18) https://github.com/owlcs/owlapi/
