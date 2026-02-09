@@ -4,7 +4,6 @@
 # but keep these so the repo can track them
 !.gitignore
 !.gitattributes
-!nodered-user-application-ontology.rdf
 !nodered-urdf/
 !nodered-urdf/**
 !github-issues-to-jsonld/
