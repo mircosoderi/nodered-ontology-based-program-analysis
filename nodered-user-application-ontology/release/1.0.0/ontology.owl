@@ -300,13 +300,6 @@
     
 
 
-    <!-- http://schema.org/Action -->
-
-
-    <owl:Class rdf:about="http://schema.org/Action"/>
-    
-
-
     <!-- https://schema.org/Application -->
 
 

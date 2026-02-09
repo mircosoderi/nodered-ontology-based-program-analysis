@@ -3,9 +3,258 @@
     "@id": "urn:nrua:ontology",
     "@graph": [
       {
-        "@id": "http://schema.org/Action",
+        "@id": "_:b0",
         "@type": [
           "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2002/07/owl#unionOf": [
+          {
+            "@list": [
+              {
+                "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow"
+              },
+              {
+                "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "@id": "_:b1",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2002/07/owl#unionOf": [
+          {
+            "@list": [
+              {
+                "@id": "https://schema.org/OperatingSystem"
+              },
+              {
+                "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow"
+              },
+              {
+                "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "@id": "_:b2",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#Class"
+        ],
+        "http://www.w3.org/2002/07/owl#unionOf": [
+          {
+            "@list": [
+              {
+                "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs"
+              },
+              {
+                "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/description",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://schema.org/OperatingSystem"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/encodingFormat",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/hasPart",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://schema.org/SoftwareSourceCode"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/identifier",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "_:b0"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/isPartOf",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ]
+      },
+      {
+        "@id": "http://schema.org/keywords",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/name",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "_:b1"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/operatingSystem",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://schema.org/OperatingSystem"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/programmingLanguage",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/runtimePlatform",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/softwareVersion",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://schema.org/OperatingSystem"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/text",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
+        ]
+      },
+      {
+        "@id": "http://schema.org/version",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#DatatypeProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "_:b2"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "http://www.w3.org/2001/XMLSchema#string"
+          }
         ]
       },
       {
@@ -246,6 +495,48 @@
         "http://www.w3.org/2000/01/rdf-schema#range": [
           {
             "@id": "http://www.w3.org/2001/XMLSchema#boolean"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://schema.org/Application"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [
+          {
+            "@id": "http://schema.org/isPartOf"
+          }
+        ]
+      },
+      {
+        "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow",
+        "@type": [
+          "http://www.w3.org/2002/07/owl#ObjectProperty"
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#domain": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#range": [
+          {
+            "@id": "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow"
+          }
+        ],
+        "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [
+          {
+            "@id": "http://schema.org/isPartOf"
           }
         ]
       },

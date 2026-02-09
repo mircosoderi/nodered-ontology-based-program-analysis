@@ -177,10 +177,6 @@
 #    Classes
 #################################################################
 
-###  http://schema.org/Action
-<http://schema.org/Action> rdf:type owl:Class .
-
-
 ###  https://schema.org/Application
 <https://schema.org/Application> rdf:type owl:Class .
 

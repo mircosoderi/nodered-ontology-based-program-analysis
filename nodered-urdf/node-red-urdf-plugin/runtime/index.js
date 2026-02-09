@@ -644,7 +644,7 @@ async function loadRulesJsonLdOnStartup() {
   // Because the plugin is loaded during Node-RED startup, those endpoints may
   // not be immediately reachable. The loader therefore includes a retry loop
   // that waits until the Admin API is ready.
-  const NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#";
+  const NRUA = "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#";
   const SCHEMA = "https://schema.org/";
   const GID_ENV = z(process.env.URDF_ENV_GID || "urn:nrua:env");
 
@@ -708,13 +708,13 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
       : {}),
     ...(typeof osInfo.containerised === "boolean"
       ? {
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised")]:
+          [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised")]:
             [{ "@value": osInfo.containerised }]
         }
       : {}),
     ...(typeof osInfo.wsl === "boolean"
       ? {
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#isWsl")]:
+          [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isWsl")]:
             [{ "@value": osInfo.wsl }]
         }
       : {})
@@ -722,7 +722,7 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
 
   graph.push({
     "@id": nodeJsId,
-    "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs")],
+    "@type": [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs")],
     ...(notUnset(nodeInfo.version)
       ? { [z("https://schema.org/version")]: [{ "@value": String(nodeInfo.version) }] }
       : {}),
@@ -731,7 +731,7 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
 
   graph.push({
     "@id": nodeRedId,
-    "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed")],
+    "@type": [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed")],
     ...(notUnset(rt.version)
       ? { [z("https://schema.org/version")]: [{ "@value": String(rt.version) }] }
       : {}),
@@ -844,7 +844,7 @@ function buildEnvJsonLdFromAdmin({ diagnostics, settings }) {
   // the "language" and "format" of that program. Some rules may also contain
   // parts (schema:hasPart) to store auxiliary code such as a projection query.
   const SCHEMA_TEXT = z("https://schema.org/text");
-  const NRUA_RULE = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#Rule";
+  const NRUA_RULE = "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Rule";
   const SCHEMA_PROGRAMMING_LANGUAGE = z("https://schema.org/programmingLanguage");
   const SCHEMA_ENCODING_FORMAT = z("https://schema.org/encodingFormat");
   const SCHEMA_HASPART = z("https://schema.org/hasPart");
@@ -1773,10 +1773,10 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
     graph.push({
       "@id": fid,
-      "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#Flow")],
+      "@type": [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Flow")],
       [z("https://schema.org/identifier")]: [{ "@value": String(t.id) }],
       ...(t.label ? { [z("https://schema.org/name")]: [{ "@value": String(t.label) }] } : {}),
-      [z("https://schema.org/isPartOf")]: [{ "@id": appId() }]
+      [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp")]: [{ "@id": appId() }]
     });
 
     flowKeywords.set(fid, flowKeywords.get(fid) || new Set());
@@ -1790,16 +1790,17 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
     const thisNodeId = nodeId(n.id);
     const partOf = n.z ? flowId(String(n.z)) : appId();
+    const isPartOf = n.z ? "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfFlow" : "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isPartOfApp";
 
     if (n.z) addKw(partOf, n.type);
 
     const node = {
       "@id": thisNodeId,
-      "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#Node")],
+      "@type": [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#Node")],
       [z("https://schema.org/identifier")]: [{ "@value": String(n.id) }],
-      [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#type")]: [{ "@value": String(n.type) }],
+      [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#type")]: [{ "@value": String(n.type) }],
       ...(n.name ? { [z("https://schema.org/name")]: [{ "@value": String(n.name) }] } : {}),
-      [z("https://schema.org/isPartOf")]: [{ "@id": partOf }]
+      [z(isPartOf)]: [{ "@id": partOf }]
     };
 
     graph.push(node);
@@ -1822,13 +1823,13 @@ function addPropertyValue(graph, subjectId, key, value, baseId) {
 
         graph.push({
           "@id": outIri,
-          "@type": [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeOutput")],
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#fromGate")]: [{ "@value": gate }],
-          [z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#toNode")]: targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
+          "@type": [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeOutput")],
+          [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#fromGate")]: [{ "@value": gate }],
+          [z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#toNode")]: targets.map((tid) => ({ "@id": nodeId(String(tid)) }))
         });
 
-        node[z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput")] = node[z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput")] || [];
-        node[z("https://w3id.org/nodered-static-program-analysis/user-application-ontology#hasOutput")].push({ "@id": outIri });
+        node[z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput")] = node[z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput")] || [];
+        node[z("https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#hasOutput")].push({ "@id": outIri });
       }
     }
   }
