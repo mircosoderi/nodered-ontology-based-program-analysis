@@ -1,0 +1,36 @@
+==> Building image: urdf-baseline-measure:local
+==> Running container: urdf_baseline_measure
+==> Waiting for health endpoint...
+Baseline: 7.043 MiB
+==> Triggering t1 require('jsonld')
+---- trigger response (t1) ----
+{"ok":true,"did":"require('jsonld') + processor=jsonld.promises"}
+--------------------------------
+==> Triggering t2 require('sparqljs')
+---- trigger response (t2) ----
+{"ok":true,"did":"require('sparqljs')"}
+--------------------------------
+==> Triggering t3 require('urdf/src/io.js')
+---- trigger response (t3) ----
+{"ok":true,"did":"require('urdf/src/io.js')"}
+--------------------------------
+==> Triggering t4 new sparqljs.Parser()
+---- trigger response (t4) ----
+{"ok":true,"did":"new sparqljs.Parser()"}
+--------------------------------
+==> Triggering t5 require('urdf/src/urdf.js') + new urdf.Store()
+---- trigger response (t5) ----
+{"ok":true,"did":"require('urdf/src/urdf.js') + new urdf.Store()"}
+--------------------------------
+
+==================== RESULTS (MiB) ====================
+Step                                      Mem        Delta
+baseline                                7.043          —
+t1 require('jsonld')                   23.980       16.937
+t2 require('sparqljs')                 24.250        0.270
+t3 require('urdf/src/io.js')           27.770        3.520
+t4 new sparqljs.Parser()               27.780        0.010
+t5 require('urdf/src/urdf.js') + new urdf.Store()       27.820        0.040
+=======================================================
+
+==> Done. Container will be terminated.
