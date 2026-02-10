@@ -144,7 +144,7 @@ uRDF was [**forked**](https://github.com/mircosoderi/uRDF.js), and all subsequen
 
 Validation showed:
 - baseline memory overhead reduced from **~20 MB to ~3 MB** ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/urdf-memory-occupation-at-rest-2)),
-- total Node-RED overhead ~5 MB (~+10%) ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-at-rest-2)).
+- total Node-RED overhead of about 5 MB (+10%) ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-at-rest-2)).
 
 ## Ablation: Cost of Supporting N3 Reasoning (measured at rest)
 
