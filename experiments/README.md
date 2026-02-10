@@ -14,8 +14,6 @@ Joint reasoning over these sources enables capabilities such as:
   - detection of connection loops that may cause runtime instability,
   - identification of data-processing nodes not connected to any output or sink.
 
----
-
 ## Proof of Concept Architecture
 
 The proof-of-concept system is packaged as a [**Docker image**](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/nodered-urdf), built on top of the [most recent](https://hub.docker.com/layers/nodered/node-red/4.1.3-22/images/sha256-1655a8ccebd6fe3465d1aab932599ad7ece2085c7c1e11135e0f0d323ce26d7f) official Node-RED image available at project start.
@@ -35,8 +33,6 @@ Two Node-RED plugins were added:
 - Displays reasoning results inline
 
 [Link to editor plugin folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/nodered-urdf/node-red-urdf-plugin/editor)
-
----
 
 ## Technology Choices
 
@@ -61,8 +57,6 @@ Eyeling was selected because it is:
 
 [Link to the eyeling repository](https://github.com/eyereasoner/eyeling)
 
----
-
 ## Correctness evaluation
 
 Correctness was validated manually by:
@@ -71,8 +65,6 @@ Correctness was validated manually by:
 3. Loading external semantic data 
 4. Defining rules
 5. Verifying that inference results matched expectations and that no major defects emerged
-
----
 
 ## Docker Image Size Optimization
 
@@ -95,11 +87,7 @@ The enriched image is only **4 MB larger**, corresponding to a **1.8% increase**
 
 This was considered a first successful result.
 
----
-
-## Resource Utilization at Rest
-
-### Baseline Measurement
+## Resource Utilization at Rest (Baseline Measurement)
 
 The next question was:
 
@@ -118,13 +106,9 @@ Results showed:
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-at-rest)
 
----
-
-## Isolating Memory Overhead: uRDF
+## Isolating Memory Overhead: uRDF Memory Occupation at Rest 
 
 A hypothesis was formulated that **uRDF was responsible** for most of the memory overhead.
-
-### Experiment: uRDF Memory Occupation at Rest
 
 A minimal Node.js application was built:
 - initially without uRDF,
@@ -133,8 +117,6 @@ A minimal Node.js application was built:
 Using Docker memory statistics, instantiating uRDF increased memory usage by **~22 MB**, confirming the hypothesis.
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/urdf-memory-occupation-at-rest)
-
----
 
 ## Decomposing uRDF Memory Usage
 
@@ -148,8 +130,6 @@ A decomposition experiment tested individual components:
 Results showed that **`jsonld` and `io` accounted for most of the baseline memory overhead**.
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/decompose-urdf-memory-occupation-at-rest)
-
----
 
 ## uRDF Optimization via Forking
 
@@ -166,8 +146,6 @@ Validation showed:
 - baseline memory overhead reduced from **~20 MB to ~3 MB** ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/urdf-memory-occupation-at-rest-2)),
 - total Node-RED overhead ~5 MB (~+10%) ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-at-rest-2)).
 
----
-
 ## Ablation: Cost of Supporting N3 Reasoning (measured at rest)
 
 An ablation experiment evaluated the cost of enabling eyeling:
@@ -176,8 +154,6 @@ An ablation experiment evaluated the cost of enabling eyeling:
 - CPU impact: negligible
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-at-rest-2-without-eyeling)
-
----
 
 ## Memory Scaling with Growing Applications
 
@@ -193,8 +169,6 @@ Most importantly, they showed a significant gap in memory usage (avg, peak) betw
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-with-reasoning)
 
----
-
 ## Semantic Compression Strategy
 
 To improve scaling:
@@ -203,8 +177,6 @@ To improve scaling:
 - no prefixes, base IRIs, or JSON-LD contexts are supported.
 
 This favors simplicity and efficiency over expressiveness.
-
----
 
 ## Improved Scaling Results
 
@@ -217,8 +189,6 @@ With compression:
 
 Ablation without eyeling showed minor, inconsistent differences ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-no-reasoning-2-without-eyeling)).
 
----
-
 ## Resource Utilization Under Double Stress (App Growth + Reasoning)
 
 Under combined growth and active reasoning:
@@ -227,7 +197,6 @@ Under combined growth and active reasoning:
 - largest tested application ≈500 KB of Node-RED JSON.
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-with-reasoning)
----
 
 ## Scalability and Execution Time Analysis Under Double Stress
 
@@ -238,8 +207,6 @@ Final experiments showed:
 - N3 reasoning remains bounded and proportional.
 
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-with-reasoning-2)
-
----
 
 ## Conclusion
 
