@@ -167,7 +167,7 @@ Most importantly, they showed a significant gap in memory usage (avg, peak) betw
 - semantic Node-RED: avg memory usage 90 M, peak memory usage 110 M
 - vanilla Node-RED:  avg memory usage 60 M, peak memory usage  70 M  
 
-[Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-with-reasoning)
+[Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-no-reasoning)
 
 ## Semantic Compression Strategy
 
@@ -188,15 +188,6 @@ With compression:
 [Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-no-reasoning-2)
 
 Ablation without eyeling showed minor, inconsistent differences ([link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-no-reasoning-2-without-eyeling)).
-
-## Resource Utilization Under Double Stress (App Growth + Reasoning)
-
-Under combined growth and active reasoning:
-- RAM usage increased by ~30%,
-- CPU usage remained stable and returned to idle quickly (<5s),
-- largest tested application ≈500 KB of Node-RED JSON.
-
-[Link to experiment folder](https://github.com/mircosoderi/nodered-ontology-based-program-analysis/tree/main/experiments/resource-utilization-growing-flows-with-reasoning)
 
 ## Scalability and Execution Time Analysis Under Double Stress
 
