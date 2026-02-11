@@ -2,8 +2,6 @@
 
 > Towards lightweight RDF store and N3 reasoner embedded in the Node-RED engine via runtime and editor plugins for ontology-based analysis of the user application with humans in the loop.
 
----
-
 ## Overview
 
 This repository explores how **semantic technologies (RDF, JSON-LD, N3 reasoning)** can be embedded directly into the **Node-RED runtime** to support:
@@ -48,14 +46,14 @@ The fastest way to evaluate the system is to build and run the Docker image in:
 nodered-urdf/
 ```
 
-### 1️⃣ Clone the repository
+### Clone the repository
 
 ```bash
 git clone https://github.com/mircosoderi/nodered-ontology-based-program-analysis.git
 cd nodered-ontology-based-program-analysis/nodered-urdf
 ```
 
-### 2️⃣ Build the Docker image
+### Build the Docker image
 
 ```bash
 docker build -t nodered-urdf:4.1.3-22 .
@@ -67,7 +65,7 @@ docker build -t nodered-urdf:4.1.3-22 .
  docker network create nodered-urdf-net
 ```
 
-### 3️⃣ Run the container
+### Run the container
 
 ```bash
 docker run -it --rm \
