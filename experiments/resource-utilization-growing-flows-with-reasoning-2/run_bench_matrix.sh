@@ -10,15 +10,15 @@ IMAGE=${IMAGE:-"nodered-urdf-instrumented:4.1.3-22"}   # Node-RED image (instrum
 # Node-RED / Bench config
 # -----------------------
 PORT=${PORT:-1880}
-TIMEOUT=${TIMEOUT:-120}                         # more generous (seeders + deploy)
+TIMEOUT=${TIMEOUT:-600}                         # more generous (seeders + deploy)
 OUTROOT=${OUTROOT:-"results"}
-FACTORS=${FACTORS:-"1,2,4,8,16"}
+FACTORS=${FACTORS:-"1,2,4,8,16,32,48,64"}
 
 # RULES=${RULES:-"rules.flattened.compressed.jsonld"}
 FLOWS_SEED=${FLOWS_SEED:-"nodered-default-flows.json"}
 
-CPUS=${CPUS:-"1"}                               # e.g. 0.5
-MEM=${MEM:-"1g"}                                 # e.g. 256m
+CPUS=${CPUS:-"2"}                               # e.g. 0.5
+MEM=${MEM:-"2g"}                                 # e.g. 256m
 
 # -----------------------
 # Seeding config (optional)
@@ -48,7 +48,7 @@ need(){ command -v "$1" >/dev/null 2>&1 || { echo "Missing $1" >&2; exit 1; }; }
 need docker; need curl; need python3; need grep
 
 RUN_ID=$(date +%Y%m%d-%H%M%S)
-OUTBASE="$OUTROOT/$RUN_ID"
+OUTBASE="$OUTROOT/$RUN_ID-${CPU}CPU-${MEM}RAM"
 mkdir -p "$OUTBASE"
 
 SCALED_DIR="$OUTBASE/scaled_flows"

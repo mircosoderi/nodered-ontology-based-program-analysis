@@ -570,7 +570,7 @@
         "@iD": "urn:runtime:issues:5447:nodered:4",
         "@id": "urn:runtime:issues:5447:nodered:4",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -1268,7 +1268,7 @@
         "@iD": "urn:runtime:issues:5394:nodered:5-0",
         "@id": "urn:runtime:issues:5394:nodered:5-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -1929,7 +1929,7 @@
         "@iD": "urn:runtime:issues:5362:nodered:5",
         "@id": "urn:runtime:issues:5362:nodered:5",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -3939,7 +3939,7 @@
         "@iD": "urn:runtime:issues:5211:nodered:4-0",
         "@id": "urn:runtime:issues:5211:nodered:4-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -5452,7 +5452,7 @@
         "@iD": "urn:runtime:issues:5035:nodered:4-0",
         "@id": "urn:runtime:issues:5035:nodered:4-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -5813,7 +5813,7 @@
         "@iD": "urn:runtime:issues:4968:nodered:3",
         "@id": "urn:runtime:issues:4968:nodered:3",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -5851,7 +5851,7 @@
             "@id": "urn:rating:issues:4968"
           }
         ],
-        "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [
+        "z:68": [
           {
             "@value": true
           }
@@ -6899,7 +6899,7 @@
             "@id": "urn:rating:issues:4859"
           }
         ],
-        "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [
+        "z:68": [
           {
             "@value": true
           }
@@ -6977,7 +6977,7 @@
         "@iD": "urn:runtime:issues:4826:nodered:4",
         "@id": "urn:runtime:issues:4826:nodered:4",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -6989,7 +6989,7 @@
         "@iD": "urn:runtime:issues:4826:nodered:4",
         "@id": "urn:runtime:issues:4826:nodered:4",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -7171,7 +7171,7 @@
         "@iD": "urn:runtime:issues:4805:nodered:4-0",
         "@id": "urn:runtime:issues:4805:nodered:4-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -8223,7 +8223,7 @@
         "@iD": "urn:runtime:issues:4665:nodered:703",
         "@id": "urn:runtime:issues:4665:nodered:703",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -8261,7 +8261,7 @@
             "@id": "urn:rating:issues:4665"
           }
         ],
-        "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [
+        "z:68": [
           {
             "@value": true
           }
@@ -9224,7 +9224,7 @@
         "@iD": "urn:runtime:issues:4504:nodered:3-1",
         "@id": "urn:runtime:issues:4504:nodered:3-1",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -10452,7 +10452,7 @@
         "@iD": "urn:runtime:issues:4341:nodered:3",
         "@id": "urn:runtime:issues:4341:nodered:3",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -10464,7 +10464,7 @@
         "@iD": "urn:runtime:issues:4341:nodered:3-0",
         "@id": "urn:runtime:issues:4341:nodered:3-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -11154,7 +11154,7 @@
             "@id": "urn:rating:issues:4249"
           }
         ],
-        "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised": [
+        "z:68": [
           {
             "@value": true
           }
@@ -11185,7 +11185,7 @@
         "@iD": "urn:runtime:issues:4245:nodered:3-0",
         "@id": "urn:runtime:issues:4245:nodered:3-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -16905,7 +16905,7 @@
         "@iD": "urn:runtime:issues:3102:nodered:2-0",
         "@id": "urn:runtime:issues:3102:nodered:2-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -16917,7 +16917,7 @@
         "@iD": "urn:runtime:issues:3102:nodered:1-3",
         "@id": "urn:runtime:issues:3102:nodered:1-3",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -20049,7 +20049,7 @@
         "@iD": "urn:runtime:issues:2144:nodered:0",
         "@id": "urn:runtime:issues:2144:nodered:0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -20165,7 +20165,7 @@
         "@iD": "urn:runtime:issues:2127:nodered:0",
         "@id": "urn:runtime:issues:2127:nodered:0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -21493,7 +21493,7 @@
         "@iD": "urn:runtime:issues:1647:nodered:0-18",
         "@id": "urn:runtime:issues:1647:nodered:0-18",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -21609,7 +21609,7 @@
         "@iD": "urn:runtime:issues:1592:nodered:0-0-0",
         "@id": "urn:runtime:issues:1592:nodered:0-0-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -21621,7 +21621,7 @@
         "@iD": "urn:runtime:issues:1592:nodered:127-0-0",
         "@id": "urn:runtime:issues:1592:nodered:127-0-0",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {
@@ -23863,7 +23863,7 @@
         "@iD": "urn:runtime:issues:780:nodered:0-12",
         "@id": "urn:runtime:issues:780:nodered:0-12",
         "@type": [
-          "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed"
+          "z:64"
         ],
         "z:56": [
           {

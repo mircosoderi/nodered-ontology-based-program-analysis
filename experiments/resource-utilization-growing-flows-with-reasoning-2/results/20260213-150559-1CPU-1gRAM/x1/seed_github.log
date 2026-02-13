@@ -1,0 +1,3 @@
+Wrote output/issues.jsonld
+Uploaded output/issues.jsonld -> http://nodered_20260213-150559_x1:1880/urdf/loadFile (HTTP 200)
+{"ok":true,"ts":1770991562997,"gid":"urn:graph:issues","size":5535,"totalSize":null}
