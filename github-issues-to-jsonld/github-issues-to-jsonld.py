@@ -78,7 +78,7 @@ NODERED_URDF = os.environ.get("NODERED_URDF", "").rstrip("/")
 
 SCHEMA = "https://schema.org/"
 XSD = "http://www.w3.org/2001/XMLSchema#"
-NRUA = "https://w3id.org/nodered-static-program-analysis/user-application-ontology#"
+NRUA = "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#"
 
 # -----------------------------------------------------------------------------
 # GitHub label vocabulary (stable list)
@@ -523,7 +523,7 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
                     "@id": nodejs_id,
                     "@type": [
                         z(
-                            "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeJs",
+                            "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeJs",
                             ZURL,
                         )
                     ],
@@ -540,7 +540,7 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
                     "@id": nodered_id,
                     "@type": [
                         z(
-                            "https://w3id.org/nodered-static-program-analysis/user-application-ontology#NodeRed",
+                            "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#NodeRed",
                             ZURL,
                         )
                     ],
@@ -563,7 +563,7 @@ def transform_file(path: Path) -> List[Dict[str, Any]]:
             **(
                 {
                     z(
-                        "https://w3id.org/nodered-static-program-analysis/user-application-ontology#isContainerised",
+                        "https://w3id.org/nodered-ontology-based-program-analysis/nodered-user-application-ontology#isContainerised",
                         ZURL,
                     ): [{"@value": True}]
                 }

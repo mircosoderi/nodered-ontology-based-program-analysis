@@ -521,7 +521,7 @@ async function urdfQueryViaPluginApiContract(sparql) {
   async function loadOntologyJsonLdOnStartup() {
     if (!urdf) return;
 
-    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/nodered-user-application-ontology.flattened.compressed.jsonld";
+    const filePath = process.env.URDF_ONTOLOGY_PATH || "/opt/urdf/nodered-user-application-ontology.jsonld";
     const gid = z(process.env.URDF_ONTOLOGY_GID || "urn:nrua:ontology");
 
     if (!fs.existsSync(filePath)) {
@@ -531,7 +531,7 @@ async function urdfQueryViaPluginApiContract(sparql) {
 
     try {
       const raw = fs.readFileSync(filePath, "utf8");
-      const doc = JSON.parse(raw);
+      const doc = flattenJsonLd(compressGraph(JSON.parse(raw)));
 
       let dataset;
 
@@ -577,7 +577,7 @@ async function urdfQueryViaPluginApiContract(sparql) {
 async function loadRulesJsonLdOnStartup() {
   if (!urdf) return;
 
-  const filePath = process.env.URDF_RULES_PATH || "/opt/urdf/rules.flattened.compressed.jsonld";
+  const filePath = process.env.URDF_RULES_PATH || "/opt/urdf/rules.jsonld";
   const gid = z(process.env.URDF_RULES_GID || "urn:nrua:rules");
 
   if (!fs.existsSync(filePath)) {
@@ -587,7 +587,7 @@ async function loadRulesJsonLdOnStartup() {
 
   try {
     const raw = fs.readFileSync(filePath, "utf8");
-    const doc = JSON.parse(raw);
+    const doc = flattenJsonLd(compressGraph(JSON.parse(raw)));
 
     let dataset;
 
